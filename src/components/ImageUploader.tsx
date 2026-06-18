@@ -20,6 +20,9 @@ export default function ImageUploader({ onImageCropped, aspectRatio, setAspectRa
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
 
+  const [imgLoaded, setImgLoaded] = useState<boolean>(false);
+  const [touchStartDist, setTouchStartDist] = useState<number | null>(null);
+
   // Handle uploaded file
   const handleFile = (file: File) => {
     if (file.size > 10 * 1024 * 1024) {
@@ -69,18 +72,30 @@ export default function ImageUploader({ onImageCropped, aspectRatio, setAspectRa
     }
   };
 
-  // Render on Cropping Canvas
+  // 1. Separate HTMLImageElement loading from render cycles (Massive Performance Booster!)
   useEffect(() => {
-    if (!imageSrc) return;
+    if (!imageSrc) {
+      imageRef.current = null;
+      setImgLoaded(false);
+      return;
+    }
     
+    setImgLoaded(false);
     const img = new Image();
     img.src = imageSrc;
     img.crossOrigin = 'anonymous';
     img.onload = () => {
       imageRef.current = img;
-      drawCropper();
+      setImgLoaded(true);
     };
-  }, [imageSrc, zoom, rotation, pan, aspectRatio]);
+  }, [imageSrc]);
+
+  // Redraw canvas on any transform state changes
+  useEffect(() => {
+    if (imgLoaded) {
+      drawCropper();
+    }
+  }, [imgLoaded, zoom, rotation, pan, aspectRatio]);
 
   const drawCropper = () => {
     const canvas = canvasRef.current;
@@ -99,7 +114,7 @@ export default function ImageUploader({ onImageCropped, aspectRatio, setAspectRa
     canvas.height = viewHeight;
 
     // Clear background
-    ctx.fillStyle = '#f3f4f6';
+    ctx.fillStyle = '#0f172a'; // modern elegant dark slate backend
     ctx.fillRect(0, 0, viewWidth, viewHeight);
 
     ctx.save();
@@ -122,13 +137,80 @@ export default function ImageUploader({ onImageCropped, aspectRatio, setAspectRa
     ctx.drawImage(img, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
     ctx.restore();
 
-    // Draw guideline bounds check (faint overlay of safe crop limit)
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
-    // Highlight the borders
-    ctx.strokeStyle = '#ef4444';
+    // 2. Beautiful Rule of Thirds guidelines overlay (classic photographer/cropped look)
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 4]);
+
+    ctx.beginPath();
+    // Verticals
+    ctx.moveTo(viewWidth / 3, 0);
+    ctx.lineTo(viewWidth / 3, viewHeight);
+    ctx.moveTo((viewWidth * 2) / 3, 0);
+    ctx.lineTo((viewWidth * 2) / 3, viewHeight);
+    // Horizontals
+    ctx.moveTo(0, viewHeight / 3);
+    ctx.lineTo(viewWidth, viewHeight / 3);
+    ctx.moveTo(0, (viewHeight * 2) / 3);
+    ctx.lineTo(viewWidth, (viewHeight * 2) / 3);
+    ctx.stroke();
+
+    // Reset line dash
+    ctx.setLineDash([]);
+
+    // Highlight the crop container outer boundaries with primary color
+    ctx.strokeStyle = '#6366f1'; // Premium indigo-500
     ctx.lineWidth = 2;
-    ctx.setLineDash([4, 4]);
-    ctx.strokeRect(2, 2, viewWidth - 4, viewHeight - 4);
+    ctx.strokeRect(1, 1, viewWidth - 2, viewHeight - 2);
+  };
+
+  // Auto layout fit calculators (one-click absolute comfort)
+  const fitToFrame = () => {
+    const img = imageRef.current;
+    if (!img) return;
+    
+    const viewWidth = 400;
+    const targetRatio = aspectRatio === '1:1' ? 1 : 3/4;
+    const viewHeight = 400 * targetRatio;
+
+    const imgRatio = img.width / img.height;
+    let drawWidth = viewWidth;
+    let drawHeight = viewWidth / imgRatio;
+
+    if (imgRatio > 1) {
+      drawHeight = viewHeight;
+      drawWidth = viewHeight * imgRatio;
+    }
+
+    const rHeight = viewHeight / drawHeight;
+    const rWidth = viewWidth / drawWidth;
+    
+    setZoom(Math.min(rHeight, rWidth));
+    setPan({ x: 0, y: 0 });
+  };
+
+  const fillFrame = () => {
+    const img = imageRef.current;
+    if (!img) return;
+
+    const viewWidth = 400;
+    const targetRatio = aspectRatio === '1:1' ? 1 : 3/4;
+    const viewHeight = 400 * targetRatio;
+
+    const imgRatio = img.width / img.height;
+    let drawWidth = viewWidth;
+    let drawHeight = viewWidth / imgRatio;
+
+    if (imgRatio > 1) {
+      drawHeight = viewHeight;
+      drawWidth = viewHeight * imgRatio;
+    }
+
+    const rHeight = viewHeight / drawHeight;
+    const rWidth = viewWidth / drawWidth;
+
+    setZoom(Math.max(rHeight, rWidth));
+    setPan({ x: 0, y: 0 });
   };
 
   // Trigger crop finished callback
@@ -139,6 +221,14 @@ export default function ImageUploader({ onImageCropped, aspectRatio, setAspectRa
     // Export the drawn canvas area
     const croppedUrl = canvas.toDataURL('image/png');
     onImageCropped(croppedUrl);
+  };
+
+  // Touch Distance calculator
+  const calculateTouchDistance = (touches: React.TouchList) => {
+    if (touches.length < 2) return 0;
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    return Math.sqrt(dx * dx + dy * dy);
   };
 
   // Mouse / Touch handlers for Panning
@@ -159,6 +249,113 @@ export default function ImageUploader({ onImageCropped, aspectRatio, setAspectRa
   const handleEndDrag = () => {
     setIsDragging(false);
   };
+
+  // Dual-touch pinch zoom support
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (!imageSrc) return;
+    if (e.touches.length === 2) {
+      setIsDragging(false);
+      const dist = calculateTouchDistance(e.touches);
+      setTouchStartDist(dist);
+    } else if (e.touches.length === 1) {
+      handleStartDrag(e.touches[0].clientX, e.touches[0].clientY);
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!imageSrc) return;
+    if (e.touches.length === 2 && touchStartDist !== null) {
+      e.preventDefault(); // Stop mobile scrolling gesture
+      const currentDist = calculateTouchDistance(e.touches);
+      if (currentDist > 0) {
+        const factor = currentDist / touchStartDist;
+        setZoom((prev) => {
+          const next = prev * (factor > 1 ? 1.025 : 0.975);
+          return Math.min(4.0, Math.max(0.4, next));
+        });
+        setTouchStartDist(currentDist);
+      }
+    } else if (e.touches.length === 1) {
+      handleDragMove(e.touches[0].clientX, e.touches[0].clientY);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+    setTouchStartDist(null);
+  };
+
+  // 3. Scroll Wheel zooming with non-passive event listeners
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const onWheelEvent = (e: WheelEvent) => {
+      e.preventDefault();
+      const factor = e.deltaY < 0 ? 1.08 : 0.92;
+      setZoom((prev) => Math.min(4.0, Math.max(0.4, prev * factor)));
+    };
+
+    container.addEventListener('wheel', onWheelEvent, { passive: false });
+    return () => {
+      container.removeEventListener('wheel', onWheelEvent);
+    };
+  }, [imgLoaded]);
+
+  // 4. Keyboard Arrow key micro-adjustments & Hotkeys support
+  useEffect(() => {
+    if (!imageSrc) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const activeElement = document.activeElement;
+      if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
+        return;
+      }
+
+      const step = e.shiftKey ? 20 : 5; // shift speeds up alignment
+
+      switch (e.key) {
+        case 'ArrowUp':
+          e.preventDefault();
+          setPan((p) => ({ ...p, y: p.y - step }));
+          break;
+        case 'ArrowDown':
+          e.preventDefault();
+          setPan((p) => ({ ...p, y: p.y + step }));
+          break;
+        case 'ArrowLeft':
+          e.preventDefault();
+          setPan((p) => ({ ...p, x: p.x - step }));
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          setPan((p) => ({ ...p, x: p.x + step }));
+          break;
+        case '+':
+        case '=':
+          e.preventDefault();
+          setZoom((prev) => Math.min(4.0, prev * 1.05));
+          break;
+        case '-':
+        case '_':
+          e.preventDefault();
+          setZoom((prev) => Math.max(0.4, prev * 0.95));
+          break;
+        case 'r':
+        case 'R':
+          e.preventDefault();
+          setRotation((prev) => (prev + 90) % 360);
+          break;
+        default:
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [imageSrc]);
 
   return (
     <div className="w-full bg-white border border-black/[0.04] rounded-3xl p-6 shadow-sm overflow-hidden transition-all duration-300">
@@ -202,13 +399,14 @@ export default function ImageUploader({ onImageCropped, aspectRatio, setAspectRa
             
             {/* Cropper viewport */}
             <div className="flex-1 flex flex-col items-center justify-center bg-slate-50/80 rounded-2xl p-4 border border-black/[0.02] overflow-hidden">
-              <span className="text-[11px] font-medium text-slate-400 mb-3 self-start flex items-center gap-1.5">
-                <Move className="w-3.5 h-3.5 text-indigo-500" /> 按住鼠标拖拽/手指滑动可平移图片，微调视角
+              <span className="text-[11px] font-medium text-slate-400 mb-3 self-start flex items-center gap-1.5 flex-wrap">
+                <Move className="w-3.5 h-3.5 text-indigo-500" /> 
+                <span>鼠标拖拽/单指平移 · 鼠标滚轮/双指捏合缩放 · 键盘方向键/快捷键微调</span>
               </span>
               
               <div 
                 ref={containerRef}
-                className="relative cursor-grab active:cursor-grabbing border-4 border-white shadow-lg bg-slate-950 overflow-hidden rounded-2xl"
+                className="relative cursor-grab active:cursor-grabbing border-4 border-white shadow-xl bg-slate-950 overflow-hidden rounded-2xl"
                 style={{
                   width: '100%',
                   maxWidth: '430px',
@@ -218,13 +416,9 @@ export default function ImageUploader({ onImageCropped, aspectRatio, setAspectRa
                 onMouseMove={(e) => handleDragMove(e.clientX, e.clientY)}
                 onMouseUp={handleEndDrag}
                 onMouseLeave={handleEndDrag}
-                onTouchStart={(e) => {
-                  if (e.touches[0]) handleStartDrag(e.touches[0].clientX, e.touches[0].clientY);
-                }}
-                onTouchMove={(e) => {
-                  if (e.touches[0]) handleDragMove(e.touches[0].clientX, e.touches[0].clientY);
-                }}
-                onTouchEnd={handleEndDrag}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
               >
                 <canvas 
                   ref={canvasRef} 
@@ -233,21 +427,43 @@ export default function ImageUploader({ onImageCropped, aspectRatio, setAspectRa
               </div>
  
               {/* Reset layout or rotate */}
-              <div className="flex items-center gap-3 mt-4">
-                <button
-                  type="button"
-                  onClick={() => setRotation((prev) => (prev + 90) % 360)}
-                  className="px-4 py-2 bg-white border border-slate-200/80 text-xs font-semibold rounded-xl text-slate-700 hover:bg-slate-50 hover:text-indigo-600 flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
-                >
-                  <RotateCw className="w-3.5 h-3.5" /> 顺时针旋转
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setPan({ x: 0, y: 0 }); setZoom(1); setRotation(0); }}
-                  className="px-4 py-2 bg-white border border-slate-200/80 text-xs font-semibold rounded-xl text-slate-700 hover:bg-slate-50 hover:text-indigo-600 shadow-xs transition-all cursor-pointer"
-                >
-                  重置视角
-                </button>
+              <div className="flex items-center justify-between w-full max-w-[430px] mt-4 flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={fitToFrame}
+                    className="px-2.5 py-1.5 bg-white border border-slate-200 text-[11px] font-bold rounded-lg text-slate-700 hover:text-indigo-600 hover:border-indigo-100 transition-all cursor-pointer shadow-xs"
+                    title="缩放图像使其完全放入选区内"
+                  >
+                    完全贴合
+                  </button>
+                  <button
+                    type="button"
+                    onClick={fillFrame}
+                    className="px-2.5 py-1.5 bg-white border border-slate-200 text-[11px] font-bold rounded-lg text-slate-700 hover:text-indigo-600 hover:border-indigo-100 transition-all cursor-pointer shadow-xs"
+                    title="缩放图像使其完全填满整个选区"
+                  >
+                    填满画布
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setRotation((prev) => (prev + 90) % 360)}
+                    className="px-3 py-1.5 bg-white border border-slate-200 text-[11px] font-bold rounded-lg text-slate-700 hover:bg-slate-50 hover:text-indigo-600 flex items-center gap-1 shadow-xs transition-all cursor-pointer"
+                  >
+                    <RotateCw className="w-3 h-3" /> 旋转 90°
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setPan({ x: 0, y: 0 }); setZoom(1); setRotation(0); }}
+                    className="px-3 py-1.5 bg-slate-100 border border-slate-200 text-[11px] font-bold rounded-lg text-slate-600 hover:bg-slate-200 transition-all cursor-pointer"
+                    title="重置缩放坐标与旋转"
+                  >
+                    初始重置
+                  </button>
+                </div>
               </div>
             </div>
  
@@ -305,7 +521,7 @@ export default function ImageUploader({ onImageCropped, aspectRatio, setAspectRa
                       step="0.05"
                       value={zoom}
                       onChange={(e) => setZoom(parseFloat(e.target.value))}
-                      className="flex-1 accent-indigo-600 h-1.5 bg-slate-250 rounded-lg cursor-pointer"
+                      className="flex-1 accent-indigo-600 h-1.5 bg-slate-200 rounded-lg cursor-pointer"
                     />
                     <button
                       type="button"
@@ -315,6 +531,15 @@ export default function ImageUploader({ onImageCropped, aspectRatio, setAspectRa
                       <ZoomIn className="w-3.5 h-3.5" />
                     </button>
                   </div>
+                </div>
+
+                {/* Keyboard Shortcuts cheat sheet for pro look */}
+                <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 text-[10px] text-slate-500 leading-normal flex flex-col gap-1">
+                  <div className="font-bold text-slate-700 uppercase tracking-wider mb-1">键盘快捷面板</div>
+                  <div className="flex justify-between"><span>平移微调:</span> <span className="font-mono font-bold bg-white border border-slate-250 px-1 rounded">↑ ↓ ← →</span></div>
+                  <div className="flex justify-between"><span>快速缩放:</span> <span className="font-mono font-bold bg-white border border-slate-250 px-1 rounded">- / +</span></div>
+                  <div className="flex justify-between"><span>旋转 90°:</span> <span className="font-mono font-bold bg-white border border-slate-250 px-1 rounded">R键</span></div>
+                  <div className="flex justify-between mt-1 text-slate-400"><span>加速平移:</span> <span>按住 Shift + 方向键</span></div>
                 </div>
               </div>
  

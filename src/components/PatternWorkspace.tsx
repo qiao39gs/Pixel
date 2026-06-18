@@ -68,6 +68,11 @@ export default function PatternWorkspace({
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
 
+  // Converted pixels & stats state to resolve asynchronous image loading issue
+  const [transformedPixels, setTransformedPixels] = useState<TransformedPixel[]>([]);
+  const [stats, setStats] = useState<IngredientStat[]>([]);
+  const [isProcessing, setIsProcessing] = useState<boolean>(false);
+
   // References
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -91,192 +96,221 @@ export default function PatternWorkspace({
     });
   }, [brandFilter]);
 
-  // Transform core downsampling & matching logic
-  const { transformedPixels, stats } = useMemo(() => {
-    if (!croppedImageDataUrl) return { transformedPixels: [], stats: [] };
+  // Transform core downsampling & matching logic (Asynchronous Image onload pipeline)
+  useEffect(() => {
+    if (!croppedImageDataUrl) {
+      setTransformedPixels([]);
+      setStats([]);
+      setIsProcessing(false);
+      return;
+    }
 
-    // Create single offscreen canvas for nearest-neighbor downsampling
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = gridWidth;
-    tempCanvas.height = gridHeight;
-    const tempCtx = tempCanvas.getContext('2d');
-    if (!tempCtx) return { transformedPixels: [], stats: [] };
+    setIsProcessing(true);
+    let active = true;
 
-    tempCtx.imageSmoothingEnabled = false;
-
-    // Load cropped image and draw
     const img = new Image();
     img.src = croppedImageDataUrl;
-    
-    // We do sync-draw on elements that are already loaded in base64 URL
-    tempCtx.drawImage(img, 0, 0, gridWidth, gridHeight);
-    
-    const imgData = tempCtx.getImageData(0, 0, gridWidth, gridHeight);
-    const data = imgData.data;
+    img.onload = () => {
+      if (!active) return;
 
-    // Step 1: Initial pixel match to full selected palette
-    const initialMatched: TransformedPixel[] = [];
-    const colorUsageCount: Record<string, number> = {};
+      // Create single offscreen canvas for nearest-neighbor downsampling
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = gridWidth;
+      tempCanvas.height = gridHeight;
+      const tempCtx = tempCanvas.getContext('2d');
+      if (!tempCtx) {
+        setIsProcessing(false);
+        return;
+      }
 
-    for (let y = 0; y < gridHeight; y++) {
-      for (let x = 0; x < gridWidth; x++) {
-        const offset = (y * gridWidth + x) * 4;
-        const r = data[offset];
-        const g = data[offset + 1];
-        const b = data[offset + 2];
-        const a = data[offset + 3];
+      tempCtx.imageSmoothingEnabled = false;
+      tempCtx.drawImage(img, 0, 0, gridWidth, gridHeight);
+      
+      const imgData = tempCtx.getImageData(0, 0, gridWidth, gridHeight);
+      const data = imgData.data;
 
-        // Is Transparent or White background to ignore
-        const isTransparent = a < 80;
-        const isSubWhite = removeBackground && (r > 245 && g > 245 && b > 245); // Almost pure white background
+      // Step 1: Initial pixel match to full selected palette
+      const initialMatched: TransformedPixel[] = [];
+      const colorUsageCount: Record<string, number> = {};
 
-        if (isTransparent || isSubWhite) {
-          // Represent empty pixel background
+      for (let y = 0; y < gridHeight; y++) {
+        for (let x = 0; x < gridWidth; x++) {
+          const offset = (y * gridWidth + x) * 4;
+          const r = data[offset];
+          const g = data[offset + 1];
+          const b = data[offset + 2];
+          const a = data[offset + 3];
+
+          // Is Transparent or White background to ignore
+          const isTransparent = a < 80;
+          const isSubWhite = removeBackground && (r > 245 && g > 245 && b > 245); // Almost pure white background
+
+          if (isTransparent || isSubWhite) {
+            // Represent empty pixel background
+            initialMatched.push({
+              x,
+              y,
+              matchedBead: { code: "EMPTY", name: "透明背景", hex: "rgba(0,0,0,0)", brand: "MGB" }
+            });
+            continue;
+          }
+
+          // Convert RGB level to LAB Space
+          const pixelLab = rgbToLab({ r, g, b });
+
+          // Search nearest bead in the sub-palette
+          let bestMatch = currentPalette[0];
+          let minDistance = Infinity;
+
+          for (let i = 0; i < currentPalette.length; i++) {
+            const bead = currentPalette[i];
+            let dist = 0;
+            if (distanceAlgorithm === 'CIEDE2000') {
+              dist = deltaE2000(pixelLab, bead.lab);
+            } else if (distanceAlgorithm === 'CIE94') {
+              dist = deltaE94(pixelLab, bead.lab);
+            } else if (distanceAlgorithm === 'CIE76') {
+              dist = deltaE76(pixelLab, bead.lab);
+            } else {
+              dist = deltaEWeightedRGB({ r, g, b }, bead.rgb);
+            }
+
+            if (dist < minDistance) {
+              minDistance = dist;
+              bestMatch = bead;
+            }
+          }
+
           initialMatched.push({
             x,
             y,
-            matchedBead: { code: "EMPTY", name: "透明背景", hex: "rgba(0,0,0,0)", brand: "MGB" }
+            matchedBead: bestMatch
           });
-          continue;
-        }
 
-        // Convert RGB level to LAB Space
-        const pixelLab = rgbToLab({ r, g, b });
-
-        // Search nearest bead in the sub-palette
-        let bestMatch = currentPalette[0];
-        let minDistance = Infinity;
-
-        for (let i = 0; i < currentPalette.length; i++) {
-          const bead = currentPalette[i];
-          let dist = 0;
-          if (distanceAlgorithm === 'CIEDE2000') {
-            dist = deltaE2000(pixelLab, bead.lab);
-          } else if (distanceAlgorithm === 'CIE94') {
-            dist = deltaE94(pixelLab, bead.lab);
-          } else if (distanceAlgorithm === 'CIE76') {
-            dist = deltaE76(pixelLab, bead.lab);
-          } else {
-            dist = deltaEWeightedRGB({ r, g, b }, bead.rgb);
+          if (bestMatch.code !== "EMPTY") {
+            colorUsageCount[bestMatch.code] = (colorUsageCount[bestMatch.code] || 0) + 1;
           }
-
-          if (dist < minDistance) {
-            minDistance = dist;
-            bestMatch = bead;
-          }
-        }
-
-        initialMatched.push({
-          x,
-          y,
-          matchedBead: bestMatch
-        });
-
-        if (bestMatch.code !== "EMPTY") {
-          colorUsageCount[bestMatch.code] = (colorUsageCount[bestMatch.code] || 0) + 1;
         }
       }
-    }
 
-    // Step 2: Restricted Colors pass if distinct matching colors > limit limit
-    const uniqueBeadsUsed = Object.keys(colorUsageCount);
-    
-    if (uniqueBeadsUsed.length <= colorLimit) {
-      // Calculate statistics
-      const statsObj: Record<string, { bead: BeadPaletteItem; count: number }> = {};
-      initialMatched.forEach(p => {
-        if (p.matchedBead.code !== "EMPTY") {
-          const code = p.matchedBead.code;
-          if (!statsObj[code]) {
-            statsObj[code] = { bead: p.matchedBead, count: 0 };
+      // Step 2: Restricted Colors pass if distinct matching colors > limit limit
+      const uniqueBeadsUsed = Object.keys(colorUsageCount);
+      
+      if (uniqueBeadsUsed.length <= colorLimit) {
+        // Calculate statistics
+        const statsObj: Record<string, { bead: BeadPaletteItem; count: number }> = {};
+        initialMatched.forEach(p => {
+          if (p.matchedBead.code !== "EMPTY") {
+            const code = p.matchedBead.code;
+            if (!statsObj[code]) {
+              statsObj[code] = { bead: p.matchedBead, count: 0 };
+            }
+            statsObj[code].count++;
           }
-          statsObj[code].count++;
+        });
+
+        const statsList = Object.values(statsObj).sort((a, b) => b.count - a.count);
+        if (active) {
+          setTransformedPixels(initialMatched);
+          setStats(statsList);
+          setIsProcessing(false);
         }
-      });
+        return;
+      }
 
-      const statsList = Object.values(statsObj).sort((a, b) => b.count - a.count);
-      return { transformedPixels: initialMatched, stats: statsList };
-    }
+      // Sort existing palette beads by frequency
+      const topBeadCodes = Object.entries(colorUsageCount)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, colorLimit)
+        .map(entry => entry[0]);
 
-    // Sort existing palette beads by frequency
-    const topBeadCodes = Object.entries(colorUsageCount)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, colorLimit)
-      .map(entry => entry[0]);
+      const topBeadsPalette = currentPalette.filter(bead => topBeadCodes.includes(bead.code));
 
-    const topBeadsPalette = currentPalette.filter(bead => topBeadCodes.includes(bead.code));
+      // Phase 3: Remap every pixel ONLY to the top limit list
+      const finalMatched: TransformedPixel[] = [];
+      const finalStatsObj: Record<string, { bead: BeadPaletteItem; count: number }> = {};
 
-    // Phase 3: Remap every pixel ONLY to the top limit list
-    const finalMatched: TransformedPixel[] = [];
-    const finalStatsObj: Record<string, { bead: BeadPaletteItem; count: number }> = {};
+      for (let y = 0; y < gridHeight; y++) {
+        for (let x = 0; x < gridWidth; x++) {
+          const initialPixel = initialMatched[y * gridWidth + x];
 
-    for (let y = 0; y < gridHeight; y++) {
-      for (let x = 0; x < gridWidth; x++) {
-        const initialPixel = initialMatched[y * gridWidth + x];
+          if (initialPixel.matchedBead.code === "EMPTY") {
+            finalMatched.push(initialPixel);
+            continue;
+          }
 
-        if (initialPixel.matchedBead.code === "EMPTY") {
-          finalMatched.push(initialPixel);
-          continue;
-        }
+          // Check if its initial match is already in the allowed list
+          if (topBeadCodes.includes(initialPixel.matchedBead.code)) {
+            finalMatched.push(initialPixel);
+            
+            const code = initialPixel.matchedBead.code;
+            if (!finalStatsObj[code]) {
+              finalStatsObj[code] = { bead: initialPixel.matchedBead, count: 0 };
+            }
+            finalStatsObj[code].count++;
+            continue;
+          }
 
-        // Check if its initial match is already in the allowed list
-        if (topBeadCodes.includes(initialPixel.matchedBead.code)) {
-          finalMatched.push(initialPixel);
-          
-          const code = initialPixel.matchedBead.code;
+          // Otherwise: re-match this pixel's raw image color with only the top selection
+          const offset = (y * gridWidth + x) * 4;
+          const r = data[offset];
+          const g = data[offset + 1];
+          const b = data[offset + 2];
+          const pixelLab = rgbToLab({ r, g, b });
+
+          let bestMatch = topBeadsPalette[0];
+          let minDistance = Infinity;
+
+          for (let i = 0; i < topBeadsPalette.length; i++) {
+            const bead = topBeadsPalette[i];
+            let dist = 0;
+            if (distanceAlgorithm === 'CIEDE2000') {
+              dist = deltaE2000(pixelLab, bead.lab);
+            } else if (distanceAlgorithm === 'CIE94') {
+              dist = deltaE94(pixelLab, bead.lab);
+            } else if (distanceAlgorithm === 'CIE76') {
+              dist = deltaE76(pixelLab, bead.lab);
+            } else {
+              dist = deltaEWeightedRGB({ r, g, b }, bead.rgb);
+            }
+
+            if (dist < minDistance) {
+              minDistance = dist;
+              bestMatch = bead;
+            }
+          }
+
+          finalMatched.push({
+            x,
+            y,
+            matchedBead: bestMatch
+          });
+
+          const code = bestMatch.code;
           if (!finalStatsObj[code]) {
-            finalStatsObj[code] = { bead: initialPixel.matchedBead, count: 0 };
+            finalStatsObj[code] = { bead: bestMatch, count: 0 };
           }
           finalStatsObj[code].count++;
-          continue;
         }
-
-        // Otherwise: re-match this pixel's raw image color with only the top selection
-        const offset = (y * gridWidth + x) * 4;
-        const r = data[offset];
-        const g = data[offset + 1];
-        const b = data[offset + 2];
-        const pixelLab = rgbToLab({ r, g, b });
-
-        let bestMatch = topBeadsPalette[0];
-        let minDistance = Infinity;
-
-        for (let i = 0; i < topBeadsPalette.length; i++) {
-          const bead = topBeadsPalette[i];
-          let dist = 0;
-          if (distanceAlgorithm === 'CIEDE2000') {
-            dist = deltaE2000(pixelLab, bead.lab);
-          } else if (distanceAlgorithm === 'CIE94') {
-            dist = deltaE94(pixelLab, bead.lab);
-          } else if (distanceAlgorithm === 'CIE76') {
-            dist = deltaE76(pixelLab, bead.lab);
-          } else {
-            dist = deltaEWeightedRGB({ r, g, b }, bead.rgb);
-          }
-
-          if (dist < minDistance) {
-            minDistance = dist;
-            bestMatch = bead;
-          }
-        }
-
-        finalMatched.push({
-          x,
-          y,
-          matchedBead: bestMatch
-        });
-
-        const code = bestMatch.code;
-        if (!finalStatsObj[code]) {
-          finalStatsObj[code] = { bead: bestMatch, count: 0 };
-        }
-        finalStatsObj[code].count++;
       }
-    }
 
-    const finalStatsList = Object.values(finalStatsObj).sort((a, b) => b.count - a.count);
-    return { transformedPixels: finalMatched, stats: finalStatsList };
+      const finalStatsList = Object.values(finalStatsObj).sort((a, b) => b.count - a.count);
+      if (active) {
+        setTransformedPixels(finalMatched);
+        setStats(finalStatsList);
+        setIsProcessing(false);
+      }
+    };
 
+    img.onerror = () => {
+      if (active) {
+        setIsProcessing(false);
+      }
+    };
+
+    return () => {
+      active = false;
+    };
   }, [croppedImageDataUrl, gridWidth, gridHeight, colorLimit, currentPalette, distanceAlgorithm, removeBackground]);
 
 
@@ -866,6 +900,13 @@ export default function PatternWorkspace({
               onMouseUp={handleEndPan}
               onMouseLeave={handleEndPan}
             >
+              {isProcessing && (
+                <div className="absolute inset-0 bg-[#09090B]/80 backdrop-blur-xs flex flex-col items-center justify-center gap-3 z-30 rounded-2xl select-none">
+                  <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                  <span className="text-xs font-bold text-slate-300">图纸高精转换与色卡量化中...</span>
+                </div>
+              )}
+
               <div 
                 className="relative transition-transform duration-75 origin-center"
                 style={{
