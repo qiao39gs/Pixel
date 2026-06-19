@@ -82,8 +82,11 @@ export default function PatternWorkspace({
   const [brushBead, setBrushBead] = useState<BeadPaletteItem | null>(null);
   const [selectedCell, setSelectedCell] = useState<{x:number, y:number} | null>(null);
   const [isEraser, setIsEraser] = useState(false);
+  const [wandMode, setWandMode] = useState(false);
+  const [wandSelection, setWandSelection] = useState<Set<string>>(new Set());
   const editDragRef = useRef(false);
   const editFilledRef = useRef(new Set<string>());
+  const undoStackRef = useRef<{ pixels: TransformedPixel[]; stats: IngredientStat[] }[]>([]);
 
   // Converted pixels & stats state to resolve asynchronous image loading issue
   const [transformedPixels, setTransformedPixels] = useState<TransformedPixel[]>([]);
@@ -105,6 +108,18 @@ export default function PatternWorkspace({
         lab: rgbToLab(rgb)
       };
     });
+  }, []);
+
+  // Ctrl+Z / Cmd+Z undo
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+        e.preventDefault();
+        undo();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
   }, []);
 
   // Transform core downsampling & matching logic (Asynchronous Image onload pipeline)
@@ -543,10 +558,22 @@ export default function PatternWorkspace({
       ctx.setLineDash([]);
     }
 
+    // Highlight wand selection
+    if (editMode && wandMode && wandSelection.size > 0) {
+      ctx.strokeStyle = '#06B6D4';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([3, 2]);
+      wandSelection.forEach(key => {
+        const [sx, sy] = key.split(',').map(Number);
+        ctx.strokeRect(sx * scale + 1.5, sy * scale + 1.5, scale - 3, scale - 3);
+      });
+      ctx.setLineDash([]);
+    }
+
     // Restore offset transform after completion
     ctx.restore();
 
-  }, [transformedPixels, scale, showNumbers, showRulers, selectedBeadHighlight, gridWidth, gridHeight, editMode, selectedCell]);
+  }, [transformedPixels, scale, showNumbers, showRulers, selectedBeadHighlight, gridWidth, gridHeight, editMode, selectedCell, wandMode, wandSelection]);
 
   // Handle Board Drag Navigation (Mouse Events)
   const mouseToGrid = (e: React.MouseEvent): {x:number, y:number} | null => {
@@ -566,9 +593,18 @@ export default function PatternWorkspace({
 
   const EMPTY_BEAD: BeadPaletteItem = { code: "EMPTY", name: "透明背景", hex: "rgba(0,0,0,0)", brand: "MGB", series: "" };
 
+  const pushUndo = () => {
+    undoStackRef.current.push({
+      pixels: [...transformedPixels],
+      stats: [...stats],
+    });
+    if (undoStackRef.current.length > 50) undoStackRef.current.shift();
+  };
+
   const applyBrush = (x: number, y: number) => {
     const targetBead = isEraser ? EMPTY_BEAD : brushBead;
     if (!targetBead) return;
+    pushUndo();
     setTransformedPixels(prev => {
       const next = [...prev];
       next[y * gridWidth + x] = { x, y, matchedBead: targetBead };
@@ -605,6 +641,111 @@ export default function PatternWorkspace({
     setSelectedCell({ x, y });
   };
 
+  // One-click denoise: removes isolated pixels (no same-color neighbor in
+  // 8-neighborhood), replacing them with the most frequent neighbor color.
+  const denoise = () => {
+    pushUndo();
+    const current = transformedPixels;
+    const next = [...current];
+    let changed = 0;
+
+    for (let y = 0; y < gridHeight; y++) {
+      for (let x = 0; x < gridWidth; x++) {
+        const idx = y * gridWidth + x;
+        const pixel = current[idx];
+        if (pixel.matchedBead.code === 'EMPTY') continue;
+
+        const code = pixel.matchedBead.code;
+        let hasSameColorNeighbor = false;
+        const neighborCounts = new Map<string, number>();
+
+        for (let dy = -1; dy <= 1; dy++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            if (dx === 0 && dy === 0) continue;
+            const nx = x + dx, ny = y + dy;
+            if (nx < 0 || nx >= gridWidth || ny < 0 || ny >= gridHeight) continue;
+            const nbr = current[ny * gridWidth + nx];
+            if (nbr.matchedBead.code === 'EMPTY') continue;
+            if (nbr.matchedBead.code === code) { hasSameColorNeighbor = true; }
+            neighborCounts.set(nbr.matchedBead.code, (neighborCounts.get(nbr.matchedBead.code) || 0) + 1);
+          }
+        }
+
+        if (hasSameColorNeighbor) continue;
+
+        // Isolated — pick most frequent neighbor color
+        let bestCode = '';
+        let bestCount = 0;
+        neighborCounts.forEach((count, c) => {
+          if (count > bestCount) { bestCount = count; bestCode = c; }
+        });
+
+        if (bestCode && bestCount > 0) {
+          const bestBead = currentPalette.find(b => b.code === bestCode);
+          if (bestBead) {
+            next[idx] = { x, y, matchedBead: bestBead };
+            changed++;
+          }
+        }
+      }
+    }
+
+    if (changed > 0) {
+      setTransformedPixels(next);
+      // Recalculate stats
+      const statsObj = new Map<string, { bead: BeadPaletteItem; count: number }>();
+      next.forEach(p => {
+        if (p.matchedBead.code === 'EMPTY') return;
+        const c = p.matchedBead.code;
+        const e = statsObj.get(c);
+        if (e) e.count++;
+        else statsObj.set(c, { bead: p.matchedBead, count: 1 });
+      });
+      setStats(Array.from(statsObj.values()).sort((a, b) => b.count - a.count));
+    }
+
+    return changed;
+  };
+
+  const undo = () => {
+    const prev = undoStackRef.current.pop();
+    if (!prev) return;
+    setTransformedPixels(prev.pixels);
+    setStats(prev.stats);
+    setWandSelection(new Set());
+    setSelectedCell(null);
+  };
+
+  // Flood fill: select all connected cells of the same color (or EMPTY)
+  const floodFill = (startX: number, startY: number): Set<string> => {
+    const startPixel = transformedPixels[startY * gridWidth + startX];
+    if (!startPixel) return new Set();
+    const targetCode = startPixel.matchedBead.code;
+    const visited = new Set<string>();
+    const queue: [number, number][] = [[startX, startY]];
+    visited.add(`${startX},${startY}`);
+
+    while (queue.length > 0) {
+      const [cx, cy] = queue.shift()!;
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          if (dx === 0 && dy === 0) continue;
+          const nx = cx + dx, ny = cy + dy;
+          if (nx < 0 || nx >= gridWidth || ny < 0 || ny >= gridHeight) continue;
+          const key = `${nx},${ny}`;
+          if (visited.has(key)) continue;
+          const pixel = transformedPixels[ny * gridWidth + nx];
+          if (pixel && pixel.matchedBead.code === targetCode) {
+            visited.add(key);
+            queue.push([nx, ny]);
+          }
+        }
+      }
+    }
+    return visited;
+  };
+
+
   const handleCanvasMouseDown = (e: React.MouseEvent) => {
     if (editMode) {
       if (e.button === 2) {
@@ -620,6 +761,41 @@ export default function PatternWorkspace({
         return;
       }
       if (e.button === 0) {
+        if (wandMode) {
+          const cell = mouseToGrid(e);
+          if (cell) {
+            if (brushBead || isEraser) {
+              // With brush/eraser: flood fill and apply immediately
+              const selection = floodFill(cell.x, cell.y);
+              setWandSelection(selection);
+              pushUndo();
+              const targetBead = isEraser ? EMPTY_BEAD : brushBead!;
+              const next = [...transformedPixels];
+              selection.forEach(key => {
+                const [sx, sy] = key.split(',').map(Number);
+                next[sy * gridWidth + sx] = { x: sx, y: sy, matchedBead: targetBead };
+              });
+              setTransformedPixels(next);
+              // Recalc stats
+              const statsObj = new Map<string, { bead: BeadPaletteItem; count: number }>();
+              next.forEach(p => {
+                if (p.matchedBead.code === 'EMPTY') return;
+                const c = p.matchedBead.code;
+                const ex = statsObj.get(c);
+                if (ex) ex.count++;
+                else statsObj.set(c, { bead: p.matchedBead, count: 1 });
+              });
+              setStats(Array.from(statsObj.values()).sort((a, b) => b.count - a.count));
+              setWandSelection(new Set());
+              setSelectedCell(cell);
+            } else {
+              const selection = floodFill(cell.x, cell.y);
+              setWandSelection(selection);
+              setSelectedCell(cell);
+            }
+          }
+          return;
+        }
         if (brushBead || isEraser) {
           editDragRef.current = true;
           editFilledRef.current.clear();
@@ -962,13 +1138,20 @@ export default function PatternWorkspace({
               {/* Edit mode toolbar */}
               <div className="flex items-center gap-2 flex-wrap">
                 <button
-                  onClick={() => { setEditMode(!editMode); setBrushBead(null); setSelectedCell(null); setIsEraser(false); }}
+                  onClick={() => { setEditMode(!editMode); setBrushBead(null); setSelectedCell(null); setIsEraser(false); setWandMode(false); setWandSelection(new Set()); }}
                   className={`px-2.5 py-1.5 text-[11px] font-bold rounded-lg border transition-all cursor-pointer ${
                     editMode ? 'bg-amber-500 text-white border-amber-500' : 'bg-white/[0.05] text-slate-300 border-white/[0.08] hover:bg-white/[0.1]'
                   }`}
                 >
                   {editMode ? ' 编辑中' : ' 手动编辑'}
                 </button>
+                {editMode && (
+                  <button
+                    onClick={undo}
+                    className="px-2 py-1 text-[11px] font-bold rounded-lg border transition-all cursor-pointer bg-white/[0.05] text-slate-300 border-white/[0.08] hover:bg-white/[0.1]"
+                    title="撤销 (Ctrl+Z)"
+                  > 撤销</button>
+                )}
                 {editMode && (
                   <>
                     <button
@@ -977,6 +1160,22 @@ export default function PatternWorkspace({
                         isEraser ? 'bg-red-500 text-white border-red-500' : 'bg-white/[0.05] text-slate-300 border-white/[0.08] hover:bg-white/[0.1]'
                       }`}
                     > 橡皮擦</button>
+                    <button
+                      onClick={() => {
+                        const n = denoise();
+                        // brief visual feedback handled by re-render
+                      }}
+                      className="px-2 py-1 text-[11px] font-bold rounded-lg border transition-all cursor-pointer bg-white/[0.05] text-slate-300 border-white/[0.08] hover:bg-emerald-500/20 hover:text-emerald-400 hover:border-emerald-500/30"
+                    > 去杂色</button>
+                    <button
+                      onClick={() => { setWandMode(!wandMode); setWandSelection(new Set()); setIsEraser(false); }}
+                      className={`px-2 py-1 text-[11px] font-bold rounded-lg border transition-all cursor-pointer ${
+                        wandMode ? 'bg-cyan-500 text-white border-cyan-500' : 'bg-white/[0.05] text-slate-300 border-white/[0.08] hover:bg-cyan-500/20 hover:text-cyan-400 hover:border-cyan-500/30'
+                      }`}
+                    > 魔棒</button>
+                    {wandMode && wandSelection.size > 0 && (
+                      <span className="text-[10px] text-cyan-400 font-mono">已选{wandSelection.size}格</span>
+                    )}
                     <label className="px-2 py-1 bg-white/[0.05] border border-white/[0.08] rounded-lg cursor-pointer hover:bg-white/[0.1] transition-all flex items-center gap-1.5">
                       <span className="text-[10px] text-slate-400">自定义色</span>
                       <input type="color" className="w-4 h-4 rounded border-0 p-0 cursor-pointer bg-transparent"
@@ -1006,7 +1205,8 @@ export default function PatternWorkspace({
                 )}
                 {editMode && (
                   <span className="text-[10px] text-slate-500 hidden sm:inline">
-                    {isEraser ? '擦除格子' : brushBead ? '左键/拖拽填充' : '右键取色 · 左键选格子'}
+                    {wandMode ? (brushBead || isEraser ? '点击格子直接替换同色区域' : '点击格子选中相同颜色区域') :
+                     isEraser ? '擦除格子' : brushBead ? '左键/拖拽填充' : '右键取色 · 左键选格子'}
                   </span>
                 )}
               </div>
