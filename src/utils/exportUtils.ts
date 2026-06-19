@@ -13,15 +13,17 @@ export function generateHighResPng(
   options: { showRulers: boolean; showNumbers: boolean } = { showRulers: true, showNumbers: true }
 ): string {
   const { showRulers, showNumbers } = options;
-  // We render a premium grid block size of 40px for maximum clarity on download
   const scale = 40;
-  const padding = 120; // spacious padding on top for metadata, and right/bottom for indices
-  
-  // Rulers & indexes offset
+  const padding = 120;
   const rulerOffset = 40;
   
-  const totalWidth = gridWidth * scale + padding * 2;
-  const totalHeight = gridHeight * scale + padding * 2 + 100; // Extra room for a footer
+  // Stats table dimensions
+  const statsHeaderH = 60;
+  const statsRowH = 56;
+  const statsAreaH = stats.length > 0 ? statsHeaderH + stats.length * statsRowH + 80 : 0;
+  
+  const totalWidth = Math.max(gridWidth * scale + padding * 2, padding * 2 + 860 + 280);
+  const totalHeight = gridHeight * scale + padding * 2 + statsAreaH + 80;
 
   const canvas = document.createElement('canvas');
   canvas.width = totalWidth;
@@ -187,15 +189,67 @@ export function generateHighResPng(
 
   ctx.restore();
 
-  // Footer branding tag annotation
-  ctx.fillStyle = '#94A3B8';
-  ctx.font = 'italic 14px "Helvetica Neue", Arial, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText(
-    '此设计由「像素拼豆图纸生成器·V1.0」纯前端安全沙盒离线引擎一键构建。完美对齐主流麦洛高温标。',
-    totalWidth / 2,
-    totalHeight - 50
-  );
+  // 7. Draw material stats table below the grid
+  if (stats.length > 0) {
+    const tableY = padding + gridHeight * scale + 120;
+    const colX = [padding, padding + 120, padding + 320, padding + 620, padding + 860];
+    
+    // Table header
+    ctx.fillStyle = '#0F172A';
+    ctx.font = 'bold 24px "Helvetica Neue", Arial, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('Material Checklist / 耗材清单', padding, tableY);
+    
+    ctx.fillStyle = '#94A3B8';
+    ctx.font = 'bold 20px "Helvetica Neue", Arial, sans-serif';
+    ctx.fillText('Code', colX[1], tableY + statsHeaderH);
+    ctx.fillText('Name', colX[2], tableY + statsHeaderH);
+    ctx.fillText('Count / 用量', colX[3], tableY + statsHeaderH);
+    ctx.fillText('~Packs (1K/bag)', colX[4], tableY + statsHeaderH);
+    
+    // Separator line
+    ctx.strokeStyle = '#E2E8F0';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(padding, tableY + statsHeaderH + 36);
+    ctx.lineTo(padding + colX[4] + 240, tableY + statsHeaderH + 36);
+    ctx.stroke();
+    
+    stats.forEach((item, i) => {
+      const y = tableY + statsHeaderH + 56 + i * statsRowH;
+      
+      // Color swatch
+      ctx.fillStyle = item.bead.hex;
+      ctx.fillRect(colX[1] - 60, y - 16, 44, 44);
+      ctx.strokeStyle = '#CBD5E1';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(colX[1] - 60, y - 16, 44, 44);
+      
+      // Code
+      ctx.fillStyle = '#0F172A';
+      ctx.font = 'bold 22px monospace';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(item.bead.code, colX[1], y);
+      
+      // Name (Chinese via system font)
+      ctx.fillStyle = '#475569';
+      ctx.font = '22px "PingFang SC", "Microsoft YaHei", "Helvetica Neue", sans-serif';
+      ctx.fillText(item.bead.name, colX[2], y);
+      
+      // Count
+      ctx.fillStyle = '#0F172A';
+      ctx.font = 'bold 22px monospace';
+      ctx.fillText(`${item.count}`, colX[3], y);
+      
+      // Packs
+      ctx.fillStyle = '#64748B';
+      ctx.font = '22px "Helvetica Neue", Arial, sans-serif';
+      const packs = (item.count / 1000).toFixed(1);
+      ctx.fillText(`~${packs}`, colX[4], y);
+    });
+  }
 
   return canvas.toDataURL('image/png');
 }
@@ -271,7 +325,7 @@ export function generateMultiPagePdf(
   pdf.setTextColor('#475569');
   pdf.text('Sample', 20, 120);
   pdf.text('Code', 42, 120);
-  pdf.text('Color Name', 65, 120);
+  pdf.text('Code', 65, 120);
   pdf.text('Bead Count / Usage', 115, 120);
   pdf.text('Approx Bags (1000/bag)', 155, 120);
 
@@ -288,7 +342,7 @@ export function generateMultiPagePdf(
       pdf.setTextColor('#475569');
       pdf.text('Sample', 20, 20);
       pdf.text('Code', 42, 20);
-      pdf.text('Color Name', 65, 20);
+      pdf.text('Code', 65, 20);
       pdf.text('Bead Count / Usage', 115, 20);
       pdf.text('Approx Bags (1000/bag)', 155, 20);
       
@@ -309,7 +363,8 @@ export function generateMultiPagePdf(
     
     pdf.setFont('helvetica', 'normal');
     pdf.setTextColor('#475569');
-    pdf.text(item.bead.name, 65, yOffset + 4);
+    // Use bead code as label (helvetica has no Chinese glyphs)
+    pdf.text(item.bead.code, 65, yOffset + 4);
     
     pdf.setFont('helvetica', 'bold');
     pdf.setTextColor('#0F172A');
@@ -327,7 +382,7 @@ export function generateMultiPagePdf(
   pdf.setFont('helvetica', 'italic');
   pdf.setFontSize(8);
   pdf.setTextColor('#94A3B8');
-  pdf.text('Pixel Bead generator by Google AI Studio Build. Free, client-side, offline sandboxed.', pageWidth / 2, pageHeight - 12, { align: 'center' });
+  pdf.text('Pixel Bead Pattern Generator — Client-side, offline, sandboxed.', pageWidth / 2, pageHeight - 12, { align: 'center' });
 
 
   // --- SEGMENTED DETAIL CHUNKS DRAWING ENGINE ---

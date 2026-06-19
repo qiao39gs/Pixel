@@ -12,7 +12,7 @@ import { Sparkles, Grid3X3, Github, ShieldAlert, BadgeCheck, Flame, Layers } fro
 
 export default function App() {
   const [croppedImage, setCroppedImage] = useState<string | null>(null);
-  const [aspectRatio, setAspectRatio] = useState<'1:1' | '4:3'>('1:1');
+  const [aspectRatio, setAspectRatio] = useState<'1:1' | '4:3' | 'auto'>('auto');
 
   // Completed Crop phase
   const handleImageCropped = useCallback((imageDataUrl: string) => {
@@ -77,14 +77,6 @@ export default function App() {
               <p className="text-[10px] text-gray-400 mt-0.5 font-semibold font-mono tracking-wider">
                 PIXEL BEAD PATTERN GENERATOR
               </p>
-            </div>
-          </div>
-
-          {/* Secure details client side badge */}
-          <div className="hidden sm:flex items-center gap-4">
-            <div className="flex items-center gap-1.5 px-3 py-1 bg-white border border-black/[0.04] rounded-full text-[10px] text-gray-600 font-semibold shadow-xs">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span>100% 浏览器本地计算 · 绝不泄露隐私</span>
             </div>
           </div>
         </div>
@@ -158,7 +150,7 @@ export default function App() {
                   A4 分页拼图打印 (PDF)
                 </h4>
                 <p className="text-xs text-slate-500 leading-relaxed">
-                  首创标准的 29x29 网格专属分割算法。如果是多拼板组合成的宏伟图作，可自动为您分页并绘制完整的网格切板标注，打印即可 1:1 置物拼缀，堪称终极手作助手。
+                  首创标准网格专属分割算法。如果是多拼板组合成的宏伟图作，可自动为您分页并绘制完整的网格切板标注，打印即可 1:1 置物拼缀，堪称终极手作助手。
                 </p>
               </div>
             </div>
@@ -183,18 +175,6 @@ export default function App() {
       </main>
 
       {/* Page bottom footer */}
-      <footer className="bg-white/50 border-t border-black/[0.03] py-8 px-4 mt-12 text-center text-xs text-slate-400 font-medium">
-        <div className="max-w-7xl mx-auto flex flex-col items-center justify-between gap-4 sm:flex-row">
-          <p>© 2026 像素拼豆网格工艺图纸生成器 - Bento Edition. 保留所有权利。</p>
-          <div className="flex items-center gap-1">
-            <span>Powered by</span>
-            <span className="text-indigo-600 font-bold tracking-tight">Google AI Studio</span>
-            <span>&</span>
-            <span className="text-slate-800 font-semibold font-mono bg-black/[0.04] px-1.5 py-0.2 rounded text-[10px]">Vercel Client Edge</span>
-          </div>
-        </div>
-      </footer>
-
     </div>
   );
 }

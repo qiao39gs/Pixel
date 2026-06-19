@@ -1,10 +1,20 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Upload, Image as ImageIcon, RotateCw, ZoomIn, ZoomOut, Move } from 'lucide-react';
 
+type AspectRatio = '1:1' | '4:3' | '3:4' | '16:9' | '9:16' | 'auto';
+
+const PRESET_RATIOS: Record<string, number> = {
+  '1:1': 1,
+  '4:3': 3 / 4,
+  '3:4': 4 / 3,
+  '16:9': 9 / 16,
+  '9:16': 16 / 9,
+};
+
 interface ImageUploaderProps {
   onImageCropped: (imageDataUrl: string) => void;
-  aspectRatio: '1:1' | '4:3';
-  setAspectRatio: (ratio: '1:1' | '4:3') => void;
+  aspectRatio: AspectRatio;
+  setAspectRatio: (ratio: AspectRatio) => void;
 }
 
 export default function ImageUploader({ onImageCropped, aspectRatio, setAspectRatio }: ImageUploaderProps) {
@@ -87,6 +97,8 @@ export default function ImageUploader({ onImageCropped, aspectRatio, setAspectRa
     img.onload = () => {
       imageRef.current = img;
       setImgLoaded(true);
+      // 默认使用原图片比例
+      setAspectRatio('auto');
     };
   }, [imageSrc]);
 
@@ -105,17 +117,22 @@ export default function ImageUploader({ onImageCropped, aspectRatio, setAspectRa
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // We want the canvas viewport to be consistently sized (e.g., 400x400)
+    // Canvas viewport sized to aspect ratio
     const viewWidth = 400;
-    const targetRatio = aspectRatio === '1:1' ? 1 : 3/4;
-    const viewHeight = 400 * targetRatio;
+    let viewHeight: number;
+    if (aspectRatio === 'auto') {
+      const imgRatio = img.width / img.height;
+      viewHeight = Math.round(viewWidth / imgRatio);
+    } else {
+      viewHeight = Math.round(viewWidth * (PRESET_RATIOS[aspectRatio] ?? 1));
+    }
 
     canvas.width = viewWidth;
     canvas.height = viewHeight;
 
-    // Clear background
-    ctx.fillStyle = '#0f172a'; // modern elegant dark slate backend
-    ctx.fillRect(0, 0, viewWidth, viewHeight);
+    // Clear background (transparent — let container show through for display,
+    // and preserve alpha for downstream transparency detection)
+    ctx.clearRect(0, 0, viewWidth, viewHeight);
 
     ctx.save();
     // Center of canvas
@@ -124,11 +141,16 @@ export default function ImageUploader({ onImageCropped, aspectRatio, setAspectRa
     ctx.scale(zoom, zoom);
 
     // Calculate aspect match
+    // auto mode: snap draw dims to viewport exactly to avoid sub-pixel gaps
+    // that create transparent margins and break symmetry
     const imgRatio = img.width / img.height;
     let drawWidth = viewWidth;
     let drawHeight = viewWidth / imgRatio;
 
-    if (imgRatio > 1) {
+    if (aspectRatio === 'auto') {
+      drawWidth = viewWidth;
+      drawHeight = viewHeight;
+    } else if (imgRatio > 1) {
       drawHeight = viewHeight;
       drawWidth = viewHeight * imgRatio;
     }
@@ -157,11 +179,6 @@ export default function ImageUploader({ onImageCropped, aspectRatio, setAspectRa
 
     // Reset line dash
     ctx.setLineDash([]);
-
-    // Highlight the crop container outer boundaries with primary color
-    ctx.strokeStyle = '#6366f1'; // Premium indigo-500
-    ctx.lineWidth = 2;
-    ctx.strokeRect(1, 1, viewWidth - 2, viewHeight - 2);
   };
 
   // Auto layout fit calculators (one-click absolute comfort)
@@ -170,14 +187,21 @@ export default function ImageUploader({ onImageCropped, aspectRatio, setAspectRa
     if (!img) return;
     
     const viewWidth = 400;
-    const targetRatio = aspectRatio === '1:1' ? 1 : 3/4;
-    const viewHeight = 400 * targetRatio;
+    const viewHeight = (() => {
+      if (aspectRatio === 'auto') {
+        return Math.round(viewWidth / (img.width / img.height));
+      }
+      return Math.round(viewWidth * (PRESET_RATIOS[aspectRatio] ?? 1));
+    })();
 
     const imgRatio = img.width / img.height;
     let drawWidth = viewWidth;
     let drawHeight = viewWidth / imgRatio;
 
-    if (imgRatio > 1) {
+    if (aspectRatio === 'auto') {
+      drawWidth = viewWidth;
+      drawHeight = viewHeight;
+    } else if (imgRatio > 1) {
       drawHeight = viewHeight;
       drawWidth = viewHeight * imgRatio;
     }
@@ -194,14 +218,21 @@ export default function ImageUploader({ onImageCropped, aspectRatio, setAspectRa
     if (!img) return;
 
     const viewWidth = 400;
-    const targetRatio = aspectRatio === '1:1' ? 1 : 3/4;
-    const viewHeight = 400 * targetRatio;
+    const viewHeight = (() => {
+      if (aspectRatio === 'auto') {
+        return Math.round(viewWidth / (img.width / img.height));
+      }
+      return Math.round(viewWidth * (PRESET_RATIOS[aspectRatio] ?? 1));
+    })();
 
     const imgRatio = img.width / img.height;
     let drawWidth = viewWidth;
     let drawHeight = viewWidth / imgRatio;
 
-    if (imgRatio > 1) {
+    if (aspectRatio === 'auto') {
+      drawWidth = viewWidth;
+      drawHeight = viewHeight;
+    } else if (imgRatio > 1) {
       drawHeight = viewHeight;
       drawWidth = viewHeight * imgRatio;
     }
@@ -475,29 +506,31 @@ export default function ImageUploader({ onImageCropped, aspectRatio, setAspectRa
                 </h4>
                 
                 {/* Ratio selector */}
-                <div className="grid grid-cols-2 gap-2 mb-6">
-                  <button
-                    type="button"
-                    onClick={() => setAspectRatio('1:1')}
+                <div className="grid grid-cols-3 gap-2 mb-6">
+                  <button type="button" onClick={() => setAspectRatio('1:1')}
                     className={`py-2 px-3 text-xs font-bold rounded-xl border text-center transition-all cursor-pointer ${
-                      aspectRatio === '1:1'
-                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-500/10'
-                        : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                    }`}
-                  >
-                    1:1 正方形
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAspectRatio('4:3')}
+                      aspectRatio === '1:1' ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-500/10' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                    }`}>1:1</button>
+                  <button type="button" onClick={() => setAspectRatio('4:3')}
                     className={`py-2 px-3 text-xs font-bold rounded-xl border text-center transition-all cursor-pointer ${
-                      aspectRatio === '4:3'
-                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-500/10'
-                        : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                    }`}
-                  >
-                    4:3 长方形
-                  </button>
+                      aspectRatio === '4:3' ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-500/10' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                    }`}>4:3</button>
+                  <button type="button" onClick={() => setAspectRatio('3:4')}
+                    className={`py-2 px-3 text-xs font-bold rounded-xl border text-center transition-all cursor-pointer ${
+                      aspectRatio === '3:4' ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-500/10' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                    }`}>3:4</button>
+                  <button type="button" onClick={() => setAspectRatio('16:9')}
+                    className={`py-2 px-3 text-xs font-bold rounded-xl border text-center transition-all cursor-pointer ${
+                      aspectRatio === '16:9' ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-500/10' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                    }`}>16:9</button>
+                  <button type="button" onClick={() => setAspectRatio('9:16')}
+                    className={`py-2 px-3 text-xs font-bold rounded-xl border text-center transition-all cursor-pointer ${
+                      aspectRatio === '9:16' ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-500/10' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                    }`}>9:16</button>
+                  <button type="button" onClick={() => setAspectRatio('auto')}
+                    className={`py-2 px-3 text-xs font-bold rounded-xl border text-center transition-all cursor-pointer ${
+                      aspectRatio === 'auto' ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-500/10' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                    }`}>原图</button>
                 </div>
  
                 {/* Zoom regulation */}

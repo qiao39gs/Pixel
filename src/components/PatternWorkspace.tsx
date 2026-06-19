@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { BeadPaletteItem, TransformedPixel, IngredientStat } from '../types';
-import { BEAD_PALETTE } from '../data/palette';
+import { BEAD_PALETTE, COLOR_GROUPS } from '../data/palette';
 import { hexToRgb, rgbToLab, deltaE76, deltaE2000, deltaE94, deltaEWeightedRGB, LAB } from '../colorUtils';
 import { 
   ZoomIn, ZoomOut, Check, Sliders, Hash, Grid3X3, Layers, 
-  Trash2, Eye, EyeOff, LayoutGrid, Award, Info
+  Trash2, Eye, EyeOff, LayoutGrid, Award
 } from 'lucide-react';
 
 interface PatternWorkspaceProps {
   croppedImageDataUrl: string;
   onReset: () => void;
-  aspectRatio: '1:1' | '4:3';
+  aspectRatio: '1:1' | '4:3' | '3:4' | '16:9' | '9:16' | 'auto';
   onGeneratePng: (pixels: TransformedPixel[], width: number, height: number, stats: IngredientStat[], options?: { showRulers: boolean; showNumbers: boolean }) => void;
   onGeneratePdf: (pixels: TransformedPixel[], width: number, height: number, stats: IngredientStat[], options?: { showRulers: boolean; showNumbers: boolean }) => void;
 }
@@ -23,38 +23,49 @@ export default function PatternWorkspace({
   onGeneratePdf
 }: PatternWorkspaceProps) {
   // 1. Grid Size States
-  const [panelPreset, setPanelPreset] = useState<'29x29' | '58x58' | '87x87' | 'custom'>('29x29');
-  const [customWidth, setCustomWidth] = useState<number>(29);
-  const [customHeight, setCustomHeight] = useState<number>(29);
+  const [panelPreset, setPanelPreset] = useState<'52x52' | '78x78' | '104x104' | 'custom'>('52x52');
+  const [customWidth, setCustomWidth] = useState<number>(52);
+  const [customHeight, setCustomHeight] = useState<number>(52);
+  const [imageAspectRatio, setImageAspectRatio] = useState<number>(1);
 
   // Derive final grid dimensions
   const { gridWidth, gridHeight } = useMemo(() => {
-    let w = 29;
-    let h = 29;
+    const PRESET_RATIOS: Record<string, number> = {
+      '1:1': 1,
+      '4:3': 3 / 4,
+      '3:4': 4 / 3,
+      '16:9': 9 / 16,
+      '9:16': 16 / 9,
+    };
+
+    let w = 52;
+    let h = 52;
     
-    if (panelPreset === '29x29') {
-      w = 29;
-      h = aspectRatio === '1:1' ? 29 : 22; // 4:3 ratio close approximation
-    } else if (panelPreset === '58x58') {
-      w = 58;
-      h = aspectRatio === '1:1' ? 58 : 44;
-    } else if (panelPreset === '87x87') {
-      w = 87;
-      h = aspectRatio === '1:1' ? 87 : 65;
+    const computeH = (w: number) => {
+      if (aspectRatio === 'auto') {
+        return Math.max(1, Math.round(w / imageAspectRatio));
+      }
+      return Math.round(w * (PRESET_RATIOS[aspectRatio] ?? 1));
+    };
+
+    if (panelPreset === '52x52') {
+      w = 52;
+      h = computeH(52);
+    } else if (panelPreset === '78x78') {
+      w = 78;
+      h = computeH(78);
+    } else if (panelPreset === '104x104') {
+      w = 104;
+      h = computeH(104);
     } else {
       w = Math.min(150, Math.max(5, customWidth));
-      if (aspectRatio === '1:1') {
-        h = w;
-      } else {
-        h = Math.round(w * (3/4));
-      }
+      h = computeH(w);
     }
     return { gridWidth: w, gridHeight: h };
-  }, [panelPreset, customWidth, customHeight, aspectRatio]);
+  }, [panelPreset, customWidth, customHeight, aspectRatio, imageAspectRatio]);
 
   // 2. Algorithm States
   const [colorLimit, setColorLimit] = useState<number>(24);
-  const [brandFilter, setBrandFilter] = useState<'MGB' | 'Universal' | 'Both'>('MGB');
   const [distanceAlgorithm, setDistanceAlgorithm] = useState<'CIEDE2000' | 'CIE94' | 'CIE76' | 'WeightedRGB'>('CIEDE2000');
   const [whiteThreshold, setWhiteThreshold] = useState<number>(10); // Alpha threshold
   const [removeBackground, setRemoveBackground] = useState<boolean>(true); // Ignore light close-to-white or transparent backgrounds
@@ -77,15 +88,9 @@ export default function PatternWorkspace({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  // Filter available pallet list based on brand preference
+  // Filter palette to MGB only
   const currentPalette = useMemo(() => {
-    let filtered = BEAD_PALETTE;
-    if (brandFilter === 'MGB') {
-      filtered = BEAD_PALETTE.filter(item => item.brand === 'MGB');
-    } else if (brandFilter === 'Universal') {
-      filtered = BEAD_PALETTE.filter(item => item.brand === 'Universal');
-    }
-    // Pre-calculate Lab and RGB for performance
+    const filtered = BEAD_PALETTE.filter(item => item.brand === 'MGB');
     return filtered.map(item => {
       const rgb = hexToRgb(item.hex);
       return {
@@ -94,7 +99,7 @@ export default function PatternWorkspace({
         lab: rgbToLab(rgb)
       };
     });
-  }, [brandFilter]);
+  }, []);
 
   // Transform core downsampling & matching logic (Asynchronous Image onload pipeline)
   useEffect(() => {
@@ -113,52 +118,67 @@ export default function PatternWorkspace({
     img.onload = () => {
       if (!active) return;
 
-      // Create single offscreen canvas for nearest-neighbor downsampling
-      const tempCanvas = document.createElement('canvas');
-      tempCanvas.width = gridWidth;
-      tempCanvas.height = gridHeight;
-      const tempCtx = tempCanvas.getContext('2d');
-      if (!tempCtx) {
-        setIsProcessing(false);
-        return;
+      // Compute ratio & grid locally to avoid stale closure
+      const imgRatio = img.width / img.height;
+      const sw = img.width;
+      const sh = img.height;
+      setImageAspectRatio(imgRatio);
+
+      let gw: number, gh: number;
+      if (panelPreset === '52x52') {
+        gw = 52;
+      } else if (panelPreset === '78x78') {
+        gw = 78;
+      } else if (panelPreset === '104x104') {
+        gw = 104;
+      } else {
+        gw = Math.min(150, Math.max(5, customWidth));
       }
+      const ratio = (() => {
+        if (aspectRatio === 'auto') return 1 / imgRatio;
+        const m: Record<string, number> = { '1:1': 1, '4:3': 3/4, '3:4': 4/3, '16:9': 9/16, '9:16': 16/9 };
+        return m[aspectRatio] ?? 1;
+      })();
+      gh = Math.max(1, Math.round(gw * ratio));
 
-      tempCtx.imageSmoothingEnabled = false;
-      tempCtx.drawImage(img, 0, 0, gridWidth, gridHeight);
-      
-      const imgData = tempCtx.getImageData(0, 0, gridWidth, gridHeight);
-      const data = imgData.data;
+      // Draw source image at native resolution for precise sampling
+      const srcCanvas = document.createElement('canvas');
+      srcCanvas.width = sw;
+      srcCanvas.height = sh;
+      const srcCtx = srcCanvas.getContext('2d');
+      if (!srcCtx) { setIsProcessing(false); return; }
+      srcCtx.drawImage(img, 0, 0);
+      const srcData = srcCtx.getImageData(0, 0, sw, sh).data;
 
-      // Step 1: Initial pixel match to full selected palette
+      // Step 1: Nearest-neighbor downsampling & match to palette
+      // Using single-pixel sampling preserves color fidelity better than
+      // area averaging, which creates intermediate blended colors that
+      // increase the number of unique bead matches (noise).
       const initialMatched: TransformedPixel[] = [];
       const colorUsageCount: Record<string, number> = {};
 
-      for (let y = 0; y < gridHeight; y++) {
-        for (let x = 0; x < gridWidth; x++) {
-          const offset = (y * gridWidth + x) * 4;
-          const r = data[offset];
-          const g = data[offset + 1];
-          const b = data[offset + 2];
-          const a = data[offset + 3];
+      for (let y = 0; y < gh; y++) {
+        const sy = gh > 1 ? Math.round(y * (sh - 1) / (gh - 1)) : 0;
+        for (let x = 0; x < gw; x++) {
+          const sx = gw > 1 ? Math.round(x * (sw - 1) / (gw - 1)) : 0;
+          const offset = (sy * sw + sx) * 4;
+          const r = srcData[offset];
+          const g = srcData[offset + 1];
+          const b = srcData[offset + 2];
+          const a = srcData[offset + 3];
 
           // Is Transparent or White background to ignore
           const isTransparent = a < 80;
-          const isSubWhite = removeBackground && (r > 245 && g > 245 && b > 245); // Almost pure white background
+          const isSubWhite = removeBackground && (r > 245 && g > 245 && b > 245);
 
           if (isTransparent || isSubWhite) {
-            // Represent empty pixel background
-            initialMatched.push({
-              x,
-              y,
-              matchedBead: { code: "EMPTY", name: "透明背景", hex: "rgba(0,0,0,0)", brand: "MGB" }
-            });
+            initialMatched.push({ x, y, matchedBead: { code: "EMPTY", name: "透明背景", hex: "rgba(0,0,0,0)", brand: "MGB", series: "" } });
             continue;
           }
 
           // Convert RGB level to LAB Space
           const pixelLab = rgbToLab({ r, g, b });
 
-          // Search nearest bead in the sub-palette
           let bestMatch = currentPalette[0];
           let minDistance = Infinity;
 
@@ -174,19 +194,10 @@ export default function PatternWorkspace({
             } else {
               dist = deltaEWeightedRGB({ r, g, b }, bead.rgb);
             }
-
-            if (dist < minDistance) {
-              minDistance = dist;
-              bestMatch = bead;
-            }
+            if (dist < minDistance) { minDistance = dist; bestMatch = bead; }
           }
 
-          initialMatched.push({
-            x,
-            y,
-            matchedBead: bestMatch
-          });
-
+          initialMatched.push({ x, y, matchedBead: bestMatch });
           if (bestMatch.code !== "EMPTY") {
             colorUsageCount[bestMatch.code] = (colorUsageCount[bestMatch.code] || 0) + 1;
           }
@@ -230,9 +241,9 @@ export default function PatternWorkspace({
       const finalMatched: TransformedPixel[] = [];
       const finalStatsObj: Record<string, { bead: BeadPaletteItem; count: number }> = {};
 
-      for (let y = 0; y < gridHeight; y++) {
-        for (let x = 0; x < gridWidth; x++) {
-          const initialPixel = initialMatched[y * gridWidth + x];
+      for (let y = 0; y < gh; y++) {
+        for (let x = 0; x < gw; x++) {
+          const initialPixel = initialMatched[y * gw + x];
 
           if (initialPixel.matchedBead.code === "EMPTY") {
             finalMatched.push(initialPixel);
@@ -252,10 +263,12 @@ export default function PatternWorkspace({
           }
 
           // Otherwise: re-match this pixel's raw image color with only the top selection
-          const offset = (y * gridWidth + x) * 4;
-          const r = data[offset];
-          const g = data[offset + 1];
-          const b = data[offset + 2];
+          const sy2 = gh > 1 ? Math.round(y * (sh - 1) / (gh - 1)) : 0;
+          const sx2 = gw > 1 ? Math.round(x * (sw - 1) / (gw - 1)) : 0;
+          const off2 = (sy2 * sw + sx2) * 4;
+          const r = srcData[off2];
+          const g = srcData[off2 + 1];
+          const b = srcData[off2 + 2];
           const pixelLab = rgbToLab({ r, g, b });
 
           let bestMatch = topBeadsPalette[0];
@@ -569,34 +582,34 @@ export default function PatternWorkspace({
               </label>
               <div className="grid grid-cols-2 gap-2">
                 <button
-                  onClick={() => setPanelPreset('29x29')}
+                  onClick={() => setPanelPreset('52x52')}
                   className={`py-2.5 px-3 text-xs font-bold rounded-xl text-center border cursor-pointer transition-all ${
-                    panelPreset === '29x29' 
+                    panelPreset === '52x52' 
                       ? 'bg-indigo-50 text-indigo-600 border-indigo-500 shadow-xs' 
                       : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
                   }`}
                 >
-                  29 × 29 (单面板)
+                  52 × 52 (小)
                 </button>
                 <button
-                  onClick={() => setPanelPreset('58x58')}
+                  onClick={() => setPanelPreset('78x78')}
                   className={`py-2.5 px-3 text-xs font-bold rounded-xl text-center border cursor-pointer transition-all ${
-                    panelPreset === '58x58' 
+                    panelPreset === '78x78' 
                       ? 'bg-indigo-50 text-indigo-600 border-indigo-500 shadow-xs' 
                       : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
                   }`}
                 >
-                  58 × 58 (4拼板)
+                  78 × 78 (中)
                 </button>
                 <button
-                  onClick={() => setPanelPreset('87x87')}
+                  onClick={() => setPanelPreset('104x104')}
                   className={`py-2.5 px-3 text-xs font-bold rounded-xl text-center border cursor-pointer transition-all ${
-                    panelPreset === '87x87' 
+                    panelPreset === '104x104' 
                       ? 'bg-indigo-50 text-indigo-600 border-indigo-500 shadow-xs' 
                       : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
                   }`}
                 >
-                  87 × 87 (9拼板)
+                  104 × 104 (大)
                 </button>
                 <button
                   onClick={() => setPanelPreset('custom')}
@@ -627,50 +640,15 @@ export default function PatternWorkspace({
                   <div className="flex-1 flex flex-col gap-1">
                     <span className="text-[10px] text-slate-400 font-bold uppercase">高度 (锁比例)</span>
                     <div className="w-full p-1.5 border border-slate-100 text-xs text-center font-mono rounded bg-slate-100 text-slate-500 select-none font-semibold">
-                      {aspectRatio === '1:1' ? customWidth : Math.round(customWidth * (3/4))}
+                      {aspectRatio === 'auto'
+                        ? Math.max(1, Math.round(customWidth / imageAspectRatio))
+                        : Math.round(customWidth * ({
+                            '1:1': 1, '4:3': 3/4, '3:4': 4/3, '16:9': 9/16, '9:16': 16/9
+                          }[aspectRatio] ?? 1))}
                     </div>
                   </div>
                 </div>
               )}
-            </div>
-
-            {/* Custom Brand settings */}
-            <div className="flex flex-col gap-2.5">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                麦洛高与通用色卡选择
-              </label>
-              <div className="grid grid-cols-3 gap-1.5">
-                <button
-                  onClick={() => setBrandFilter('MGB')}
-                  className={`py-2 text-[11px] font-bold rounded-xl text-center border cursor-pointer transition-all ${
-                    brandFilter === 'MGB' 
-                      ? 'bg-indigo-50 text-indigo-600 border-indigo-500' 
-                      : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
-                  }`}
-                >
-                  MGB 麦洛高
-                </button>
-                <button
-                  onClick={() => setBrandFilter('Universal')}
-                  className={`py-2 text-[11px] font-bold rounded-xl text-center border cursor-pointer transition-all ${
-                    brandFilter === 'Universal' 
-                      ? 'bg-indigo-50 text-indigo-600 border-indigo-500' 
-                      : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
-                  }`}
-                >
-                  通用拼豆
-                </button>
-                <button
-                  onClick={() => setBrandFilter('Both')}
-                  className={`py-2 text-[11px] font-bold rounded-xl text-center border cursor-pointer transition-all ${
-                    brandFilter === 'Both' 
-                      ? 'bg-indigo-50 text-indigo-600 border-indigo-500' 
-                      : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
-                  }`}
-                >
-                  全部品牌
-                </button>
-              </div>
             </div>
 
             {/* Limit Colors slider */}
@@ -742,11 +720,7 @@ export default function PatternWorkspace({
                   红均加权 (RGB)
                 </button>
               </div>
-              <p className="text-[9px] text-slate-400 mt-1 leading-normal">
-                提示: 精细/感知计算在色块过渡与阴影处理上最符合人眼视觉。红均算法无需任何空间转换，响应效率极速。
-              </p>
             </div>
-
             {/* Background filtration */}
             <div className="flex flex-col gap-3 pt-3 border-t border-slate-100">
               <div className="flex items-center justify-between">
@@ -850,15 +824,6 @@ export default function PatternWorkspace({
             {scale < 16 && showNumbers && (
               <p className="text-[10px] text-amber-600 leading-tight">提示: 网格渲染尺寸较小 (当前 {scale}px)，图纸中可能会无法看清标记，建议调拉高上方网格尺寸。</p>
             )}
-
-            {/* Helper panel */}
-            <div className="flex gap-2.5 p-3.5 bg-indigo-50/50 rounded-2xl border border-indigo-100/35">
-              <Info className="w-4 h-4 text-indigo-500 shrink-0 mt-0.5" />
-              <div className="text-[10px] text-slate-600 leading-relaxed font-medium">
-                <strong className="text-slate-800 focus:outline-none">物理对齐黄金分割刻度：</strong>
-                图纸横纵每隔 5 格轻绘虚线，每 10 格重绘实线，极佳契合传统 29x29 pegboard 物理定位轴线。
-              </div>
-            </div>
           </div>
         </div>
 
@@ -920,7 +885,7 @@ export default function PatternWorkspace({
               </div>
 
               {/* Viewport instruction overlay */}
-              <div className="absolute bottom-3 left-3 flex gap-2 text-[10px] text-slate-450 bg-[#09090B]/80 px-3 py-1 rounded-lg border border-white/[0.05] backdrop-blur-md select-none">
+              <div className="absolute bottom-3 left-3 flex gap-2 text-[10px] text-slate-500 bg-white/70 px-3 py-1 rounded-lg border border-slate-200/50 backdrop-blur-sm select-none shadow-sm">
                 <span>按住鼠标左键可平移拖拽</span>
                 <span>·</span>
                 <span>画布完全支持大尺寸缩放</span>
@@ -952,7 +917,7 @@ export default function PatternWorkspace({
               <div className="flex flex-col">
                 <h3 className="font-display font-bold text-[#1D1D1F] text-sm flex items-center gap-2 leading-none">
                   <Grid3X3 className="w-4 h-4 text-indigo-500" />
-                  拼豆物料采购搭配清单
+                  MARD 标准色卡
                 </h3>
                 <span className="text-[10px] text-slate-400 font-semibold mt-1 font-mono uppercase tracking-wider">
                   材料总用量: <strong className="text-slate-800">{transformedPixels.filter(p => p.matchedBead.code !== "EMPTY").length} 颗</strong>
@@ -963,61 +928,72 @@ export default function PatternWorkspace({
               </div>
             </div>
 
-            {/* Material stats list table as a beautiful bento segment */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {stats.map((statItem, index) => {
-                const isSelected = selectedBeadHighlight === statItem.bead.code;
-                const packs = (statItem.count / 1000).toFixed(1);
+            {/* Grouped by series */}
+            {COLOR_GROUPS.map(group => {
+              const seriesStats = stats.filter(s => s.bead.series === group.series);
+              if (seriesStats.length === 0) return null;
 
-                return (
-                  <div
-                    key={statItem.bead.code}
-                    onClick={() => setSelectedBeadHighlight(isSelected ? null : statItem.bead.code)}
-                    className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer ${
-                      isSelected 
-                        ? 'border-indigo-600 bg-indigo-50/20 shadow-xs' 
-                        : 'border-slate-100 hover:bg-slate-50 bg-white'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3.5">
-                      {/* Colored badge */}
-                      <div 
-                        className="w-11 h-11 rounded-full shadow-inner border border-black/[0.04] flex items-center justify-center font-mono font-bold text-[11px]"
-                        style={{ 
-                          backgroundColor: statItem.bead.hex,
-                          color: (statItem.bead.hex === '#FFFFFF' || statItem.bead.hex === '#F5F5F5' || statItem.bead.hex === '#FFE0B2') ? '#334155' : '#FFFFFF'
-                        }}
-                      >
-                        {statItem.bead.code}
-                      </div>
-
-                      {/* Info details */}
-                      <div className="flex flex-col">
-                        <span className="font-bold text-slate-900 text-xs flex items-center gap-1.5 leading-none">
-                          {statItem.bead.name}
-                          <span className="text-[9px] px-1.5 py-0.2 bg-slate-100 text-slate-500 rounded font-bold uppercase font-mono">
-                            {statItem.bead.brand}
-                          </span>
-                        </span>
-                        <span className="text-[10px] text-slate-400 mt-1 font-mono">
-                          库色号: #{statItem.bead.code}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Numeric counts */}
-                    <div className="text-right">
-                      <div className="font-display font-extrabold text-slate-800 text-xs">
-                        {statItem.count} <span className="text-[10px] font-normal text-slate-400 font-sans">颗</span>
-                      </div>
-                      <div className="text-[9px] text-slate-400 mt-1 font-mono font-semibold">
-                        估约 {packs} 包 (1千袋装)
-                      </div>
-                    </div>
+              return (
+                <div key={group.series} className="mb-5">
+                  <div className="flex items-center justify-between mb-2.5 px-1">
+                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                      {group.name}
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-mono">
+                      {seriesStats.reduce((sum, s) => sum + s.count, 0)} 颗 · {seriesStats.length} 色
+                    </span>
                   </div>
-                );
-              })}
-            </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                    {seriesStats.map((statItem) => {
+                      const isSelected = selectedBeadHighlight === statItem.bead.code;
+                      const packs = (statItem.count / 1000).toFixed(1);
+
+                      return (
+                        <div
+                          key={statItem.bead.code}
+                          onClick={() => setSelectedBeadHighlight(isSelected ? null : statItem.bead.code)}
+                          className={`flex items-center justify-between p-3 rounded-2xl border transition-all cursor-pointer ${
+                            isSelected 
+                              ? 'border-indigo-600 bg-indigo-50/20 shadow-xs' 
+                              : 'border-slate-100 hover:bg-slate-50 bg-white'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div 
+                              className="w-10 h-10 rounded-full shadow-inner border border-black/[0.04] flex items-center justify-center font-mono font-bold text-[10px]"
+                              style={{ 
+                                backgroundColor: statItem.bead.hex,
+                                color: (statItem.bead.hex === '#FFFFFF' || statItem.bead.hex === '#F5F5F5' || statItem.bead.hex === '#FFE0B2') ? '#334155' : '#FFFFFF'
+                              }}
+                            >
+                              {statItem.bead.code}
+                            </div>
+
+                            <div className="flex flex-col">
+                              <span className="font-bold text-slate-900 text-xs leading-none">
+                                {statItem.bead.name}
+                              </span>
+                              <span className="text-[10px] text-slate-400 mt-0.5 font-mono">
+                                #{statItem.bead.code}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="text-right">
+                            <div className="font-display font-extrabold text-slate-800 text-xs">
+                              {statItem.count} <span className="text-[10px] font-normal text-slate-400 font-sans">颗</span>
+                            </div>
+                            <div className="text-[9px] text-slate-400 mt-0.5 font-mono font-semibold">
+                              ~{packs} 包
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
         </div>

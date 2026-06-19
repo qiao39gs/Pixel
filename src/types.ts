@@ -1,8 +1,9 @@
 export interface BeadPaletteItem {
-  code: string;       // 拼豆编号，如 "G3", "H2"
-  name: string;       // 中文名称，如 "浅肤色"
-  hex: string;        // 16进制颜色值，如 "#FAD4B2"
-  brand: 'MGB' | 'Universal'; 
+  code: string;        // 拼豆编号，如 "R01", "B03"
+  name: string;        // 中文名称，如 "大红", "天蓝"
+  hex: string;         // 16进制颜色值，如 "#FAD4B2"
+  brand: 'MGB' | 'Universal';
+  series: string;      // MARD 系列，如 "A系列", "B系列"
 }
 
 export interface TransformedPixel {
