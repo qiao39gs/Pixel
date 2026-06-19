@@ -79,6 +79,14 @@ export default function PatternWorkspace({
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
 
+  // 4. Manual Edit Mode
+  const [editMode, setEditMode] = useState(false);
+  const [brushBead, setBrushBead] = useState<BeadPaletteItem | null>(null);
+  const [selectedCell, setSelectedCell] = useState<{x:number, y:number} | null>(null);
+  const [isEraser, setIsEraser] = useState(false);
+  const editDragRef = useRef(false);
+  const editFilledRef = useRef(new Set<string>());
+
   // Converted pixels & stats state to resolve asynchronous image loading issue
   const [transformedPixels, setTransformedPixels] = useState<TransformedPixel[]>([]);
   const [stats, setStats] = useState<IngredientStat[]>([]);
@@ -528,17 +536,129 @@ export default function PatternWorkspace({
       }
     }
 
+    // Highlight selected cell in edit mode
+    if (editMode && selectedCell) {
+      ctx.strokeStyle = '#FBBF24';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([3, 2]);
+      ctx.strokeRect(selectedCell.x * scale + 1, selectedCell.y * scale + 1, scale - 2, scale - 2);
+      ctx.setLineDash([]);
+    }
+
     // Restore offset transform after completion
     ctx.restore();
 
-  }, [transformedPixels, scale, showNumbers, showRulers, selectedBeadHighlight, gridWidth, gridHeight]);
+  }, [transformedPixels, scale, showNumbers, showRulers, selectedBeadHighlight, gridWidth, gridHeight, editMode, selectedCell]);
 
   // Handle Board Drag Navigation (Mouse Events)
-  const handleStartPan = (e: React.MouseEvent) => {
-    // Only drag with left click or dragging enabled
+  const mouseToGrid = (e: React.MouseEvent): {x:number, y:number} | null => {
+    const canvas = canvasRef.current;
+    if (!canvas) return null;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const rulerSize = showRulers ? 32 : 0;
+    const mx = (e.clientX - rect.left) * scaleX - rulerSize;
+    const my = (e.clientY - rect.top) * scaleY - rulerSize;
+    const gx = Math.floor(mx / scale);
+    const gy = Math.floor(my / scale);
+    if (gx < 0 || gx >= gridWidth || gy < 0 || gy >= gridHeight) return null;
+    return { x: gx, y: gy };
+  };
+
+  const EMPTY_BEAD: BeadPaletteItem = { code: "EMPTY", name: "透明背景", hex: "rgba(0,0,0,0)", brand: "MGB", series: "" };
+
+  const applyBrush = (x: number, y: number) => {
+    const targetBead = isEraser ? EMPTY_BEAD : brushBead;
+    if (!targetBead) return;
+    setTransformedPixels(prev => {
+      const next = [...prev];
+      next[y * gridWidth + x] = { x, y, matchedBead: targetBead };
+      return next;
+    });
+    setStats(prev => {
+      const statsObj = new Map<string, { bead: BeadPaletteItem; count: number }>();
+      transformedPixels.forEach(p => {
+        if (p.matchedBead.code === 'EMPTY') return;
+        const c = p.matchedBead.code;
+        const existing = statsObj.get(c);
+        if (existing) { existing.count++; }
+        else { statsObj.set(c, { bead: p.matchedBead, count: 1 }); }
+      });
+      // Tally the changed pixel
+      const tgtCode = targetBead.code;
+      if (tgtCode !== 'EMPTY') {
+        const entry = statsObj.get(tgtCode);
+        if (entry) { entry.count++; }
+        else { statsObj.set(tgtCode, { bead: targetBead, count: 1 }); }
+      }
+      // Decrement old pixel
+      const oldPixel = transformedPixels[y * gridWidth + x];
+      if (oldPixel && oldPixel.matchedBead.code !== 'EMPTY') {
+        const oldCode = oldPixel.matchedBead.code;
+        const oldEntry = statsObj.get(oldCode);
+        if (oldEntry) {
+          oldEntry.count--;
+          if (oldEntry.count <= 0) statsObj.delete(oldCode);
+        }
+      }
+      return Array.from(statsObj.values()).sort((a, b) => b.count - a.count);
+    });
+    setSelectedCell({ x, y });
+  };
+
+  const handleCanvasMouseDown = (e: React.MouseEvent) => {
+    if (editMode) {
+      if (e.button === 2) {
+        e.preventDefault();
+        const cell = mouseToGrid(e);
+        if (cell) {
+          const pixel = transformedPixels[cell.y * gridWidth + cell.x];
+          if (pixel && pixel.matchedBead.code !== 'EMPTY') {
+            setBrushBead(pixel.matchedBead);
+            setSelectedCell(cell);
+          }
+        }
+        return;
+      }
+      if (e.button === 0) {
+        if (brushBead || isEraser) {
+          editDragRef.current = true;
+          editFilledRef.current.clear();
+          const cell = mouseToGrid(e);
+          if (cell) {
+            applyBrush(cell.x, cell.y);
+          }
+        } else {
+          const cell = mouseToGrid(e);
+          setSelectedCell(cell);
+        }
+        return;
+      }
+    }
+    // Non-edit mode: pan
     if (e.button !== 0) return;
     setIsPanning(true);
     setPanStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
+  };
+
+  const handleCanvasMouseMoveForEdit = (e: React.MouseEvent) => {
+    if (!editDragRef.current || (!brushBead && !isEraser)) return;
+    const cell = mouseToGrid(e);
+    if (!cell) return;
+    const key = `${cell.x},${cell.y}`;
+    if (editFilledRef.current.has(key)) return;
+    editFilledRef.current.add(key);
+    applyBrush(cell.x, cell.y);
+  };
+
+  const handleCanvasMouseUp = (e: React.MouseEvent) => {
+    if (editDragRef.current) {
+      editDragRef.current = false;
+      editFilledRef.current.clear();
+      return;
+    }
+    handleEndPan();
   };
 
   const handlePanMove = (e: React.MouseEvent) => {
@@ -841,6 +961,58 @@ export default function PatternWorkspace({
                 </span>
               </div>
               
+              {/* Edit mode toolbar */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  onClick={() => { setEditMode(!editMode); setBrushBead(null); setSelectedCell(null); setIsEraser(false); }}
+                  className={`px-2.5 py-1.5 text-[11px] font-bold rounded-lg border transition-all cursor-pointer ${
+                    editMode ? 'bg-amber-500 text-white border-amber-500' : 'bg-white/[0.05] text-slate-300 border-white/[0.08] hover:bg-white/[0.1]'
+                  }`}
+                >
+                  {editMode ? ' 编辑中' : ' 手动编辑'}
+                </button>
+                {editMode && (
+                  <>
+                    <button
+                      onClick={() => { setIsEraser(!isEraser); setBrushBead(null); }}
+                      className={`px-2 py-1 text-[11px] font-bold rounded-lg border transition-all cursor-pointer ${
+                        isEraser ? 'bg-red-500 text-white border-red-500' : 'bg-white/[0.05] text-slate-300 border-white/[0.08] hover:bg-white/[0.1]'
+                      }`}
+                    > 橡皮擦</button>
+                    <label className="px-2 py-1 bg-white/[0.05] border border-white/[0.08] rounded-lg cursor-pointer hover:bg-white/[0.1] transition-all flex items-center gap-1.5">
+                      <span className="text-[10px] text-slate-400">自定义色</span>
+                      <input type="color" className="w-4 h-4 rounded border-0 p-0 cursor-pointer bg-transparent"
+                        onChange={(e) => {
+                          const hex = e.target.value;
+                          const rgb = hexToRgb(hex);
+                          const lab = rgbToLab(rgb);
+                          let best = currentPalette[0];
+                          let minD = Infinity;
+                          currentPalette.forEach(b => {
+                            const d = deltaE2000(lab, b.lab);
+                            if (d < minD) { minD = d; best = b; }
+                          });
+                          setBrushBead(best);
+                          setIsEraser(false);
+                        }}
+                      />
+                    </label>
+                  </>
+                )}
+                {editMode && brushBead && (
+                  <div className="flex items-center gap-1.5 px-2 py-1 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                    <div className="w-4 h-4 rounded-full border border-white/20" style={{ backgroundColor: brushBead.hex }} />
+                    <span className="text-[10px] font-bold text-amber-400">{brushBead.code}</span>
+                    <button onClick={() => setBrushBead(null)} className="text-amber-500/70 hover:text-red-400 ml-0.5 text-[11px] leading-none">✕</button>
+                  </div>
+                )}
+                {editMode && (
+                  <span className="text-[10px] text-slate-500 hidden sm:inline">
+                    {isEraser ? '擦除格子' : brushBead ? '左键/拖拽填充' : '右键取色 · 左键选格子'}
+                  </span>
+                )}
+              </div>
+              
               {/* Interactive highlight filter state detail */}
               {selectedBeadHighlight && (
                 <div className="flex items-center gap-1.5 bg-indigo-500/15 border border-indigo-500/30 px-3 py-1 rounded-xl text-indigo-400 text-xs">
@@ -858,12 +1030,13 @@ export default function PatternWorkspace({
             {/* Drag scrollable Viewport container */}
             <div 
               ref={containerRef}
-              className="flex-1 w-full overflow-hidden flex items-center justify-center relative cursor-grab active:cursor-grabbing border-2 border-dashed border-white/[0.06] rounded-2xl bg-[#09090B] p-4 group"
-              style={{ minHeight: '380px' }}
-              onMouseDown={handleStartPan}
-              onMouseMove={handlePanMove}
-              onMouseUp={handleEndPan}
-              onMouseLeave={handleEndPan}
+              className="flex-1 w-full overflow-hidden flex items-center justify-center relative border-2 border-dashed border-white/[0.06] rounded-2xl bg-[#09090B] p-4 group"
+              style={{ minHeight: '380px', cursor: editMode ? 'crosshair' : 'grab' }}
+              onMouseDown={handleCanvasMouseDown}
+              onMouseMove={editMode ? handleCanvasMouseMoveForEdit : handlePanMove}
+              onMouseUp={handleCanvasMouseUp}
+              onMouseLeave={editMode ? handleCanvasMouseUp : handleEndPan}
+              onContextMenu={(e) => e.preventDefault()}
             >
               {isProcessing && (
                 <div className="absolute inset-0 bg-[#09090B]/80 backdrop-blur-xs flex flex-col items-center justify-center gap-3 z-30 rounded-2xl select-none">
@@ -884,12 +1057,13 @@ export default function PatternWorkspace({
                 />
               </div>
 
-              {/* Viewport instruction overlay */}
-              <div className="absolute bottom-3 left-3 flex gap-2 text-[10px] text-slate-500 bg-white/70 px-3 py-1 rounded-lg border border-slate-200/50 backdrop-blur-sm select-none shadow-sm">
-                <span>按住鼠标左键可平移拖拽</span>
-                <span>·</span>
-                <span>画布完全支持大尺寸缩放</span>
-              </div>
+            </div>
+
+            {/* Canvas hint — placed below viewport so it doesn't obscure the grid */}
+            <div className="flex justify-center mt-2">
+              <span className="text-[10px] text-slate-500 bg-white/5 px-3 py-1 rounded-lg border border-white/[0.06] select-none">
+                按住鼠标左键可平移拖拽 · 画布完全支持大尺寸缩放
+              </span>
             </div>
 
             {/* Quick Export Panel buttons */}
@@ -924,7 +1098,10 @@ export default function PatternWorkspace({
                 </span>
               </div>
               <div className="text-[10px] text-slate-400 font-semibold md:text-right">
-                点按下方颜色小块，可快速在上方画布中 <span className="text-indigo-600">聚焦高亮显示</span>
+                {editMode
+                  ? '点按色块设为画笔 · 左键画布填充'
+                  : '点按下方颜色小块，可快速在上方画布中 '}
+                {!editMode && <span className="text-indigo-600">聚焦高亮显示</span>}
               </div>
             </div>
 
@@ -951,7 +1128,13 @@ export default function PatternWorkspace({
                       return (
                         <div
                           key={statItem.bead.code}
-                          onClick={() => setSelectedBeadHighlight(isSelected ? null : statItem.bead.code)}
+                          onClick={() => {
+                            if (editMode) {
+                              setBrushBead(statItem.bead);
+                            } else {
+                              setSelectedBeadHighlight(isSelected ? null : statItem.bead.code);
+                            }
+                          }}
                           className={`flex items-center justify-between p-3 rounded-2xl border transition-all cursor-pointer ${
                             isSelected 
                               ? 'border-indigo-600 bg-indigo-50/20 shadow-xs' 
