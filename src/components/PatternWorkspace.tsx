@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { BeadPaletteItem, TransformedPixel, IngredientStat } from '../types';
 import { BEAD_PALETTE, COLOR_GROUPS } from '../data/palette';
-import { hexToRgb, rgbToLab, deltaE76, deltaE2000, deltaE94, deltaEWeightedRGB, LAB } from '../colorUtils';
+import { hexToRgb, rgbToLab, deltaE76, deltaE2000, deltaE94, deltaEWeightedRGB } from '../colorUtils';
 import { 
-  ZoomIn, ZoomOut, Check, Sliders, Hash, Grid3X3, Layers, 
-  Trash2, Eye, EyeOff, LayoutGrid, Award
+  ZoomIn, ZoomOut, Sliders, Hash, Grid3X3, Layers, 
+  Trash2, LayoutGrid, Award
 } from 'lucide-react';
 
 interface PatternWorkspaceProps {
@@ -25,7 +25,6 @@ export default function PatternWorkspace({
   // 1. Grid Size States
   const [panelPreset, setPanelPreset] = useState<'52x52' | '78x78' | '104x104' | 'custom'>('52x52');
   const [customWidth, setCustomWidth] = useState<number>(52);
-  const [customHeight, setCustomHeight] = useState<number>(52);
   const [imageAspectRatio, setImageAspectRatio] = useState<number>(1);
 
   // Derive final grid dimensions
@@ -62,12 +61,11 @@ export default function PatternWorkspace({
       h = computeH(w);
     }
     return { gridWidth: w, gridHeight: h };
-  }, [panelPreset, customWidth, customHeight, aspectRatio, imageAspectRatio]);
+  }, [panelPreset, customWidth, aspectRatio, imageAspectRatio]);
 
   // 2. Algorithm States
   const [colorLimit, setColorLimit] = useState<number>(24);
   const [distanceAlgorithm, setDistanceAlgorithm] = useState<'CIEDE2000' | 'CIE94' | 'CIE76' | 'WeightedRGB'>('CIEDE2000');
-  const [whiteThreshold, setWhiteThreshold] = useState<number>(10); // Alpha threshold
   const [removeBackground, setRemoveBackground] = useState<boolean>(true); // Ignore light close-to-white or transparent backgrounds
 
   // 3. UI Display States

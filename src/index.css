@@ -9,6 +9,13 @@
   --color-brand-primary: #1D1D1F;
   --color-brand-accent: #4F46E5;
   --color-brand-secondary: #EF4444;
+
+  --animate-fade-in: fade-in 0.4s ease-out;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 /* Custom backgrounds & grid decoration for the Bento look */

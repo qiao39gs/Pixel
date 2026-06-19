@@ -8,7 +8,7 @@ import ImageUploader from './components/ImageUploader';
 import PatternWorkspace from './components/PatternWorkspace';
 import { generateHighResPng, generateMultiPagePdf } from './utils/exportUtils';
 import { TransformedPixel, IngredientStat } from './types';
-import { Sparkles, Grid3X3, Github, ShieldAlert, BadgeCheck, Flame, Layers } from 'lucide-react';
+import { Sparkles, Grid3X3, Flame, Layers } from 'lucide-react';
 
 export default function App() {
   const [croppedImage, setCroppedImage] = useState<string | null>(null);

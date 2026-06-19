@@ -1,6 +1,0 @@
-{
-  "name": "像素拼豆图纸生成器",
-  "description": "纯前端一键将图片转换为拼豆像素网格图纸，支持MGB通用色卡、高精网格、色号标识显示与采购用量统计，可导出高清图及PDF。",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}
