@@ -84,6 +84,7 @@ export default function PatternWorkspace({
   const [isEraser, setIsEraser] = useState(false);
   const [wandMode, setWandMode] = useState(false);
   const [wandSelection, setWandSelection] = useState<Set<string>>(new Set());
+  const [showPalettePanel, setShowPalettePanel] = useState(false);
   const editDragRef = useRef(false);
   const editFilledRef = useRef(new Set<string>());
   const undoStackRef = useRef<{ pixels: TransformedPixel[]; stats: IngredientStat[] }[]>([]);
@@ -1176,24 +1177,12 @@ export default function PatternWorkspace({
                     {wandMode && wandSelection.size > 0 && (
                       <span className="text-[10px] text-cyan-400 font-mono">已选{wandSelection.size}格</span>
                     )}
-                    <label className="px-2 py-1 bg-white/[0.05] border border-white/[0.08] rounded-lg cursor-pointer hover:bg-white/[0.1] transition-all flex items-center gap-1.5">
-                      <span className="text-[10px] text-slate-400">自定义色</span>
-                      <input type="color" className="w-4 h-4 rounded border-0 p-0 cursor-pointer bg-transparent"
-                        onChange={(e) => {
-                          const hex = e.target.value;
-                          const rgb = hexToRgb(hex);
-                          const lab = rgbToLab(rgb);
-                          let best = currentPalette[0];
-                          let minD = Infinity;
-                          currentPalette.forEach(b => {
-                            const d = deltaE2000(lab, b.lab);
-                            if (d < minD) { minD = d; best = b; }
-                          });
-                          setBrushBead(best);
-                          setIsEraser(false);
-                        }}
-                      />
-                    </label>
+                    <button
+                      onClick={() => setShowPalettePanel(!showPalettePanel)}
+                      className={`px-2 py-1 text-[11px] font-bold rounded-lg border transition-all cursor-pointer ${
+                        showPalettePanel ? 'bg-violet-500 text-white border-violet-500' : 'bg-white/[0.05] text-slate-300 border-white/[0.08] hover:bg-violet-500/20 hover:text-violet-400 hover:border-violet-500/30'
+                      }`}
+                    > 色板</button>
                   </>
                 )}
                 {editMode && brushBead && (
@@ -1224,6 +1213,37 @@ export default function PatternWorkspace({
                 </div>
               )}
             </div>
+
+            {/* MARD palette popover */}
+            {editMode && showPalettePanel && (
+              <div className="mb-3 p-3 bg-[#0F0F13] border border-white/[0.06] rounded-2xl max-h-[320px] overflow-y-auto">
+                {COLOR_GROUPS.map(group => {
+                  const groupBeads = currentPalette.filter(b => b.series === group.series);
+                  if (groupBeads.length === 0) return null;
+                  return (
+                    <div key={group.series} className="mb-3 last:mb-0">
+                      <div className="text-[10px] font-bold text-slate-500 mb-1.5">{group.name}</div>
+                      <div className="flex flex-wrap gap-1">
+                        {groupBeads.map(b => (
+                          <button
+                            key={b.code}
+                            onClick={() => { setBrushBead(b); setIsEraser(false); }}
+                            className="w-7 h-7 rounded-md border border-white/[0.06] hover:scale-125 hover:z-10 transition-all cursor-pointer relative group/bead"
+                            style={{ backgroundColor: b.hex }}
+                            title={b.code + ' ' + b.name}
+                          >
+                            <span className="absolute inset-0 flex items-center justify-center text-[7px] font-bold opacity-0 group-hover/bead:opacity-100"
+                              style={{ color: (hexToRgb(b.hex).r * 0.299 + hexToRgb(b.hex).g * 0.587 + hexToRgb(b.hex).b * 0.114) > 140 ? '#000' : '#fff' }}>
+                              {b.code}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
             {/* Drag scrollable Viewport container */}
             <div 
