@@ -57,7 +57,7 @@ export default function StatsPanel({ stats, editMode, setBrushBead, selectedBead
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="font-display font-extrabold text-slate-800 text-xs">{statItem.count} <span className="text-[10px] font-normal text-slate-400 font-sans">颗</span></div>
+                      <div className="font-sans font-bold text-slate-800 text-xs tabular-nums">{statItem.count} <span className="text-[10px] font-normal text-slate-400">颗</span></div>
                       <div className="text-[9px] text-slate-400 mt-0.5 font-mono font-semibold">~{(statItem.count / 1000).toFixed(1)} 包</div>
                     </div>
                   </div>
