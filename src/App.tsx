@@ -74,7 +74,7 @@ export default function App() {
                   Bento Pro v1.0
                 </span>
               </div>
-              <p className="text-[10px] text-gray-400 mt-0.5 font-semibold font-mono tracking-wider">
+              <p className="hidden sm:block text-[10px] text-gray-400 mt-0.5 font-semibold font-mono tracking-wider">
                 PIXEL BEAD PATTERN GENERATOR
               </p>
             </div>
@@ -93,7 +93,7 @@ export default function App() {
               <span>智能色彩量化 · 国家标准 CIEDE2000 色差体系</span>
             </div>
             <h2 className="text-2xl md:text-4xl font-display font-black text-gray-950 tracking-tight leading-tight">
-              把喜欢的动漫图片，一键打磨成<br />
+              把喜欢的动漫图片，一键打磨成
               <span className="bg-gradient-to-r from-indigo-600 via-rose-500 to-amber-500 bg-clip-text text-transparent">完美拼豆网格图纸</span>
             </h2>
             <p className="text-xs md:text-sm text-slate-500 leading-relaxed max-w-xl">

@@ -87,6 +87,9 @@ export default function PatternWorkspace({
   const [showPalettePanel, setShowPalettePanel] = useState(false);
   const editDragRef = useRef(false);
   const editFilledRef = useRef(new Set<string>());
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressPickedRef = useRef(false);
+  const touchStartCoordsRef = useRef<{x:number,y:number}|null>(null);
   const undoStackRef = useRef<{ pixels: TransformedPixel[]; stats: IngredientStat[] }[]>([]);
 
   // Converted pixels & stats state to resolve asynchronous image loading issue
@@ -577,20 +580,22 @@ export default function PatternWorkspace({
   }, [transformedPixels, scale, showNumbers, showRulers, selectedBeadHighlight, gridWidth, gridHeight, editMode, selectedCell, wandMode, wandSelection]);
 
   // Handle Board Drag Navigation (Mouse Events)
-  const mouseToGrid = (e: React.MouseEvent): {x:number, y:number} | null => {
+  const coordToGrid = (clientX: number, clientY: number): {x:number, y:number} | null => {
     const canvas = canvasRef.current;
     if (!canvas) return null;
     const rect = canvas.getBoundingClientRect();
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
     const rulerSize = showRulers ? 32 : 0;
-    const mx = (e.clientX - rect.left) * scaleX - rulerSize;
-    const my = (e.clientY - rect.top) * scaleY - rulerSize;
+    const mx = (clientX - rect.left) * scaleX - rulerSize;
+    const my = (clientY - rect.top) * scaleY - rulerSize;
     const gx = Math.floor(mx / scale);
     const gy = Math.floor(my / scale);
     if (gx < 0 || gx >= gridWidth || gy < 0 || gy >= gridHeight) return null;
     return { x: gx, y: gy };
   };
+
+  const mouseToGrid = (e: React.MouseEvent) => coordToGrid(e.clientX, e.clientY);
 
   const EMPTY_BEAD: BeadPaletteItem = { code: "EMPTY", name: "透明背景", hex: "rgba(0,0,0,0)", brand: "MGB", series: "" };
 
@@ -1124,7 +1129,7 @@ export default function PatternWorkspace({
 
         {/* Workspace Canvas (Right) */}
         <div className="w-full lg:col-span-8 flex flex-col gap-6">
-          <div className="bg-slate-950 border border-[#1D1D21] rounded-3xl p-6 shadow-2xl flex flex-col relative overflow-hidden min-h-[500px] transition-all">
+          <div className="bg-slate-950 border border-[#1D1D21] rounded-3xl p-6 shadow-2xl flex flex-col relative overflow-hidden min-h-[300px] md:min-h-[500px] transition-all">
             {/* Header controls for Board */}
             <div className="flex flex-wrap justify-between items-center gap-2 mb-4 pb-3 border-b border-white/[0.04] z-10">
               <div className="flex items-center gap-2 text-white">
@@ -1198,6 +1203,11 @@ export default function PatternWorkspace({
                      isEraser ? '擦除格子' : brushBead ? '左键/拖拽填充' : '右键取色 · 左键选格子'}
                   </span>
                 )}
+                {editMode && (
+                  <span className="text-[10px] text-slate-500 sm:hidden">
+                    {brushBead ? '点击/拖拽填充' : isEraser ? '点击擦除' : '长按格子取色'}
+                  </span>
+                )}
               </div>
               
               {/* Interactive highlight filter state detail */}
@@ -1246,14 +1256,125 @@ export default function PatternWorkspace({
             )}
 
             {/* Drag scrollable Viewport container */}
-            <div 
+            <div
               ref={containerRef}
-              className="flex-1 w-full overflow-hidden flex items-center justify-center relative border-2 border-dashed border-white/[0.06] rounded-2xl bg-[#09090B] p-4 group"
-              style={{ minHeight: '380px', cursor: editMode ? 'crosshair' : 'grab' }}
+              className="flex-1 w-full overflow-hidden flex items-center justify-center relative border-2 border-dashed border-white/[0.06] rounded-2xl bg-[#09090B] p-4 group min-h-[240px] md:min-h-[380px]"
+              style={{ cursor: editMode ? 'crosshair' : 'grab', touchAction: 'none' }}
               onMouseDown={handleCanvasMouseDown}
               onMouseMove={editMode ? handleCanvasMouseMoveForEdit : handlePanMove}
               onMouseUp={handleCanvasMouseUp}
               onMouseLeave={editMode ? handleCanvasMouseUp : handleEndPan}
+              onTouchStart={(e) => {
+                e.preventDefault();
+                if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+                const t = e.touches[0];
+                const cx = t.clientX, cy = t.clientY;
+                if (!editMode) {
+                  setPanStart({ x: cx - panOffset.x, y: cy - panOffset.y });
+                  setIsPanning(true);
+                  return;
+                }
+                longPressPickedRef.current = false;
+                longPressTimerRef.current = setTimeout(() => {
+                  longPressTimerRef.current = null;
+                  const cell = coordToGrid(cx, cy);
+                  if (cell) {
+                    const pixel = transformedPixels[cell.y * gridWidth + cell.x];
+                    if (pixel && pixel.matchedBead.code !== 'EMPTY') {
+                      setBrushBead(pixel.matchedBead);
+                      setIsEraser(false);
+                      longPressPickedRef.current = true;
+                      editDragRef.current = false;
+                    }
+                  }
+                }, 500);
+                if (wandMode) {
+                  const cell = coordToGrid(cx, cy);
+                  if (cell) {
+                    if (brushBead || isEraser) {
+                      // defer fill to touchEnd (short tap = fill, long press = pick color)
+                      touchStartCoordsRef.current = { x: cx, y: cy };
+                    } else {
+                      setWandSelection(floodFill(cell.x, cell.y));
+                    }
+                    setSelectedCell(cell);
+                  }
+                  return;
+                }
+                if (brushBead || isEraser) {
+                  editFilledRef.current.clear();
+                  touchStartCoordsRef.current = { x: cx, y: cy };
+                  // don't draw yet — tap draws on touchEnd, drag draws on touchMove
+                } else {
+                  setSelectedCell(coordToGrid(cx, cy));
+                }
+              }}
+              onTouchMove={(e) => {
+                if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null; }
+                const t = e.touches[0];
+                if (!editMode) {
+                  if (!isPanning) return;
+                  setPanOffset({ x: t.clientX - panStart.x, y: t.clientY - panStart.y });
+                  return;
+                }
+                if (wandMode || (!brushBead && !isEraser) || longPressPickedRef.current) return;
+                if (!editDragRef.current) {
+                  editDragRef.current = true;
+                  if (touchStartCoordsRef.current) {
+                    const startCell = coordToGrid(touchStartCoordsRef.current.x, touchStartCoordsRef.current.y);
+                    if (startCell) {
+                      const key = `${startCell.x},${startCell.y}`;
+                      if (!editFilledRef.current.has(key)) { editFilledRef.current.add(key); applyBrush(startCell.x, startCell.y); }
+                    }
+                  }
+                }
+                const cell = coordToGrid(t.clientX, t.clientY);
+                if (!cell) return;
+                const key = `${cell.x},${cell.y}`;
+                if (editFilledRef.current.has(key)) return;
+                editFilledRef.current.add(key);
+                applyBrush(cell.x, cell.y);
+              }}
+              onTouchEnd={() => {
+                if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null; }
+                if (editMode) {
+                  if ((brushBead || isEraser) && !longPressPickedRef.current && !editDragRef.current && touchStartCoordsRef.current) {
+                    const cell = coordToGrid(touchStartCoordsRef.current.x, touchStartCoordsRef.current.y);
+                    if (cell) {
+                      if (wandMode) {
+                        const selection = floodFill(cell.x, cell.y);
+                        pushUndo();
+                        const targetBead = isEraser ? EMPTY_BEAD : brushBead!;
+                        const next = [...transformedPixels];
+                        selection.forEach(key => {
+                          const [sx, sy] = key.split(',').map(Number);
+                          next[sy * gridWidth + sx] = { x: sx, y: sy, matchedBead: targetBead };
+                        });
+                        setTransformedPixels(next);
+                        const statsObj = new Map<string, { bead: BeadPaletteItem; count: number }>();
+                        next.forEach(p => {
+                          if (p.matchedBead.code === 'EMPTY') return;
+                          const c = p.matchedBead.code;
+                          const ex = statsObj.get(c);
+                          if (ex) ex.count++;
+                          else statsObj.set(c, { bead: p.matchedBead, count: 1 });
+                        });
+                        setStats(Array.from(statsObj.values()).sort((a, b) => b.count - a.count));
+                        setWandSelection(new Set());
+                        setSelectedCell(cell);
+                      } else {
+                        applyBrush(cell.x, cell.y);
+                      }
+                    }
+                  }
+                  editDragRef.current = false;
+                  editFilledRef.current.clear();
+                  touchStartCoordsRef.current = null;
+                  longPressPickedRef.current = false;
+                } else {
+                  setIsPanning(false);
+                }
+              }}
               onContextMenu={(e) => e.preventDefault()}
             >
               {isProcessing && (
