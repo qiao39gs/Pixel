@@ -95,7 +95,7 @@ export default function ControlPanel({ panelPreset, setPanelPreset, customWidth,
             <span className="font-bold text-slate-700">限制色号数量 (色彩量化)</span>
             <span className="font-mono px-2 py-0.5 bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-md font-bold text-xs">{colorLimit} 色以内</span>
           </div>
-          <input type="range" min="2" max="64" value={colorLimit} onChange={e => setColorLimit(parseInt(e.target.value))}
+          <input type="range" min="2" max="24" value={colorLimit} onChange={e => setColorLimit(parseInt(e.target.value))}
             className="w-full h-1.5 accent-indigo-600 bg-slate-200 rounded-lg cursor-pointer animate-all" />
           <span className="text-[10px] text-slate-400 leading-normal">限制图纸最终出现的最多拼豆颜色，数量少可大幅降低图纸制作与购买复杂度。</span>
         </div>

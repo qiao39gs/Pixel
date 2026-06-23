@@ -86,9 +86,6 @@ export default function App() {
               图片变<br />
               <span className="text-[#E8570A]">拼豆图纸</span>
             </h2>
-            <p className="text-sm text-zinc-500 font-normal">
-              CIEDE2000 精准色差 · 支持 PNG / PDF 导出
-            </p>
           </div>
         )}
 
@@ -119,7 +116,7 @@ export default function App() {
       {!croppedImage && (
         <footer className="border-t border-black/[0.06] px-4 py-5">
           <div className="max-w-6xl mx-auto flex items-center justify-between text-[11px] text-zinc-400 font-mono">
-            <span>© 2025 像素拼豆图纸生成器</span>
+            <span>© 2026 像素拼豆图纸生成器</span>
             <span>Perler Bead Pattern Generator</span>
           </div>
         </footer>

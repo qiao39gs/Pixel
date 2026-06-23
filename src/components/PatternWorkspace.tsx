@@ -31,7 +31,7 @@ export default function PatternWorkspace({ croppedImageDataUrl, onReset, aspectR
     return { gridWidth: w, gridHeight: h(w) };
   }, [panelPreset, customWidth, aspectRatio, localAspectRatio]);
 
-  const [colorLimit, setColorLimit] = useState(24);
+  const [colorLimit, setColorLimit] = useState(12);
   const [distanceAlgorithm, setDistanceAlgorithm] = useState<'CIEDE2000' | 'CIE94' | 'CIE76' | 'WeightedRGB'>('CIEDE2000');
   const [removeBackground, setRemoveBackground] = useState(true);
   const [scale, setScale] = useState(14);
