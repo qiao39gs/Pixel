@@ -15,6 +15,12 @@ interface Props {
   setDistanceAlgorithm: (v: 'CIEDE2000' | 'CIE94' | 'CIE76' | 'WeightedRGB') => void;
   removeBackground: boolean;
   setRemoveBackground: (v: boolean) => void;
+  brightness: number;
+  setBrightness: (v: number) => void;
+  contrast: number;
+  setContrast: (v: number) => void;
+  saturation: number;
+  setSaturation: (v: number) => void;
   scale: number;
   setScale: (fn: (prev: number) => number) => void;
   setScaleDirect: (v: number) => void;
@@ -25,7 +31,7 @@ interface Props {
   onReset: () => void;
 }
 
-export default function ControlPanel({ panelPreset, setPanelPreset, customWidth, setCustomWidth, imageAspectRatio, aspectRatio, colorLimit, setColorLimit, distanceAlgorithm, setDistanceAlgorithm, removeBackground, setRemoveBackground, scale, setScale, setScaleDirect, showNumbers, setShowNumbers, showRulers, setShowRulers, onReset }: Props) {
+export default function ControlPanel({ panelPreset, setPanelPreset, customWidth, setCustomWidth, imageAspectRatio, aspectRatio, colorLimit, setColorLimit, distanceAlgorithm, setDistanceAlgorithm, removeBackground, setRemoveBackground, brightness, setBrightness, contrast, setContrast, saturation, setSaturation, scale, setScale, setScaleDirect, showNumbers, setShowNumbers, showRulers, setShowRulers, onReset }: Props) {
   const presetBtn = (val: typeof panelPreset, label: string) => (
     <button
       onClick={() => setPanelPreset(val)}
@@ -110,6 +116,27 @@ export default function ControlPanel({ panelPreset, setPanelPreset, customWidth,
             {algoBtn('CIE94', 'CIE94 (感知)', '图形艺术及纺织工业标准')}
             {algoBtn('CIE76', 'CIE76 (常规)', '经典的 CIE L*a*b* 空间常规三维欧氏距离')}
             {algoBtn('WeightedRGB', '红均加权 (RGB)', '针对人眼对不同颜色波长敏感度不一致的动态加权算法')}
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-2.5 pt-3 border-t border-slate-100">
+          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">图像调节</span>
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center gap-2.5">
+              <span className="text-[10px] font-mono font-bold text-slate-500 w-11 text-right">亮度</span>
+              <input type="range" min="0" max="200" value={brightness} onChange={e => setBrightness(parseInt(e.target.value))} className="flex-1 h-1 accent-[#E8570A] bg-slate-200 rounded-lg cursor-pointer" />
+              <span className="text-[10px] font-mono font-bold text-slate-500 w-9">{brightness}</span>
+            </div>
+            <div className="flex items-center gap-2.5">
+              <span className="text-[10px] font-mono font-bold text-slate-500 w-11 text-right">对比度</span>
+              <input type="range" min="0" max="200" value={contrast} onChange={e => setContrast(parseInt(e.target.value))} className="flex-1 h-1 accent-[#E8570A] bg-slate-200 rounded-lg cursor-pointer" />
+              <span className="text-[10px] font-mono font-bold text-slate-500 w-9">{contrast}</span>
+            </div>
+            <div className="flex items-center gap-2.5">
+              <span className="text-[10px] font-mono font-bold text-slate-500 w-11 text-right">饱和度</span>
+              <input type="range" min="0" max="200" value={saturation} onChange={e => setSaturation(parseInt(e.target.value))} className="flex-1 h-1 accent-[#E8570A] bg-slate-200 rounded-lg cursor-pointer" />
+              <span className="text-[10px] font-mono font-bold text-slate-500 w-9">{saturation}</span>
+            </div>
           </div>
         </div>
 

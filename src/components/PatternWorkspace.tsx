@@ -32,6 +32,9 @@ export default function PatternWorkspace({ croppedImageDataUrl, onReset, aspectR
   }, [panelPreset, customWidth, aspectRatio, localAspectRatio]);
 
   const [colorLimit, setColorLimit] = useState(12);
+  const [brightness, setBrightness] = useState(100);
+  const [contrast, setContrast] = useState(100);
+  const [saturation, setSaturation] = useState(100);
   const [distanceAlgorithm, setDistanceAlgorithm] = useState<'CIEDE2000' | 'CIE94' | 'CIE76' | 'WeightedRGB'>('CIEDE2000');
   const [removeBackground, setRemoveBackground] = useState(true);
   const [scale, setScale] = useState(14);
@@ -57,7 +60,7 @@ export default function PatternWorkspace({ croppedImageDataUrl, onReset, aspectR
   []);
 
   const { transformedPixels, stats, isProcessing, imageAspectRatio, setTransformedPixels, setStats } =
-    useImageProcessing({ croppedImageDataUrl, panelPreset, customWidth, aspectRatio, removeBackground, colorLimit, distanceAlgorithm, currentPalette, gridWidth, gridHeight });
+    useImageProcessing({ croppedImageDataUrl, panelPreset, customWidth, aspectRatio, removeBackground, colorLimit, distanceAlgorithm, currentPalette, gridWidth, gridHeight, brightness, contrast, saturation });
 
   useEffect(() => { setLocalAspectRatio(imageAspectRatio); }, [imageAspectRatio]);
 
@@ -141,6 +144,9 @@ export default function PatternWorkspace({ croppedImageDataUrl, onReset, aspectR
             colorLimit={colorLimit} setColorLimit={setColorLimit}
             distanceAlgorithm={distanceAlgorithm} setDistanceAlgorithm={setDistanceAlgorithm}
             removeBackground={removeBackground} setRemoveBackground={setRemoveBackground}
+            brightness={brightness} setBrightness={setBrightness}
+            contrast={contrast} setContrast={setContrast}
+            saturation={saturation} setSaturation={setSaturation}
             scale={scale} setScale={setScale} setScaleDirect={setScale}
             showNumbers={showNumbers} setShowNumbers={setShowNumbers}
             showRulers={showRulers} setShowRulers={setShowRulers}

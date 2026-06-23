@@ -17,9 +17,12 @@ interface Params {
   currentPalette: PaletteItemWithCache[];
   gridWidth: number;
   gridHeight: number;
+  brightness: number;
+  contrast: number;
+  saturation: number;
 }
 
-export function useImageProcessing({ croppedImageDataUrl, panelPreset, customWidth, aspectRatio, removeBackground, colorLimit, distanceAlgorithm, currentPalette, gridWidth, gridHeight }: Params) {
+export function useImageProcessing({ croppedImageDataUrl, panelPreset, customWidth, aspectRatio, removeBackground, colorLimit, distanceAlgorithm, currentPalette, gridWidth, gridHeight, brightness, contrast, saturation }: Params) {
   const [transformedPixels, setTransformedPixels] = useState<TransformedPixel[]>([]);
   const [stats, setStats] = useState<IngredientStat[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -61,6 +64,15 @@ export function useImageProcessing({ croppedImageDataUrl, panelPreset, customWid
       srcCtx.drawImage(img, 0, 0);
       const srcData = srcCtx.getImageData(0, 0, sw, sh).data;
 
+      const bri = brightness / 100, con = contrast / 100, sat = saturation / 100;
+      const adjust = (r: number, g: number, b: number): [number, number, number] => {
+        let nr = r, ng = g, nb = b;
+        if (bri !== 1) { nr = Math.min(255, Math.max(0, nr * bri)); ng = Math.min(255, Math.max(0, ng * bri)); nb = Math.min(255, Math.max(0, nb * bri)); }
+        if (con !== 1) { nr = Math.min(255, Math.max(0, ((nr/255 - 0.5) * con + 0.5) * 255)); ng = Math.min(255, Math.max(0, ((ng/255 - 0.5) * con + 0.5) * 255)); nb = Math.min(255, Math.max(0, ((nb/255 - 0.5) * con + 0.5) * 255)); }
+        if (sat !== 1) { const lum = 0.299*nr + 0.587*ng + 0.114*nb; nr = Math.min(255, Math.max(0, lum + sat*(nr-lum))); ng = Math.min(255, Math.max(0, lum + sat*(ng-lum))); nb = Math.min(255, Math.max(0, lum + sat*(nb-lum)));}
+        return [nr, ng, nb];
+      };
+
       const matchBest = (r: number, g: number, b: number, palette: PaletteItemWithCache[]): BeadPaletteItem => {
         const pixelLab = rgbToLab({ r, g, b });
         let best = palette[0], minDist = Infinity;
@@ -89,7 +101,8 @@ export function useImageProcessing({ croppedImageDataUrl, panelPreset, customWid
             initialMatched.push({ x, y, matchedBead: EMPTY });
             continue;
           }
-          const best = matchBest(r, g, b, currentPalette);
+          const [ar, ag, ab] = adjust(r, g, b);
+          const best = matchBest(ar, ag, ab, currentPalette);
           initialMatched.push({ x, y, matchedBead: best });
           if (best.code !== 'EMPTY') colorUsageCount[best.code] = (colorUsageCount[best.code] || 0) + 1;
         }
@@ -114,7 +127,8 @@ export function useImageProcessing({ croppedImageDataUrl, panelPreset, customWid
           const sx2 = gw > 1 ? Math.round(x * (sw - 1) / (gw - 1)) : 0;
           const off2 = (sy2 * sw + sx2) * 4;
           const r = srcData[off2], g2 = srcData[off2+1], b2 = srcData[off2+2];
-          finalMatched.push({ x, y, matchedBead: matchBest(r, g2, b2, topPalette) });
+          const [ar2, ag2, ab2] = adjust(r, g2, b2);
+          finalMatched.push({ x, y, matchedBead: matchBest(ar2, ag2, ab2, topPalette) });
         }
       }
 
@@ -122,7 +136,7 @@ export function useImageProcessing({ croppedImageDataUrl, panelPreset, customWid
     };
     img.onerror = () => { if (active) setIsProcessing(false); };
     return () => { active = false; };
-  }, [croppedImageDataUrl, gridWidth, gridHeight, colorLimit, currentPalette, distanceAlgorithm, removeBackground]);
+  }, [croppedImageDataUrl, gridWidth, gridHeight, colorLimit, currentPalette, distanceAlgorithm, removeBackground, brightness, contrast, saturation]);
 
   return { transformedPixels, stats, isProcessing, imageAspectRatio, setTransformedPixels, setStats };
 }
