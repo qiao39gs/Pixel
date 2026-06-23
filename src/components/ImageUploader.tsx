@@ -35,10 +35,6 @@ export default function ImageUploader({ onImageCropped, aspectRatio, setAspectRa
 
   // Handle uploaded file
   const handleFile = (file: File) => {
-    if (file.size > 10 * 1024 * 1024) {
-      alert('请上传小于 10MB 的图片');
-      return;
-    }
     if (!file.type.startsWith('image/')) {
       alert('仅支持上传图片类型文件（PNG/JPEG）');
       return;
@@ -418,7 +414,7 @@ export default function ImageUploader({ onImageCropped, aspectRatio, setAspectRa
             点击上传 或拖拽图片文件到这里
           </h3>
           <p className="text-xs text-slate-500 max-w-sm mb-5 leading-relaxed">
-            支持 10MB 以内的 JPEG/PNG 动图或日常照片。算法将自动对齐拼豆色卡体系，并生成颗粒用量预估。
+            支持 JPEG/PNG 动图或日常照片。算法将自动对齐拼豆色卡体系，并生成颗粒用量预估。
           </p>
           <span className="text-[10px] px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-full font-bold border border-indigo-100/50">
             100% 浏览器本地处理 · 绝对安全保护隐私
