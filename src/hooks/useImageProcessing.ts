@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
-import { TransformedPixel, IngredientStat } from '../types';
-import { BeadPaletteItem } from '../types';
+import { useEffect } from 'react';
+import { TransformedPixel, BeadPaletteItem } from '../types';
 import { rgbToLab, deltaE76, deltaE2000, deltaE94, deltaEWeightedRGB } from '../colorUtils';
 import { recalculateStats } from '../utils/statsUtils';
+import { useWorkspaceStore } from '../store/workspaceStore';
 
 type PaletteItemWithCache = BeadPaletteItem & { rgb: { r: number; g: number; b: number }; lab: { l: number; a: number; b: number } };
 
@@ -23,10 +23,10 @@ interface Params {
 }
 
 export function useImageProcessing({ croppedImageDataUrl, panelPreset, customWidth, aspectRatio, removeBackground, colorLimit, distanceAlgorithm, currentPalette, gridWidth, gridHeight, brightness, contrast, saturation }: Params) {
-  const [transformedPixels, setTransformedPixels] = useState<TransformedPixel[]>([]);
-  const [stats, setStats] = useState<IngredientStat[]>([]);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [imageAspectRatio, setImageAspectRatio] = useState(1);
+  const setTransformedPixels = useWorkspaceStore(s => s.setTransformedPixels);
+  const setStats = useWorkspaceStore(s => s.setStats);
+  const setIsProcessing = useWorkspaceStore(s => s.setIsProcessing);
+  const setLocalAspectRatio = useWorkspaceStore(s => s.setLocalAspectRatio);
 
   useEffect(() => {
     if (!croppedImageDataUrl) {
@@ -43,7 +43,7 @@ export function useImageProcessing({ croppedImageDataUrl, panelPreset, customWid
       if (!active) return;
       const imgRatio = img.width / img.height;
       const sw = img.width, sh = img.height;
-      setImageAspectRatio(imgRatio);
+      setLocalAspectRatio(imgRatio);
 
       let gw: number;
       if (panelPreset === '52x52') gw = 52;
@@ -136,7 +136,5 @@ export function useImageProcessing({ croppedImageDataUrl, panelPreset, customWid
     };
     img.onerror = () => { if (active) setIsProcessing(false); };
     return () => { active = false; };
-  }, [croppedImageDataUrl, gridWidth, gridHeight, colorLimit, currentPalette, distanceAlgorithm, removeBackground, brightness, contrast, saturation]);
-
-  return { transformedPixels, stats, isProcessing, imageAspectRatio, setTransformedPixels, setStats };
+  }, [croppedImageDataUrl, gridWidth, gridHeight, colorLimit, currentPalette, distanceAlgorithm, removeBackground, brightness, contrast, saturation, setTransformedPixels, setStats, setIsProcessing, setLocalAspectRatio]);
 }
