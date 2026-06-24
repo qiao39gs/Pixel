@@ -1,9 +1,28 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ZoomIn, ZoomOut, Sliders, Hash, Grid3X3, Layers, Trash2 } from 'lucide-react';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 interface Props {
   onReset: () => void;
+}
+
+function AdjustSlider({ label, value, onRelease }: { label: string; value: number; onRelease: (v: number) => void }) {
+  const pending = useRef(value);
+  const [local, setLocal] = useState(value);
+  useEffect(() => { if (local === pending.current) { setLocal(value); pending.current = value; } }, [value]);
+  return (
+    <div className="flex items-center gap-2.5">
+      <span className="text-xs font-mono font-bold text-slate-500 w-11 text-right">{label}</span>
+      <input
+        type="range" min="0" max="200" value={local}
+        onChange={e => { const v = parseInt(e.target.value); setLocal(v); pending.current = v; }}
+        onMouseUp={() => { if (pending.current !== value) onRelease(pending.current); }}
+        onTouchEnd={() => { if (pending.current !== value) onRelease(pending.current); }}
+        className="flex-1 h-2.5 accent-[#E8570A] bg-slate-200 rounded-lg cursor-pointer"
+      />
+      <span className="text-xs font-mono font-bold text-slate-500 w-9">{local}</span>
+    </div>
+  );
 }
 
 export default function ControlPanel({ onReset }: Props) {
@@ -103,21 +122,9 @@ export default function ControlPanel({ onReset }: Props) {
         <div className="flex flex-col gap-2.5 pt-3 border-t border-slate-100">
           <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">图像调节</span>
           <div className="flex flex-col gap-3">
-            <div className="flex items-center gap-2.5">
-              <span className="text-xs font-mono font-bold text-slate-500 w-11 text-right">亮度</span>
-              <input type="range" min="0" max="200" value={brightness} onChange={e => setBrightness(parseInt(e.target.value))} className="flex-1 h-2.5 accent-[#E8570A] bg-slate-200 rounded-lg cursor-pointer" />
-              <span className="text-xs font-mono font-bold text-slate-500 w-9">{brightness}</span>
-            </div>
-            <div className="flex items-center gap-2.5">
-              <span className="text-xs font-mono font-bold text-slate-500 w-11 text-right">对比度</span>
-              <input type="range" min="0" max="200" value={contrast} onChange={e => setContrast(parseInt(e.target.value))} className="flex-1 h-2.5 accent-[#E8570A] bg-slate-200 rounded-lg cursor-pointer" />
-              <span className="text-xs font-mono font-bold text-slate-500 w-9">{contrast}</span>
-            </div>
-            <div className="flex items-center gap-2.5">
-              <span className="text-xs font-mono font-bold text-slate-500 w-11 text-right">饱和度</span>
-              <input type="range" min="0" max="200" value={saturation} onChange={e => setSaturation(parseInt(e.target.value))} className="flex-1 h-2.5 accent-[#E8570A] bg-slate-200 rounded-lg cursor-pointer" />
-              <span className="text-xs font-mono font-bold text-slate-500 w-9">{saturation}</span>
-            </div>
+            <AdjustSlider label="亮度"    value={brightness}    onRelease={setBrightness} />
+            <AdjustSlider label="对比度"  value={contrast}      onRelease={setContrast} />
+            <AdjustSlider label="饱和度"  value={saturation}    onRelease={setSaturation} />
           </div>
         </div>
         <div className="flex flex-col gap-3 pt-3 border-t border-slate-100">

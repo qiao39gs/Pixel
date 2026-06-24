@@ -16,6 +16,7 @@ export default function StatsPanel() {
   const swapColor = useWorkspaceStore(s => s.swapColor);
 
   const [swapSource, setSwapSource] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState<string | null>(null);
 
   const allPalette = useMemo(() => {
     const seen = new Set<string>();
@@ -57,8 +58,9 @@ export default function StatsPanel() {
             <div id="swap-group-used" className="mb-3 pb-3 border-b border-zinc-100">
               <span className="text-xs font-bold text-amber-600 uppercase tracking-wider mb-2 block">已有的色彩 ({stats.length} 色)</span>
               <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
-                {stats.map(s => {
+                {(() => { const totalUsed = stats.reduce((s, x) => s + x.count, 0); return stats.map(s => {
                   const b = s.bead;
+                  const pct = Math.round(s.count / totalUsed * 100);
                   const isCurrent = b.code === swapSource;
                   return (
                     <button key={b.code}
@@ -66,12 +68,23 @@ export default function StatsPanel() {
                       disabled={isCurrent}
                       className={`flex flex-col items-center gap-1 p-2 rounded-xl border transition-all cursor-pointer relative ${isCurrent ? 'border-amber-400 bg-amber-50 ring-1 ring-amber-200' : 'border-zinc-300 bg-zinc-50 hover:border-zinc-400 hover:shadow-sm active:scale-95'}`}
                     >
-                      <div className="w-full aspect-square rounded-lg border border-black/[0.06]" style={{ backgroundColor: b.hex }} />
+                      <div className="relative w-full aspect-square rounded-lg border border-black/[0.06] overflow-hidden" style={{ backgroundColor: b.hex }}>
+                        <div className="absolute inset-0 z-10 flex items-center justify-center">
+                          <div
+                            className="w-4 h-4 rounded-full"
+                            style={{
+                              background: `conic-gradient(rgba(0,0,0,0.3) ${pct}%, transparent ${pct}%)`,
+                              maskImage: 'radial-gradient(transparent 55%, black 58%)',
+                              WebkitMaskImage: 'radial-gradient(transparent 55%, black 58%)',
+                            }}
+                          />
+                        </div>
+                      </div>
                       <span className={`text-xs font-mono font-bold ${isCurrent ? 'text-amber-700' : 'text-slate-800'}`}>{b.code}</span>
-                      {!isCurrent && <span className="absolute -top-1.5 -right-1.5 px-1 rounded-full bg-amber-500 text-white text-[8px] font-bold leading-tight">{s.count}</span>}
+                      <span className={`text-[9px] font-mono font-bold ${isCurrent ? 'text-amber-600' : 'text-slate-400'}`}>{pct}%</span>
                     </button>
                   );
-                })}
+                }); })()}
               </div>
             </div>
             {/* Empty option */}
@@ -129,7 +142,7 @@ export default function StatsPanel() {
           </span>
         </div>
         <div className="text-xs text-slate-400 font-semibold md:text-right">
-          {editMode ? '点按色块设为画笔 · 左键画布填充' : '点击色块聚焦高亮 · 点击换色替换色号'}
+          {editMode ? '点按色块设为画笔 · 左键画布填充' : '点击色块聚焦高亮 · 拖拽色块至另一色块快速换色'}
         </div>
       </div>
       {COLOR_GROUPS.map(group => {
@@ -143,7 +156,12 @@ export default function StatsPanel() {
                 const isSelected = selectedBeadHighlight === statItem.bead.code;
                 return (
                   <div key={statItem.bead.code}
-                    className={`flex items-center justify-between p-3 rounded-2xl border transition-all cursor-pointer ${isSelected ? 'border-indigo-600 bg-indigo-50/20 shadow-xs' : 'border-slate-100 hover:bg-slate-50 bg-white'}`}>
+                    draggable
+                    onDragStart={(e) => { e.dataTransfer.setData('text/plain', statItem.bead.code); e.dataTransfer.effectAllowed = 'move'; }}
+                    onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDragOver(statItem.bead.code); }}
+                    onDragLeave={() => setDragOver(null)}
+                    onDrop={(e) => { e.preventDefault(); const src = e.dataTransfer.getData('text/plain'); if (src && src !== statItem.bead.code) swapColor(src, statItem.bead); setDragOver(null); }}
+                    className={`flex items-center justify-between p-3 rounded-2xl border transition-all cursor-pointer ${dragOver === statItem.bead.code ? 'border-dashed border-indigo-400 bg-indigo-50/30 scale-[1.02]' : isSelected ? 'border-indigo-600 bg-indigo-50/20 shadow-xs' : 'border-slate-100 hover:bg-slate-50 bg-white'}`}>
                     <div className="flex items-center gap-3">
                       <button
                         onClick={(e) => { e.stopPropagation(); editMode ? setBrushBead(statItem.bead) : setSelectedBeadHighlight(isSelected ? null : statItem.bead.code); }}
