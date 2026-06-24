@@ -117,7 +117,10 @@ export default function App() {
         <footer className="border-t border-black/[0.06] px-4 py-5">
           <div className="max-w-6xl mx-auto flex items-center justify-between text-[11px] text-zinc-400 font-mono">
             <span>© 2026 像素拼豆图纸生成器</span>
-            <span>Perler Bead Pattern Generator</span>
+            <div className="flex items-center gap-4">
+              <a href="https://github.com/qiao39gs/Pixel" target="_blank" rel="noopener noreferrer" className="hover:text-[#E8570A] transition-colors">GitHub</a>
+              <span>Perler Bead Pattern Generator</span>
+            </div>
           </div>
         </footer>
       )}
