@@ -410,7 +410,7 @@ export default function ImageUploader({ onImageCropped, aspectRatio, setAspectRa
           <div className="h-16 w-16 bg-white rounded-2xl flex items-center justify-center shadow-md shadow-gray-200/50 border border-gray-100 text-slate-800 mb-5 hover:scale-110 hover:rotate-6 transition-all duration-300">
             <Upload className="h-7 w-7 text-indigo-500" />
           </div>
-          <h3 className="font-display font-extrabold text-slate-900 text-lg mb-2">
+          <h3 className="font-sans font-semibold text-slate-900 text-lg mb-2">
             点击上传 或拖拽图片文件到这里
           </h3>
           <p className="text-xs text-slate-500 max-w-sm mb-5 leading-relaxed">
@@ -574,7 +574,7 @@ export default function ImageUploader({ onImageCropped, aspectRatio, setAspectRa
                 <button
                   type="button"
                   onClick={handleConfirmCrop}
-                  className="w-full py-3.5 px-4 bg-gradient-to-tr from-indigo-600 via-indigo-600 to-violet-600 hover:scale-101 hover:brightness-105 duration-200 text-white font-display font-bold rounded-xl transition-all shadow-md shadow-indigo-100 flex items-center justify-center gap-1.5 text-sm cursor-pointer"
+                  className="w-full py-3.5 px-4 bg-gradient-to-tr from-indigo-600 via-indigo-600 to-violet-600 hover:scale-101 hover:brightness-105 duration-200 text-white font-semibold rounded-xl transition-all shadow-md shadow-indigo-100 flex items-center justify-center gap-1.5 text-sm cursor-pointer"
                 >
                   确定选区，导入工作台
                 </button>

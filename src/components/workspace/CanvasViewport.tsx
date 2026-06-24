@@ -100,7 +100,7 @@ export default function CanvasViewport({ canvasRef, containerRef, gridWidth, gri
   const handlePanMove = (e: React.MouseEvent) => { if (!isPanning) return; setPanOffset({ x: e.clientX - panStart.x, y: e.clientY - panStart.y }); };
 
   return (
-    <div className={`bg-slate-950 border border-[#1D1D21] rounded-3xl p-6 shadow-2xl flex flex-col relative overflow-hidden min-h-[300px] md:min-h-[500px] transition-all ${mobileTab === 'stats' ? 'hidden lg:block' : ''}`}>
+    <div className={`bg-slate-950 border border-[#1D1D21] rounded-3xl p-6 shadow-2xl flex flex-col relative overflow-hidden min-h-[300px] md:min-h-[500px] transition-all ${mobileTab !== 'canvas' ? 'hidden lg:block' : ''}`}>
       <div className="flex flex-wrap justify-between items-center gap-2 mb-4 pb-3 border-b border-white/[0.04] z-10">
         <div className="flex items-center gap-2 text-white"><span className="text-xs font-bold px-2.5 py-1 bg-white/[0.06] border border-white/[0.04] rounded-lg text-slate-300 font-mono">{gridWidth} × {gridHeight} 画幅规格</span><span className="text-xs text-slate-400 font-semibold">( 最终已精准出数: <strong className="text-indigo-400">{stats.length} 色</strong> )</span></div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -157,8 +157,8 @@ export default function CanvasViewport({ canvasRef, containerRef, gridWidth, gri
       </div>
       <div className="flex justify-center mt-2"><span className="text-[10px] text-slate-500 bg-white/5 px-3 py-1 rounded-lg border border-white/[0.06] select-none">按住鼠标左键可平移拖拽 · 画布完全支持大尺寸缩放</span></div>
       <div className="grid grid-cols-2 gap-3.5 mt-5 z-10">
-        <button onClick={() => onGeneratePng(transformedPixels, gridWidth, gridHeight, stats, { showRulers, showNumbers })} className="py-3.5 px-4 bg-white/[0.05] hover:bg-white/[0.08] active:scale-98 border border-white/[0.05] text-slate-200 text-xs font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-all duration-200 font-display"><LayoutGrid className="w-4 h-4 text-emerald-400" />导出高清拼豆图纸 (PNG)</button>
-        <button onClick={() => onGeneratePdf(transformedPixels, gridWidth, gridHeight, stats, { showRulers, showNumbers })} className="py-3.5 px-4 bg-gradient-to-tr from-indigo-600 via-indigo-650 to-violet-650 hover:brightness-105 active:scale-98 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-all duration-200 shadow-lg shadow-indigo-950/20 font-display"><Award className="w-4 h-4" />导出 A4 打印标准 PDF</button>
+        <button onClick={() => onGeneratePng(transformedPixels, gridWidth, gridHeight, stats, { showRulers, showNumbers })} className="py-3.5 px-4 bg-white/[0.05] hover:bg-white/[0.08] active:scale-98 border border-white/[0.05] text-slate-200 text-xs font-semibold rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-all duration-200"><LayoutGrid className="w-4 h-4 text-emerald-400" />导出高清拼豆图纸 (PNG)</button>
+        <button onClick={() => onGeneratePdf(transformedPixels, gridWidth, gridHeight, stats, { showRulers, showNumbers })} className="py-3.5 px-4 bg-gradient-to-tr from-indigo-600 via-indigo-650 to-violet-650 hover:brightness-105 active:scale-98 text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-all duration-200 shadow-lg shadow-indigo-950/20"><Award className="w-4 h-4" />导出 A4 打印标准 PDF</button>
       </div>
     </div>
   );

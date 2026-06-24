@@ -13,10 +13,10 @@ export default function StatsPanel() {
   const mobileTab = useWorkspaceStore(s => s.mobileTab);
 
   return (
-    <div className={`bg-white rounded-3xl border border-black/[0.04] p-6 shadow-sm ${mobileTab === 'canvas' ? 'hidden lg:block' : ''}`}>
+    <div className={`bg-white rounded-3xl border border-black/[0.04] p-6 shadow-sm ${mobileTab !== 'stats' ? 'hidden lg:block' : ''}`}>
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center pb-3.5 border-b border-slate-100 mb-5 gap-3">
         <div className="flex flex-col">
-          <h3 className="font-display font-bold text-[#1D1D1F] text-sm flex items-center gap-2 leading-none"><Grid3X3 className="w-4 h-4 text-indigo-500" />MARD 标准色卡</h3>
+          <h3 className="font-sans font-semibold text-[#1D1D1F] text-sm flex items-center gap-2 leading-none"><Grid3X3 className="w-4 h-4 text-indigo-500" />MARD 标准色卡</h3>
           <span className="text-[10px] text-slate-400 font-semibold mt-1 font-mono uppercase tracking-wider">
             材料总用量: <strong className="text-slate-800">{transformedPixels.filter(p => p.matchedBead.code !== 'EMPTY').length} 颗</strong>
           </span>

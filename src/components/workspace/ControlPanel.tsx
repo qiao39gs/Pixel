@@ -47,7 +47,7 @@ export default function ControlPanel({ onReset }: Props) {
     <div className={`w-full lg:col-span-4 flex flex-col gap-5 ${mobileTab !== 'controls' ? 'hidden lg:flex' : ''}`}>
       <div className="bg-white rounded-3xl border border-black/[0.04] p-6 shadow-sm flex flex-col gap-5 transition-all">
         <div className="flex justify-between items-center pb-3 border-b border-slate-100">
-          <h3 className="font-display font-bold text-slate-900 flex items-center gap-2 text-sm leading-none"><Sliders className="w-4 h-4 text-indigo-600" />生成图纸规格</h3>
+          <h3 className="font-sans font-semibold text-slate-900 flex items-center gap-2 text-sm leading-none"><Sliders className="w-4 h-4 text-indigo-600" />生成图纸规格</h3>
           <button onClick={onReset} className="text-xs font-bold text-slate-400 hover:text-indigo-600 transition-all flex items-center gap-1 cursor-pointer"><Trash2 className="w-3.5" /> 重选图片</button>
         </div>
         <div className="flex flex-col gap-2.5">
