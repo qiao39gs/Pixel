@@ -43,6 +43,7 @@ export default function PatternWorkspace({ croppedImageDataUrl, onReset, aspectR
   const wandSelection = useWorkspaceStore(s => s.wandSelection);
 
   const undo = useWorkspaceStore(s => s.undo);
+  const setScale = useWorkspaceStore(s => s.setScale);
 
   const { gridWidth, gridHeight } = useMemo(() => {
     const RATIOS: Record<string, number> = { '1:1': 1, '4:3': 3/4, '3:4': 4/3, '16:9': 9/16, '9:16': 16/9 };
@@ -58,6 +59,14 @@ export default function PatternWorkspace({ croppedImageDataUrl, onReset, aspectR
   useImageProcessing({ croppedImageDataUrl, panelPreset, customWidth, aspectRatio, removeBackground, colorLimit, distanceAlgorithm, currentPalette, gridWidth, gridHeight, brightness, contrast, saturation });
 
   useCanvasRenderer({ canvasRef, transformedPixels, gridWidth, gridHeight, scale, showNumbers, showRulers, selectedBeadHighlight, editMode, selectedCell, wandMode, wandSelection });
+
+  // Auto-fit canvas scale to viewport on grid change
+  useEffect(() => {
+    const rulerSize = showRulers ? 32 : 0;
+    const maxW = Math.min(window.innerWidth - 24, 700);
+    const fit = Math.max(4, Math.floor((maxW - rulerSize) / gridWidth));
+    setScale(Math.min(14, fit));
+  }, [gridWidth]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undo(); } };
