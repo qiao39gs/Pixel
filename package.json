@@ -1,7 +1,7 @@
 {
   "name": "pixel-bead-generator",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "像素拼豆图纸生成器 — 上传图片自动生成 Perler Beads 像素网格图纸",
   "type": "module",
   "scripts": {
