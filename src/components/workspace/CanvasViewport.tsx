@@ -41,6 +41,8 @@ export default function CanvasViewport({ canvasRef, containerRef, gridWidth, gri
   const showRulers = useWorkspaceStore(s => s.showRulers);
   const showNumbers = useWorkspaceStore(s => s.showNumbers);
   const scale = useWorkspaceStore(s => s.scale);
+  const topTrim = useWorkspaceStore(s => s.topTrim);
+  const leftTrim = useWorkspaceStore(s => s.leftTrim);
   const transformedPixels = useWorkspaceStore(s => s.transformedPixels);
   const stats = useWorkspaceStore(s => s.stats);
   const mobileTab = useWorkspaceStore(s => s.mobileTab);
@@ -74,8 +76,8 @@ export default function CanvasViewport({ canvasRef, containerRef, gridWidth, gri
     const rulerSize = showRulers ? 32 : 0;
     const mx = (clientX - rect.left) * sx - rulerSize;
     const my = (clientY - rect.top) * sy - rulerSize;
-    const gx = Math.floor(mx / scale), gy = Math.floor(my / scale);
-    if (gx < 0 || gx >= gridWidth || gy < 0 || gy >= gridHeight) return null;
+    const gx = Math.floor(mx / scale) + leftTrim, gy = Math.floor(my / scale) + topTrim;
+    if (gx < leftTrim || gx >= gridWidth - (useWorkspaceStore.getState().rightTrim) || gy < topTrim || gy >= gridHeight - (useWorkspaceStore.getState().bottomTrim)) return null;
     return { x: gx, y: gy };
   };
 

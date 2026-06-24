@@ -31,6 +31,12 @@ interface WorkspaceStore {
   stats: IngredientStat[];
   isProcessing: boolean;
   imageAspectRatio: number;
+  gridWidthActual: number;
+  gridHeightActual: number;
+  topTrim: number;
+  bottomTrim: number;
+  leftTrim: number;
+  rightTrim: number;
   mobileTab: 'controls' | 'canvas' | 'stats';
   undoStack: { pixels: TransformedPixel[]; stats: IngredientStat[] }[];
 
@@ -61,6 +67,8 @@ interface WorkspaceStore {
   setTransformedPixels: (v: TransformedPixel[]) => void;
   setStats: (v: IngredientStat[]) => void;
   setIsProcessing: (v: boolean) => void;
+  setGridWidthActual: (v: number) => void;
+  setGridHeightActual: (v: number) => void;
   setMobileTab: (v: WorkspaceStore['mobileTab']) => void;
 
   // Complex actions
@@ -69,6 +77,12 @@ interface WorkspaceStore {
   applyWandFill: (cell: { x: number; y: number }, selection: Set<string>, targetBead: BeadPaletteItem, gridWidth: number) => void;
   undo: () => void;
   denoise: (gridWidth: number, gridHeight: number, palette: BeadPaletteItem[]) => void;
+  autoDetectTrim: (gridWidth: number, gridHeight: number) => void;
+  setTopTrim: (v: number) => void;
+  setBottomTrim: (v: number) => void;
+  setLeftTrim: (v: number) => void;
+  setRightTrim: (v: number) => void;
+  applyTrim: (gridWidth: number, gridHeight: number) => void;
 }
 
 export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
@@ -99,6 +113,12 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   stats: [],
   isProcessing: false,
   imageAspectRatio: 1,
+  gridWidthActual: 52,
+  gridHeightActual: 52,
+  topTrim: 0,
+  bottomTrim: 0,
+  leftTrim: 0,
+  rightTrim: 0,
   mobileTab: 'canvas' as const,
   undoStack: [],
 
@@ -128,6 +148,12 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   setTransformedPixels: (v) => set({ transformedPixels: v }),
   setStats: (v) => set({ stats: v }),
   setIsProcessing: (v) => set({ isProcessing: v }),
+  setGridWidthActual: (v) => set({ gridWidthActual: v }),
+  setGridHeightActual: (v) => set({ gridHeightActual: v }),
+  setTopTrim: (v) => set({ topTrim: v }),
+  setBottomTrim: (v) => set({ bottomTrim: v }),
+  setLeftTrim: (v) => set({ leftTrim: v }),
+  setRightTrim: (v) => set({ rightTrim: v }),
   setMobileTab: (v) => set({ mobileTab: v }),
 
   pushUndo: () => {
@@ -176,5 +202,47 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
         stats,
       });
     }
+  },
+
+  autoDetectTrim: (gridWidth, gridHeight) => {
+    const s = get();
+    let top = gridHeight, bottom = 0, left = gridWidth, right = 0;
+    for (let y = 0; y < gridHeight; y++) {
+      for (let x = 0; x < gridWidth; x++) {
+        const p = s.transformedPixels[y * gridWidth + x];
+        if (p && p.matchedBead.code !== 'EMPTY') {
+          if (y < top) top = y;
+          if (y > bottom) bottom = y;
+          if (x < left) left = x;
+          if (x > right) right = x;
+        }
+      }
+    }
+    if (top > bottom || left > right) return;
+    set({ topTrim: top, bottomTrim: gridHeight - 1 - bottom, leftTrim: left, rightTrim: gridWidth - 1 - right });
+  },
+  applyTrim: (gridWidth, gridHeight) => {
+    const s = get();
+    const { topTrim, bottomTrim, leftTrim, rightTrim } = s;
+    if (topTrim + bottomTrim + leftTrim + rightTrim === 0) return;
+    const newWidth = gridWidth - leftTrim - rightTrim;
+    const newHeight = gridHeight - topTrim - bottomTrim;
+    if (newWidth <= 0 || newHeight <= 0) return;
+    const result: TransformedPixel[] = [];
+    for (let y = 0; y < newHeight; y++) {
+      for (let x = 0; x < newWidth; x++) {
+        const src = s.transformedPixels[(topTrim + y) * gridWidth + (leftTrim + x)];
+        result.push({ x, y, matchedBead: src.matchedBead });
+      }
+    }
+    const stack = [...s.undoStack, { pixels: [...s.transformedPixels], stats: [...s.stats] }];
+    set({
+      undoStack: stack.length > 50 ? stack.slice(-50) : stack,
+      transformedPixels: result,
+      stats: recalculateStats(result),
+      gridWidthActual: newWidth,
+      gridHeightActual: newHeight,
+      topTrim: 0, bottomTrim: 0, leftTrim: 0, rightTrim: 0,
+    });
   },
 }));

@@ -33,6 +33,8 @@ export default function PatternWorkspace({ croppedImageDataUrl, onReset, aspectR
   const removeBackground = useWorkspaceStore(s => s.removeBackground);
 
   const transformedPixels = useWorkspaceStore(s => s.transformedPixels);
+  const gridWidthActual = useWorkspaceStore(s => s.gridWidthActual);
+  const gridHeightActual = useWorkspaceStore(s => s.gridHeightActual);
   const scale = useWorkspaceStore(s => s.scale);
   const showNumbers = useWorkspaceStore(s => s.showNumbers);
   const showRulers = useWorkspaceStore(s => s.showRulers);
@@ -58,7 +60,7 @@ export default function PatternWorkspace({ croppedImageDataUrl, onReset, aspectR
 
   useImageProcessing({ croppedImageDataUrl, panelPreset, customWidth, aspectRatio, removeBackground, colorLimit, distanceAlgorithm, currentPalette, gridWidth, gridHeight, brightness, contrast, saturation });
 
-  useCanvasRenderer({ canvasRef, transformedPixels, gridWidth, gridHeight, scale, showNumbers, showRulers, selectedBeadHighlight, editMode, selectedCell, wandMode, wandSelection });
+  useCanvasRenderer({ canvasRef, transformedPixels, gridWidth: gridWidthActual, gridHeight: gridHeightActual, scale, showNumbers, showRulers, selectedBeadHighlight, editMode, selectedCell, wandMode, wandSelection });
 
   // Auto-fit canvas scale to viewport on grid change
   useEffect(() => {
@@ -81,7 +83,7 @@ export default function PatternWorkspace({ croppedImageDataUrl, onReset, aspectR
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start mt-4">
         <ControlPanel onReset={onReset} />
         <div className="w-full lg:col-span-8 flex flex-col gap-6">
-          <CanvasViewport canvasRef={canvasRef} containerRef={containerRef} gridWidth={gridWidth} gridHeight={gridHeight} currentPalette={currentPalette} onGeneratePng={onGeneratePng} onGeneratePdf={onGeneratePdf} />
+          <CanvasViewport canvasRef={canvasRef} containerRef={containerRef} gridWidth={gridWidthActual} gridHeight={gridHeightActual} currentPalette={currentPalette} onGeneratePng={onGeneratePng} onGeneratePdf={onGeneratePdf} />
           <StatsPanel />
         </div>
       </div>

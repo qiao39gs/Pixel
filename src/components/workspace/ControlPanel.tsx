@@ -32,6 +32,18 @@ export default function ControlPanel({ onReset }: Props) {
   const setShowRulers = useWorkspaceStore(s => s.setShowRulers);
   const mobileTab = useWorkspaceStore(s => s.mobileTab);
   const localAspectRatio = useWorkspaceStore(s => s.localAspectRatio);
+  const autoDetectTrim = useWorkspaceStore(s => s.autoDetectTrim);
+  const topTrim = useWorkspaceStore(s => s.topTrim);
+  const bottomTrim = useWorkspaceStore(s => s.bottomTrim);
+  const leftTrim = useWorkspaceStore(s => s.leftTrim);
+  const rightTrim = useWorkspaceStore(s => s.rightTrim);
+  const setTopTrim = useWorkspaceStore(s => s.setTopTrim);
+  const setBottomTrim = useWorkspaceStore(s => s.setBottomTrim);
+  const setLeftTrim = useWorkspaceStore(s => s.setLeftTrim);
+  const setRightTrim = useWorkspaceStore(s => s.setRightTrim);
+  const applyTrim = useWorkspaceStore(s => s.applyTrim);
+  const gridWidth = useWorkspaceStore(s => s.gridWidthActual);
+  const gridHeight = useWorkspaceStore(s => s.gridHeightActual);
 
   const presetBtn = (val: typeof panelPreset, label: string) => (
     <button onClick={() => setPanelPreset(val)}
@@ -116,6 +128,28 @@ export default function ControlPanel({ onReset }: Props) {
             </button>
           </div>
           <p className="text-xs text-slate-400 leading-normal">开启后将智能识别灰度接近纯白的浅色底背景像素。</p>
+        </div>
+        <div className="flex flex-col gap-3 pt-3 border-t border-slate-100">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-700">裁边修整</span>
+            <div className="flex gap-2">
+              <button onClick={() => autoDetectTrim(gridWidth, gridHeight)} className="px-2 py-1.5 text-xs font-bold rounded-lg bg-amber-50 text-amber-600 border border-amber-200 hover:bg-amber-100 transition-colors cursor-pointer">自动裁剪</button>
+              <button onClick={() => applyTrim(gridWidth, gridHeight)} className={`px-2 py-1.5 text-xs font-bold rounded-lg transition-colors cursor-pointer ${topTrim+bottomTrim+leftTrim+rightTrim === 0 ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-indigo-50 text-indigo-600 border border-indigo-200 hover:bg-indigo-100'}`} disabled={topTrim+bottomTrim+leftTrim+rightTrim === 0}>应用</button>
+            </div>
+          </div>
+          <p className="text-xs text-slate-400 leading-normal">拖动滑块预览裁切效果，点击「应用」确认。</p>
+          {([
+            ['上', topTrim, setTopTrim, Math.floor(gridHeight/2)] as const,
+            ['下', bottomTrim, setBottomTrim, Math.floor(gridHeight/2)] as const,
+            ['左', leftTrim, setLeftTrim, Math.floor(gridWidth/2)] as const,
+            ['右', rightTrim, setRightTrim, Math.floor(gridWidth/2)] as const,
+          ]).map(([label, val, set, max]) => (
+            <div key={label} className="flex items-center gap-2.5">
+              <span className="text-xs font-mono font-bold text-slate-500 w-5">{label}</span>
+              <input type="range" min="0" max={max} value={val} onChange={e => set(parseInt(e.target.value))} className="flex-1 h-2.5 accent-[#E8570A] bg-slate-200 rounded-lg cursor-pointer" />
+              <span className="text-xs font-mono font-bold text-slate-500 w-5 text-right">{val}</span>
+            </div>
+          ))}
         </div>
       </div>
       <div className="bg-white rounded-3xl border border-black/[0.04] p-5 shadow-sm flex flex-col gap-4">

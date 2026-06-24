@@ -88,3 +88,33 @@ export function denoisePixels(
   }
   return { pixels: next, stats: recalculateStats(next), changed };
 }
+
+export function autoCropPixels(
+  pixels: TransformedPixel[],
+  gridWidth: number,
+  gridHeight: number
+): { pixels: TransformedPixel[]; width: number; height: number } | null {
+  let top = gridHeight, bottom = 0, left = gridWidth, right = 0;
+  for (let y = 0; y < gridHeight; y++) {
+    for (let x = 0; x < gridWidth; x++) {
+      const p = pixels[y * gridWidth + x];
+      if (p && p.matchedBead.code !== 'EMPTY') {
+        if (y < top) top = y;
+        if (y > bottom) bottom = y;
+        if (x < left) left = x;
+        if (x > right) right = x;
+      }
+    }
+  }
+  if (top > bottom || left > right) return null;
+  const newWidth = right - left + 1;
+  const newHeight = bottom - top + 1;
+  const result: TransformedPixel[] = [];
+  for (let y = 0; y < newHeight; y++) {
+    for (let x = 0; x < newWidth; x++) {
+      const src = pixels[(top + y) * gridWidth + (left + x)];
+      result.push({ x, y, matchedBead: src.matchedBead });
+    }
+  }
+  return { pixels: result, width: newWidth, height: newHeight };
+}

@@ -27,6 +27,9 @@ export function useImageProcessing({ croppedImageDataUrl, panelPreset, customWid
   const setStats = useWorkspaceStore(s => s.setStats);
   const setIsProcessing = useWorkspaceStore(s => s.setIsProcessing);
   const setLocalAspectRatio = useWorkspaceStore(s => s.setLocalAspectRatio);
+  const setGridWidthActual = useWorkspaceStore(s => s.setGridWidthActual);
+  const setGridHeightActual = useWorkspaceStore(s => s.setGridHeightActual);
+  const resetTrim = () => { const s = useWorkspaceStore.getState(); s.setTopTrim(0); s.setBottomTrim(0); s.setLeftTrim(0); s.setRightTrim(0); };
 
   useEffect(() => {
     if (!croppedImageDataUrl) {
@@ -110,7 +113,7 @@ export function useImageProcessing({ croppedImageDataUrl, panelPreset, customWid
 
       const uniqueBeads = Object.keys(colorUsageCount);
       if (uniqueBeads.length <= colorLimit) {
-        if (active) { setTransformedPixels(initialMatched); setStats(recalculateStats(initialMatched)); setIsProcessing(false); }
+        if (active) { setTransformedPixels(initialMatched); setStats(recalculateStats(initialMatched)); setGridWidthActual(gw); setGridHeightActual(gh); resetTrim(); setIsProcessing(false); }
         return;
       }
 
@@ -132,7 +135,7 @@ export function useImageProcessing({ croppedImageDataUrl, panelPreset, customWid
         }
       }
 
-      if (active) { setTransformedPixels(finalMatched); setStats(recalculateStats(finalMatched)); setIsProcessing(false); }
+      if (active) { setTransformedPixels(finalMatched); setStats(recalculateStats(finalMatched)); setGridWidthActual(gw); setGridHeightActual(gh); resetTrim(); setIsProcessing(false); }
     };
     img.onerror = () => { if (active) setIsProcessing(false); };
     return () => { active = false; };
