@@ -60,9 +60,9 @@ export default function App() {
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <span className="font-display font-bold text-[15px] tracking-tight text-[#18181B]">像素拼豆</span>
-            <span className="hidden sm:inline text-[11px] font-mono text-zinc-400 border border-zinc-200 px-1.5 py-0.5 rounded-md">v1.0</span>
+            <span className="hidden sm:inline text-xs font-mono text-zinc-400 border border-zinc-200 px-1.5 py-0.5 rounded-md">v1.0</span>
           </div>
-          <span className="text-[11px] text-zinc-400 font-mono hidden md:block">PIXEL BEAD PATTERN GENERATOR</span>
+          <span className="text-xs text-zinc-400 font-mono hidden md:block">PIXEL BEAD PATTERN GENERATOR</span>
         </div>
       </header>
 
@@ -115,7 +115,7 @@ export default function App() {
       {/* Footer */}
       {!croppedImage && (
         <footer className="border-t border-black/[0.06] px-4 py-5">
-          <div className="max-w-6xl mx-auto flex items-center justify-between text-[11px] text-zinc-400 font-mono">
+          <div className="max-w-6xl mx-auto flex items-center justify-between text-xs text-zinc-400 font-mono">
             <span>© 2026 像素拼豆图纸生成器</span>
             <div className="flex items-center gap-4">
               <a href="https://github.com/qiao39gs/Pixel" target="_blank" rel="noopener noreferrer" className="hover:text-[#E8570A] transition-colors">GitHub</a>

@@ -423,7 +423,7 @@ export default function ImageUploader({ onImageCropped, aspectRatio, setAspectRa
             
             {/* Cropper viewport */}
             <div className="flex-1 flex flex-col items-center justify-center bg-slate-50/80 rounded-2xl p-4 border border-black/[0.02] overflow-hidden">
-              <span className="text-[11px] font-medium text-slate-400 mb-3 self-start flex items-center gap-1.5 flex-wrap">
+              <span className="text-xs font-medium text-slate-400 mb-3 self-start flex items-center gap-1.5 flex-wrap">
                 <Move className="w-3.5 h-3.5 text-indigo-500" /> 
                 <span>鼠标拖拽/单指平移 · 鼠标滚轮/双指捏合缩放 · 键盘方向键/快捷键微调</span>
               </span>
@@ -456,7 +456,7 @@ export default function ImageUploader({ onImageCropped, aspectRatio, setAspectRa
                   <button
                     type="button"
                     onClick={fitToFrame}
-                    className="px-2.5 py-1.5 bg-white border border-slate-200 text-[11px] font-bold rounded-lg text-slate-700 hover:text-indigo-600 hover:border-indigo-100 transition-all cursor-pointer shadow-xs"
+                    className="px-2.5 py-1.5 bg-white border border-slate-200 text-xs font-bold rounded-lg text-slate-700 hover:text-indigo-600 hover:border-indigo-100 transition-all cursor-pointer shadow-xs"
                     title="缩放图像使其完全放入选区内"
                   >
                     完全贴合
@@ -464,7 +464,7 @@ export default function ImageUploader({ onImageCropped, aspectRatio, setAspectRa
                   <button
                     type="button"
                     onClick={fillFrame}
-                    className="px-2.5 py-1.5 bg-white border border-slate-200 text-[11px] font-bold rounded-lg text-slate-700 hover:text-indigo-600 hover:border-indigo-100 transition-all cursor-pointer shadow-xs"
+                    className="px-2.5 py-1.5 bg-white border border-slate-200 text-xs font-bold rounded-lg text-slate-700 hover:text-indigo-600 hover:border-indigo-100 transition-all cursor-pointer shadow-xs"
                     title="缩放图像使其完全填满整个选区"
                   >
                     填满画布
@@ -475,14 +475,14 @@ export default function ImageUploader({ onImageCropped, aspectRatio, setAspectRa
                   <button
                     type="button"
                     onClick={() => setRotation((prev) => (prev + 90) % 360)}
-                    className="px-3 py-1.5 bg-white border border-slate-200 text-[11px] font-bold rounded-lg text-slate-700 hover:bg-slate-50 hover:text-indigo-600 flex items-center gap-1 shadow-xs transition-all cursor-pointer"
+                    className="px-3 py-1.5 bg-white border border-slate-200 text-xs font-bold rounded-lg text-slate-700 hover:bg-slate-50 hover:text-indigo-600 flex items-center gap-1 shadow-xs transition-all cursor-pointer"
                   >
                     <RotateCw className="w-3 h-3" /> 旋转 90°
                   </button>
                   <button
                     type="button"
                     onClick={() => { setPan({ x: 0, y: 0 }); setZoom(1); setRotation(0); }}
-                    className="px-3 py-1.5 bg-slate-100 border border-slate-200 text-[11px] font-bold rounded-lg text-slate-600 hover:bg-slate-200 transition-all cursor-pointer"
+                    className="px-3 py-1.5 bg-slate-100 border border-slate-200 text-xs font-bold rounded-lg text-slate-600 hover:bg-slate-200 transition-all cursor-pointer"
                     title="重置缩放坐标与旋转"
                   >
                     初始重置
@@ -547,7 +547,7 @@ export default function ImageUploader({ onImageCropped, aspectRatio, setAspectRa
                       step="0.05"
                       value={zoom}
                       onChange={(e) => setZoom(parseFloat(e.target.value))}
-                      className="flex-1 accent-indigo-600 h-1.5 bg-slate-200 rounded-lg cursor-pointer"
+                      className="flex-1 accent-indigo-600 h-2.5 bg-slate-200 rounded-lg cursor-pointer"
                     />
                     <button
                       type="button"
@@ -560,7 +560,7 @@ export default function ImageUploader({ onImageCropped, aspectRatio, setAspectRa
                 </div>
 
                 {/* Keyboard Shortcuts cheat sheet for pro look */}
-                <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 text-[10px] text-slate-500 leading-normal flex flex-col gap-1">
+                <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 text-xs text-slate-500 leading-normal flex flex-col gap-1">
                   <div className="font-bold text-slate-700 uppercase tracking-wider mb-1">键盘快捷面板</div>
                   <div className="flex justify-between"><span>平移微调:</span> <span className="font-mono font-bold bg-white border border-slate-250 px-1 rounded">↑ ↓ ← →</span></div>
                   <div className="flex justify-between"><span>快速缩放:</span> <span className="font-mono font-bold bg-white border border-slate-250 px-1 rounded">- / +</span></div>
