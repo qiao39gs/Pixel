@@ -78,7 +78,7 @@ export default function PatternWorkspace({ croppedImageDataUrl, onReset, aspectR
     <div className="w-full flex flex-col">
       {/* Tab bar — reads from store directly now via CanvasViewport */}
       <TabBar />
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start mt-4">
         <ControlPanel onReset={onReset} />
         <div className="w-full lg:col-span-8 flex flex-col gap-6">
           <CanvasViewport canvasRef={canvasRef} containerRef={containerRef} gridWidth={gridWidth} gridHeight={gridHeight} currentPalette={currentPalette} onGeneratePng={onGeneratePng} onGeneratePdf={onGeneratePdf} />
@@ -93,7 +93,7 @@ function TabBar() {
   const mobileTab = useWorkspaceStore(s => s.mobileTab);
   const setMobileTab = useWorkspaceStore(s => s.setMobileTab);
   return (
-    <div className="lg:hidden sticky top-14 z-40 bg-white/95 backdrop-blur-sm border-b border-zinc-100 flex mb-4">
+    <div className="lg:hidden sticky top-12 z-40 -mx-4 px-4 -mt-6 pt-6 pb-1 bg-[#FAFAF7] border-b border-zinc-200 flex">
       {([
         { id: 'controls' as const, label: '参数', Icon: Sliders },
         { id: 'canvas' as const,   label: '画布', Icon: Grid3X3 },
