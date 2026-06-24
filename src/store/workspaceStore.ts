@@ -77,6 +77,7 @@ interface WorkspaceStore {
   applyWandFill: (cell: { x: number; y: number }, selection: Set<string>, targetBead: BeadPaletteItem, gridWidth: number) => void;
   undo: () => void;
   denoise: (gridWidth: number, gridHeight: number, palette: BeadPaletteItem[]) => void;
+  swapColor: (sourceCode: string, targetBead: BeadPaletteItem) => void;
   autoDetectTrim: (gridWidth: number, gridHeight: number) => void;
   setTopTrim: (v: number) => void;
   setBottomTrim: (v: number) => void;
@@ -202,6 +203,19 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
         stats,
       });
     }
+  },
+
+  swapColor: (sourceCode, targetBead) => {
+    const s = get();
+    const stack = [...s.undoStack, { pixels: [...s.transformedPixels], stats: [...s.stats] }];
+    const next = s.transformedPixels.map(p =>
+      p.matchedBead.code === sourceCode ? { ...p, matchedBead: targetBead } : p
+    );
+    set({
+      undoStack: stack.length > 50 ? stack.slice(-50) : stack,
+      transformedPixels: next,
+      stats: recalculateStats(next),
+    });
   },
 
   autoDetectTrim: (gridWidth, gridHeight) => {
