@@ -47,10 +47,32 @@ export default function StatsPanel() {
             </div>
             {/* Quick nav pills */}
             <div className="grid grid-cols-5 gap-1 mb-3 pb-3 border-b border-zinc-100">
+              <button onClick={() => document.getElementById('swap-group-used')?.scrollIntoView({ behavior: 'smooth', block: 'start' })} className="px-1.5 py-1 text-[10px] font-bold rounded-md bg-amber-50 border border-amber-200 text-amber-700 hover:bg-amber-100 cursor-pointer text-center">已有</button>
               <button onClick={() => document.getElementById('swap-group-empty')?.scrollIntoView({ behavior: 'smooth', block: 'start' })} className="px-1.5 py-1 text-[10px] font-bold rounded-md border border-zinc-200 text-slate-500 hover:bg-zinc-50 cursor-pointer text-center">空</button>
               {COLOR_GROUPS.filter(g => allPalette.some(b => b.series === g.series)).map(g => (
                 <button key={g.series} onClick={() => document.getElementById(`swap-group-${g.series}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })} className="px-1.5 py-1 text-[10px] font-bold rounded-md border border-zinc-200 text-slate-500 hover:bg-zinc-50 cursor-pointer text-center">{g.series}</button>
               ))}
+            </div>
+            {/* Used colors group */}
+            <div id="swap-group-used" className="mb-3 pb-3 border-b border-zinc-100">
+              <span className="text-xs font-bold text-amber-600 uppercase tracking-wider mb-2 block">已有的色彩 ({stats.length} 色)</span>
+              <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
+                {stats.map(s => {
+                  const b = s.bead;
+                  const isCurrent = b.code === swapSource;
+                  return (
+                    <button key={b.code}
+                      onClick={() => { swapColor(swapSource, b); setSwapSource(null); }}
+                      disabled={isCurrent}
+                      className={`flex flex-col items-center gap-1 p-2 rounded-xl border transition-all cursor-pointer relative ${isCurrent ? 'border-amber-400 bg-amber-50 ring-1 ring-amber-200' : 'border-zinc-300 bg-zinc-50 hover:border-zinc-400 hover:shadow-sm active:scale-95'}`}
+                    >
+                      <div className="w-full aspect-square rounded-lg border border-black/[0.06]" style={{ backgroundColor: b.hex }} />
+                      <span className={`text-xs font-mono font-bold ${isCurrent ? 'text-amber-700' : 'text-slate-800'}`}>{b.code}</span>
+                      {!isCurrent && <span className="absolute -top-1.5 -right-1.5 px-1 rounded-full bg-amber-500 text-white text-[8px] font-bold leading-tight">{s.count}</span>}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
             {/* Empty option */}
             <div id="swap-group-empty" className="mb-3 pb-3 border-b border-zinc-100">
