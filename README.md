@@ -1,100 +1,70 @@
 # 像素拼豆图纸生成器
 
-> Pixel Bead Pattern Generator — Bento Pro v1.0
+> Pixel Bead Pattern Generator — v1.0
 
-纯浏览器端运行，一键将图片转换为拼豆像素网格图纸。支持 MARD 标准色卡匹配、CIEDE2000 色差体系、手动编辑、A4 分页 PDF 导出。
+纯浏览器端运行，上传图片 → 生成拼豆像素网格图纸。MARD 标准色卡匹配、CIEDE2000 色差体系、手动编辑、A4 分页 PDF 导出。
 
 ---
 
-## ✨ 功能
+## 功能
 
-### 图片裁切
-- **多比例裁切** — 1:1 / 4:3 / 3:4 / 16:9 / 9:16 / 原图比例自动裁切
-- **透明通道保留** — PNG 透明区域自动识别为空白格
-- **交互缩放** — 鼠标拖拽平移、滚轮缩放、键盘方向键微调、旋转
-
-### 图纸生成
+- **图片上传裁切** — 1:1 / 4:3 / 3:4 / 16:9 / 9:16 / 自动比例裁切，拖拽旋转缩放
 - **智能色卡匹配** — CIEDE2000 空间色差算法，最近邻像素映射到 MARD 221 色标准色卡
-- **预设画布规格** — 52×52 / 78×78 / 104×104 + 自定义宽高
-- **多种色差算法** — CIEDE2000 / CIE94 / CIE76 / WeightedRGB 可切换
-- **色彩数量限制** — 可设定最大色号数，自动精简色板
-
-### 手动编辑
-- **编辑模式** — 格子级精细编辑，十字光标
-- **画笔填充** — 左键单点 / 拖拽选区批量填充
-- **吸管取色** — 右键点击格子复制颜色到画笔
-- **橡皮擦** — 将格子设为空白
-- **MARD 色板** — 内置全系列色板弹出面板，点击选色
-- **魔棒工具** — 泛洪算法自动选中同色相连区域，一键批量替换或清空
-- **一键去杂色** — 自动扫描并消除 8 邻域无同色的孤立噪声像素
-- **撤销** — Ctrl+Z / 按钮撤销，最多 50 步历史
-
-### 导出
-- **高清 PNG** — 含耗材清单表格、色号标注、网格线
-- **A4 分页 PDF** — 大尺寸图纸自动切板分页，含统计清单
-
-### 耗材清单
-- 按 MARD 系列（A~M）自动分组统计
-- 显示色号、名称、用量、折算 1K 标准包装袋数
+- **亮度/对比度/饱和度调节** — 实时调整源图片后重新匹配色卡
+- **格子级手动编辑** — 画笔、橡皮擦、魔棒批量选区、去杂色、撤销（Ctrl+Z）
+- **移动端适配** — 三段式 tab 导航（参数/画布/色卡）、长按取色、双指捏合缩放
+- **高清 PNG 导出** — 含网格、标尺、色号标注、耗材清单
+- **A4 分页 PDF 导出** — 大尺寸图纸自动切板分页
 
 ---
 
-## 🔧 技术栈
+## 技术栈
 
 | 类别 | 技术 |
 |------|------|
 | 框架 | React 19 + TypeScript |
 | 构建 | Vite 6 |
 | 样式 | Tailwind CSS v4 |
+| 状态管理 | Zustand |
 | 图标 | Lucide React |
-| 色彩算法 | CIEDE2000（HEX → RGB → XYZ → Lab → ΔE2000） |
+| 色差算法 | CIEDE2000 / CIE94 / CIE76 / WeightedRGB |
 | 导出 | jsPDF + Canvas API |
-| 字体 | Inter / Outfit / JetBrains Mono |
+| 字体 | Syne / DM Sans / JetBrains Mono |
 
 ---
 
-## 📁 项目结构
+## 项目结构
 
 ```
 src/
-├── App.tsx                        # 主组件，路由状态管理
-├── main.tsx                       # React 入口
-├── index.css                      # Tailwind + 自定义样式
-├── types.ts                       # BeadPaletteItem / TransformedPixel / IngredientStat
-├── colorUtils.ts                  # 色彩空间转换 & CIEDE2000 色差计算
+├── App.tsx                              # 主应用入口
+├── main.tsx
+├── index.css                            # Tailwind + 自定义样式
+├── types.ts                             # 类型定义
+├── colorUtils.ts                        # 色彩空间转换 & 色差公式
+├── store/
+│   └── workspaceStore.ts               # Zustand 全局状态
+├── hooks/
+│   ├── useImageProcessing.ts           # 图像采样 & 色卡匹配管道
+│   └── useCanvasRenderer.ts            # Canvas 离屏渲染
 ├── components/
-│   ├── ImageUploader.tsx          # 图片上传 & 裁切视口
-│   └── PatternWorkspace.tsx       # 图纸生成 & 手动编辑工作台
+│   ├── ImageUploader.tsx               # 图片上传 & 裁切
+│   ├── PatternWorkspace.tsx            # 工作台主组件
+│   └── workspace/
+│       ├── ControlPanel.tsx             # 左侧控制面板
+│       ├── CanvasViewport.tsx           # 画布视口 + 编辑交互
+│       └── StatsPanel.tsx               # 底部色卡用量统计
 ├── data/
-│   └── palette.ts                 # MARD 221 色标准色卡（A~M 系列）
+│   └── palette.ts                       # MARD 221 色标准色卡
 └── utils/
-    └── exportUtils.ts             # PNG & PDF 导出
+    ├── exportUtils.ts                   # PNG & PDF 导出
+    ├── statsUtils.ts                    # 统计计算
+    └── editOperations.ts                # 编辑工具函数
 ```
 
 ---
 
-## 🚀 开发
-
-```bash
-# 安装依赖
-npm install
-
-# 启动开发服务器（默认 http://localhost:3000）
-npm run dev
-
-# 类型检查
-npm run lint
-
-# 构建生产版本
-npm run build
-
-# 预览生产构建
-npm run preview
-```
-
----
-
-## 📦 MARD 色卡系列
+## MARD 色卡系列
 
 | 系列 | 色域 | 数量 |
 |------|------|------|
@@ -110,16 +80,22 @@ npm run preview
 
 ---
 
-## ⌨️ 快捷键
+## 开发
 
-| 快捷键 | 功能 |
-|--------|------|
-| `Ctrl+Z` / `Cmd+Z` | 撤销 |
-| 右键（编辑模式） | 吸管取色 |
-| 左键拖拽（编辑模式） | 批量填充 |
+```bash
+npm install
+npm run dev      # http://localhost:3000
+npm run lint     # tsc --noEmit
+npm run build    # 生产构建
+npm run preview  # 预览构建结果
+```
 
 ---
 
-## 📄 许可证
+## 许可证
 
 MIT
+
+---
+
+[GitHub - qiao39gs/Pixel](https://github.com/qiao39gs/Pixel)
