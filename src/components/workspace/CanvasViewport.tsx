@@ -1,5 +1,5 @@
-import React, { useRef } from 'react';
-import { LayoutGrid, Award } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { LayoutGrid, Award, MoreHorizontal } from 'lucide-react';
 import { BeadPaletteItem, TransformedPixel, IngredientStat } from '../../types';
 import { COLOR_GROUPS } from '../../data/palette';
 import { hexToRgb } from '../../colorUtils';
@@ -22,6 +22,7 @@ export default function CanvasViewport({ canvasRef, containerRef, gridWidth, gri
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressPickedRef = useRef(false);
   const touchStartCoordsRef = useRef<{ x: number; y: number } | null>(null);
+  const [mobileToolsOpen, setMobileToolsOpen] = useState(false);
 
   // Read from store
   const editMode = useWorkspaceStore(s => s.editMode);
@@ -104,12 +105,31 @@ export default function CanvasViewport({ canvasRef, containerRef, gridWidth, gri
         <div className="flex items-center gap-2 text-white"><span className="text-xs font-bold px-2.5 py-1 bg-white/[0.06] border border-white/[0.04] rounded-lg text-slate-300 font-mono">{gridWidth} × {gridHeight} 画幅规格</span><span className="text-xs text-slate-400 font-semibold">( 最终已精准出数: <strong className="text-indigo-400">{stats.length} 色</strong> )</span></div>
         <div className="flex items-center gap-2 flex-wrap">
           <button onClick={() => { setEditMode(!editMode); setBrushBead(null); setSelectedCell(null); setIsEraser(false); setWandMode(false); setWandSelection(new Set()); }} className={`px-2.5 py-1.5 text-[11px] font-bold rounded-lg border transition-all cursor-pointer ${editMode ? 'bg-amber-500 text-white border-amber-500' : 'bg-white/[0.05] text-slate-300 border-white/[0.08] hover:bg-white/[0.1]'}`}>{editMode ? ' 编辑中' : ' 手动编辑'}</button>
-          {editMode && <button onClick={undo} className="px-2 py-1 text-[11px] font-bold rounded-lg border transition-all cursor-pointer bg-white/[0.05] text-slate-300 border-white/[0.08] hover:bg-white/[0.1]" title="撤销 (Ctrl+Z)"> 撤销</button>}
-          {editMode && <><button onClick={() => { setIsEraser(!isEraser); setBrushBead(null); }} className={`px-2 py-1 text-[11px] font-bold rounded-lg border transition-all cursor-pointer ${isEraser ? 'bg-red-500 text-white border-red-500' : 'bg-white/[0.05] text-slate-300 border-white/[0.08] hover:bg-white/[0.1]'}`}> 橡皮擦</button>
-            <button onClick={() => denoise(gridWidth, gridHeight, currentPalette)} className="px-2 py-1 text-[11px] font-bold rounded-lg border transition-all cursor-pointer bg-white/[0.05] text-slate-300 border-white/[0.08] hover:bg-emerald-500/20 hover:text-emerald-400 hover:border-emerald-500/30"> 去杂色</button>
-            <button onClick={() => { setWandMode(!wandMode); setWandSelection(new Set()); setIsEraser(false); }} className={`px-2 py-1 text-[11px] font-bold rounded-lg border transition-all cursor-pointer ${wandMode ? 'bg-cyan-500 text-white border-cyan-500' : 'bg-white/[0.05] text-slate-300 border-white/[0.08] hover:bg-cyan-500/20 hover:text-cyan-400 hover:border-cyan-500/30'}`}> 魔棒</button>
-            {wandMode && wandSelection.size > 0 && <span className="text-[10px] text-cyan-400 font-mono">已选{wandSelection.size}格</span>}
-            <button onClick={() => setShowPalettePanel(!showPalettePanel)} className={`px-2 py-1 text-[11px] font-bold rounded-lg border transition-all cursor-pointer ${showPalettePanel ? 'bg-violet-500 text-white border-violet-500' : 'bg-white/[0.05] text-slate-300 border-white/[0.08] hover:bg-violet-500/20 hover:text-violet-400 hover:border-violet-500/30'}`}> 色板</button></>}
+          {editMode && <button onClick={undo} className="px-2.5 py-1.5 text-[11px] font-bold rounded-lg border transition-all cursor-pointer bg-white/[0.05] text-slate-300 border-white/[0.08] hover:bg-white/[0.1]" title="撤销 (Ctrl+Z)">撤销</button>}
+          {editMode && <>
+            {/* Desktop: show all */}
+            <div className="hidden sm:flex items-center gap-1.5">
+              <button onClick={() => { setIsEraser(!isEraser); setBrushBead(null); }} className={`px-2.5 py-1.5 text-[11px] font-bold rounded-lg border transition-all cursor-pointer ${isEraser ? 'bg-red-500 text-white border-red-500' : 'bg-white/[0.05] text-slate-300 border-white/[0.08] hover:bg-white/[0.1]'}`}>橡皮擦</button>
+              <button onClick={() => denoise(gridWidth, gridHeight, currentPalette)} className="px-2.5 py-1.5 text-[11px] font-bold rounded-lg border transition-all cursor-pointer bg-white/[0.05] text-slate-300 border-white/[0.08] hover:bg-emerald-500/20 hover:text-emerald-400 hover:border-emerald-500/30">去杂色</button>
+              <button onClick={() => { setWandMode(!wandMode); setWandSelection(new Set()); setIsEraser(false); }} className={`px-2.5 py-1.5 text-[11px] font-bold rounded-lg border transition-all cursor-pointer ${wandMode ? 'bg-cyan-500 text-white border-cyan-500' : 'bg-white/[0.05] text-slate-300 border-white/[0.08] hover:bg-cyan-500/20 hover:text-cyan-400 hover:border-cyan-500/30'}`}>魔棒</button>
+              <button onClick={() => setShowPalettePanel(!showPalettePanel)} className={`px-2.5 py-1.5 text-[11px] font-bold rounded-lg border transition-all cursor-pointer ${showPalettePanel ? 'bg-violet-500 text-white border-violet-500' : 'bg-white/[0.05] text-slate-300 border-white/[0.08] hover:bg-violet-500/20 hover:text-violet-400 hover:border-violet-500/30'}`}>色板</button>
+            </div>
+            {/* Mobile: "…" menu */}
+            <div className="relative sm:hidden">
+              <button onClick={() => setMobileToolsOpen(!mobileToolsOpen)} className="px-2.5 py-1.5 text-[11px] font-bold rounded-lg border transition-all cursor-pointer bg-white/[0.05] text-slate-300 border-white/[0.08] hover:bg-white/[0.1]">
+                <MoreHorizontal className="w-3.5 h-3.5" />
+              </button>
+              {mobileToolsOpen && (
+                <div className="absolute right-0 top-full mt-1.5 bg-[#1A1A1F] border border-white/[0.1] rounded-xl shadow-2xl p-1.5 flex flex-col gap-0.5 min-w-[110px] z-20">
+                  <button onClick={() => { setIsEraser(!isEraser); setBrushBead(null); setMobileToolsOpen(false); }} className={`px-3 py-2 text-[11px] font-bold rounded-lg text-left transition-colors cursor-pointer ${isEraser ? 'bg-red-500/20 text-red-400' : 'text-slate-300 hover:bg-white/[0.06]'}`}>橡皮擦</button>
+                  <button onClick={() => { denoise(gridWidth, gridHeight, currentPalette); setMobileToolsOpen(false); }} className="px-3 py-2 text-[11px] font-bold rounded-lg text-left transition-colors cursor-pointer text-slate-300 hover:bg-white/[0.06]">去杂色</button>
+                  <button onClick={() => { setWandMode(!wandMode); setWandSelection(new Set()); setIsEraser(false); setMobileToolsOpen(false); }} className={`px-3 py-2 text-[11px] font-bold rounded-lg text-left transition-colors cursor-pointer ${wandMode ? 'bg-cyan-500/20 text-cyan-400' : 'text-slate-300 hover:bg-white/[0.06]'}`}>魔棒</button>
+                  <button onClick={() => { setShowPalettePanel(!showPalettePanel); setMobileToolsOpen(false); }} className={`px-3 py-2 text-[11px] font-bold rounded-lg text-left transition-colors cursor-pointer ${showPalettePanel ? 'bg-violet-500/20 text-violet-400' : 'text-slate-300 hover:bg-white/[0.06]'}`}>色板</button>
+                </div>
+              )}
+            </div>
+          </>}
+          {editMode && wandMode && wandSelection.size > 0 && <span className="text-[10px] text-cyan-400 font-mono">已选{wandSelection.size}格</span>}
           {editMode && brushBead && <div className="flex items-center gap-1.5 px-2 py-1 bg-amber-500/10 border border-amber-500/20 rounded-lg"><div className="w-4 h-4 rounded-full border border-white/20" style={{ backgroundColor: brushBead.hex }} /><span className="text-[10px] font-bold text-amber-400">{brushBead.code}</span><button onClick={() => setBrushBead(null)} className="text-amber-500/70 hover:text-red-400 ml-0.5 text-[11px] leading-none">✕</button></div>}
           {editMode && <span className="text-[10px] text-slate-500 hidden sm:inline">{wandMode ? (brushBead || isEraser ? '点击格子直接替换同色区域' : '点击格子选中相同颜色区域') : isEraser ? '擦除格子' : brushBead ? '左键/拖拽填充' : '右键取色 · 左键选格子'}</span>}
           {editMode && <span className="text-[10px] text-slate-500 sm:hidden">{brushBead ? '点击/拖拽填充' : isEraser ? '点击擦除' : '长按格子取色'}</span>}
