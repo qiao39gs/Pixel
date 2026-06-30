@@ -30,7 +30,6 @@ interface WorkspaceStore {
   transformedPixels: TransformedPixel[];
   stats: IngredientStat[];
   isProcessing: boolean;
-  imageAspectRatio: number;
   gridWidthActual: number;
   gridHeightActual: number;
   topTrim: number;
@@ -38,7 +37,12 @@ interface WorkspaceStore {
   leftTrim: number;
   rightTrim: number;
   mobileTab: 'controls' | 'canvas' | 'stats';
+  pipelineActive: boolean;
+  skipNextProcess: boolean;
+  currentProjectId: string | null;
+  restoringProject: boolean;
   undoStack: { pixels: TransformedPixel[]; stats: IngredientStat[] }[];
+  redoStack: { pixels: TransformedPixel[]; stats: IngredientStat[] }[];
 
   // Simple setters
   setPanelPreset: (v: WorkspaceStore['panelPreset']) => void;
@@ -70,14 +74,17 @@ interface WorkspaceStore {
   setGridWidthActual: (v: number) => void;
   setGridHeightActual: (v: number) => void;
   setMobileTab: (v: WorkspaceStore['mobileTab']) => void;
+  setPipelineActive: (v: boolean) => void;
 
   // Complex actions
   pushUndo: () => void;
   applyBrush: (x: number, y: number, gridWidth: number) => void;
   applyWandFill: (cell: { x: number; y: number }, selection: Set<string>, targetBead: BeadPaletteItem, gridWidth: number) => void;
   undo: () => void;
+  redo: () => void;
   denoise: (gridWidth: number, gridHeight: number, palette: BeadPaletteItem[]) => void;
   swapColor: (sourceCode: string, targetBead: BeadPaletteItem) => void;
+  loadProject: (pixels: TransformedPixel[], gridWidth: number, gridHeight: number, stats: IngredientStat[], settings: { colorLimit: number; distanceAlgorithm: string; removeBackground: boolean; brightness: number; contrast: number; saturation: number; panelPreset?: string; customWidth?: number }, hasOriginalImage?: boolean, projectId?: string) => void;
   autoDetectTrim: (gridWidth: number, gridHeight: number) => void;
   setTopTrim: (v: number) => void;
   setBottomTrim: (v: number) => void;
@@ -113,7 +120,6 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   transformedPixels: [],
   stats: [],
   isProcessing: false,
-  imageAspectRatio: 1,
   gridWidthActual: 52,
   gridHeightActual: 52,
   topTrim: 0,
@@ -121,7 +127,12 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   leftTrim: 0,
   rightTrim: 0,
   mobileTab: 'canvas' as const,
+  pipelineActive: true,
+  skipNextProcess: false,
+  currentProjectId: null,
+  restoringProject: false,
   undoStack: [],
+  redoStack: [],
 
   setPanelPreset: (v) => set({ panelPreset: v }),
   setCustomWidth: (v) => set({ customWidth: v }),
@@ -156,11 +167,12 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   setLeftTrim: (v) => set({ leftTrim: v }),
   setRightTrim: (v) => set({ rightTrim: v }),
   setMobileTab: (v) => set({ mobileTab: v }),
+  setPipelineActive: (v) => set({ pipelineActive: v }),
 
   pushUndo: () => {
     const s = get();
     const stack = [...s.undoStack, { pixels: [...s.transformedPixels], stats: [...s.stats] }];
-    set({ undoStack: stack.length > 50 ? stack.slice(-50) : stack });
+    set({ undoStack: stack.length > 50 ? stack.slice(-50) : stack, redoStack: [] });
   },
 
   applyBrush: (x, y, gridWidth) => {
@@ -172,6 +184,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     const stack = [...s.undoStack, { pixels: [...s.transformedPixels], stats: [...s.stats] }];
     set({
       undoStack: stack.length > 50 ? stack.slice(-50) : stack,
+      redoStack: [],
       transformedPixels: next,
       stats: recalculateStats(next),
       selectedCell: { x, y },
@@ -189,7 +202,17 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     if (s.undoStack.length === 0) return;
     const stack = [...s.undoStack];
     const prev = stack.pop()!;
-    set({ undoStack: stack, transformedPixels: prev.pixels, stats: prev.stats, wandSelection: new Set(), selectedCell: null });
+    const redo = [...s.redoStack, { pixels: [...s.transformedPixels], stats: [...s.stats] }];
+    set({ undoStack: stack, redoStack: redo, transformedPixels: prev.pixels, stats: prev.stats, wandSelection: new Set(), selectedCell: null });
+  },
+
+  redo: () => {
+    const s = get();
+    if (s.redoStack.length === 0) return;
+    const redo = [...s.redoStack];
+    const next = redo.pop()!;
+    const stack = [...s.undoStack, { pixels: [...s.transformedPixels], stats: [...s.stats] }];
+    set({ undoStack: stack.length > 50 ? stack.slice(-50) : stack, redoStack: redo, transformedPixels: next.pixels, stats: next.stats, wandSelection: new Set(), selectedCell: null });
   },
 
   denoise: (gridWidth, gridHeight, palette) => {
@@ -199,6 +222,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     if (changed > 0) {
       set({
         undoStack: stack.length > 50 ? stack.slice(-50) : stack,
+        redoStack: [],
         transformedPixels: pixels,
         stats,
       });
@@ -213,6 +237,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     );
     set({
       undoStack: stack.length > 50 ? stack.slice(-50) : stack,
+      redoStack: [],
       transformedPixels: next,
       stats: recalculateStats(next),
     });
@@ -252,11 +277,48 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     const stack = [...s.undoStack, { pixels: [...s.transformedPixels], stats: [...s.stats] }];
     set({
       undoStack: stack.length > 50 ? stack.slice(-50) : stack,
+      redoStack: [],
       transformedPixels: result,
       stats: recalculateStats(result),
       gridWidthActual: newWidth,
       gridHeightActual: newHeight,
       topTrim: 0, bottomTrim: 0, leftTrim: 0, rightTrim: 0,
+    });
+  },
+
+  loadProject: (pixels, gridWidth, gridHeight, stats, settings, hasOriginalImage, projectId) => {
+    const preset = (settings.panelPreset as WorkspaceStore['panelPreset']) || 'custom';
+    set({
+      transformedPixels: pixels,
+      stats,
+      gridWidthActual: gridWidth,
+      gridHeightActual: gridHeight,
+      colorLimit: settings.colorLimit,
+      distanceAlgorithm: settings.distanceAlgorithm as WorkspaceStore['distanceAlgorithm'],
+      removeBackground: settings.removeBackground,
+      brightness: settings.brightness,
+      contrast: settings.contrast,
+      saturation: settings.saturation,
+      panelPreset: preset,
+      customWidth: settings.customWidth || gridWidth,
+      localAspectRatio: gridWidth / gridHeight,
+      undoStack: [],
+      redoStack: [],
+      wandSelection: new Set(),
+      selectedCell: null,
+      editMode: false,
+      brushBead: null,
+      isEraser: false,
+      wandMode: false,
+      topTrim: 0,
+      bottomTrim: 0,
+      leftTrim: 0,
+      rightTrim: 0,
+      panOffset: { x: 0, y: 0 },
+      pipelineActive: hasOriginalImage === true,
+      skipNextProcess: hasOriginalImage === true,
+      restoringProject: true,
+      currentProjectId: projectId ?? null,
     });
   },
 }));

@@ -22,6 +22,11 @@ export default function App() {
     setCroppedImage(null);
   }, []);
 
+  const handleRestoreImage = useCallback((image: string, ar: '1:1' | '4:3' | 'auto') => {
+    setAspectRatio(ar);
+    setCroppedImage(image);
+  }, []);
+
   // PNG trigger download
   const handleGeneratePng = useCallback((
     pixels: TransformedPixel[],
@@ -60,14 +65,14 @@ export default function App() {
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <span className="font-display font-bold text-[15px] tracking-tight text-[#18181B]">像素拼豆</span>
-            <span className="hidden sm:inline text-xs font-mono text-zinc-400 border border-zinc-200 px-1.5 py-0.5 rounded-md">v1.0.1</span>
+            <span className="hidden sm:inline text-xs font-mono text-zinc-400 border border-zinc-200 px-1.5 py-0.5 rounded-md">v1.0.2</span>
           </div>
           <span className="text-xs text-zinc-400 font-mono hidden md:block">PIXEL BEAD PATTERN GENERATOR</span>
         </div>
       </header>
 
       {/* Main */}
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-6 md:py-8 flex flex-col gap-8">
+      <main className="flex-1 w-full mx-auto px-4 py-6 md:py-8 flex flex-col gap-8">
 
         {/* Hero — only when no image */}
         {!croppedImage && (
@@ -99,13 +104,14 @@ export default function App() {
             />
           </div>
         ) : (
-          <div className="w-full animate-fade-in">
+          <div className="w-full max-w-[1600px] mx-auto animate-fade-in">
             <PatternWorkspace
               croppedImageDataUrl={croppedImage}
               onReset={handleReset}
               aspectRatio={aspectRatio}
               onGeneratePng={handleGeneratePng}
               onGeneratePdf={handleGeneratePdf}
+              onRestoreImage={handleRestoreImage}
             />
           </div>
         )}

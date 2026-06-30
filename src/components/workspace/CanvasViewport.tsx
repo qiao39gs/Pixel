@@ -66,6 +66,7 @@ export default function CanvasViewport({ canvasRef, containerRef, gridWidth, gri
   const applyWandFill = useWorkspaceStore(s => s.applyWandFill);
   const pushUndo = useWorkspaceStore(s => s.pushUndo);
   const undo = useWorkspaceStore(s => s.undo);
+  const redo = useWorkspaceStore(s => s.redo);
   const denoise = useWorkspaceStore(s => s.denoise);
 
   const coordToGrid = (clientX: number, clientY: number) => {
@@ -109,7 +110,8 @@ export default function CanvasViewport({ canvasRef, containerRef, gridWidth, gri
         <div className="flex items-center gap-2 text-white"><span className="text-xs font-bold px-2.5 py-1 bg-white/[0.06] border border-white/[0.04] rounded-lg text-slate-300 font-mono">{gridWidth} × {gridHeight} 画幅规格</span><span className="text-xs text-slate-400 font-semibold">( 最终已精准出数: <strong className="text-indigo-400">{stats.length} 色</strong> )</span></div>
         <div className="flex items-center gap-2 flex-wrap">
           <button onClick={() => { setEditMode(!editMode); setBrushBead(null); setSelectedCell(null); setIsEraser(false); setWandMode(false); setWandSelection(new Set()); }} className={`px-2.5 py-1.5 text-xs font-bold rounded-lg border transition-all cursor-pointer ${editMode ? 'bg-amber-500 text-white border-amber-500' : 'bg-white/[0.05] text-slate-300 border-white/[0.08] hover:bg-white/[0.1]'}`}>{editMode ? ' 编辑中' : ' 手动编辑'}</button>
-          {editMode && <button onClick={undo} className="px-2.5 py-1.5 text-xs font-bold rounded-lg border transition-all cursor-pointer bg-white/[0.05] text-slate-300 border-white/[0.08] hover:bg-white/[0.1]" title="撤销 (Ctrl+Z)">撤销</button>}
+           {editMode && <button onClick={undo} className="px-2.5 py-1.5 text-xs font-bold rounded-lg border transition-all cursor-pointer bg-white/[0.05] text-slate-300 border-white/[0.08] hover:bg-white/[0.1]" title="撤销 (Ctrl+Z)">撤销</button>}
+           {editMode && <button onClick={redo} className="px-2.5 py-1.5 text-xs font-bold rounded-lg border transition-all cursor-pointer bg-white/[0.05] text-slate-300 border-white/[0.08] hover:bg-white/[0.1]" title="重做 (Ctrl+Shift+Z)">重做</button>}
           {editMode && <>
             {/* Desktop: show all */}
             <div className="hidden sm:flex items-center gap-1.5">

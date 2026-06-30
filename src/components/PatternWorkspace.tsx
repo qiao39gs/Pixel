@@ -9,6 +9,7 @@ import { useWorkspaceStore } from '../store/workspaceStore';
 import ControlPanel from './workspace/ControlPanel';
 import CanvasViewport from './workspace/CanvasViewport';
 import StatsPanel from './workspace/StatsPanel';
+import ProjectPanel from './workspace/ProjectPanel';
 
 interface PatternWorkspaceProps {
   croppedImageDataUrl: string;
@@ -16,9 +17,10 @@ interface PatternWorkspaceProps {
   aspectRatio: '1:1' | '4:3' | '3:4' | '16:9' | '9:16' | 'auto';
   onGeneratePng: (pixels: TransformedPixel[], width: number, height: number, stats: IngredientStat[], options?: { showRulers: boolean; showNumbers: boolean }) => void;
   onGeneratePdf: (pixels: TransformedPixel[], width: number, height: number, stats: IngredientStat[], options?: { showRulers: boolean; showNumbers: boolean }) => void;
+  onRestoreImage: (image: string, aspectRatio: '1:1' | '4:3' | 'auto') => void;
 }
 
-export default function PatternWorkspace({ croppedImageDataUrl, onReset, aspectRatio, onGeneratePng, onGeneratePdf }: PatternWorkspaceProps) {
+export default function PatternWorkspace({ croppedImageDataUrl, onReset, aspectRatio, onGeneratePng, onGeneratePdf, onRestoreImage }: PatternWorkspaceProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -45,6 +47,7 @@ export default function PatternWorkspace({ croppedImageDataUrl, onReset, aspectR
   const wandSelection = useWorkspaceStore(s => s.wandSelection);
 
   const undo = useWorkspaceStore(s => s.undo);
+  const redo = useWorkspaceStore(s => s.redo);
   const setScale = useWorkspaceStore(s => s.setScale);
 
   const { gridWidth, gridHeight } = useMemo(() => {
@@ -66,26 +69,36 @@ export default function PatternWorkspace({ croppedImageDataUrl, onReset, aspectR
   useEffect(() => {
     const rulerSize = showRulers ? 32 : 0;
     const maxW = Math.min(window.innerWidth - 24, 700);
-    const fit = Math.max(4, Math.floor((maxW - rulerSize) / gridWidth));
+    const fit = Math.max(4, Math.floor((maxW - rulerSize) / gridWidthActual));
     setScale(Math.min(14, fit));
-  }, [gridWidth]);
+  }, [gridWidthActual, showRulers, setScale]);
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undo(); } };
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) { redo(); } else { undo(); }
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+        e.preventDefault();
+        redo();
+      }
+    };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [undo]);
+  }, [undo, redo]);
 
   return (
     <div className="w-full flex flex-col">
       {/* Tab bar — reads from store directly now via CanvasViewport */}
       <TabBar />
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start mt-4">
-        <ControlPanel onReset={onReset} />
-        <div className="w-full lg:col-span-8 flex flex-col gap-6">
+        <div className="lg:col-span-3"><ControlPanel onReset={onReset} /></div>
+        <div className="w-full lg:col-span-6 flex flex-col gap-6">
           <CanvasViewport canvasRef={canvasRef} containerRef={containerRef} gridWidth={gridWidthActual} gridHeight={gridHeightActual} currentPalette={currentPalette} onGeneratePng={onGeneratePng} onGeneratePdf={onGeneratePdf} />
           <StatsPanel />
         </div>
+        <div className="lg:col-span-3"><ProjectPanel onReset={onReset} croppedImageDataUrl={croppedImageDataUrl} aspectRatio={aspectRatio} onRestoreImage={onRestoreImage} /></div>
       </div>
     </div>
   );

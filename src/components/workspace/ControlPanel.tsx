@@ -30,7 +30,6 @@ export default function ControlPanel({ onReset }: Props) {
   const setPanelPreset = useWorkspaceStore(s => s.setPanelPreset);
   const customWidth = useWorkspaceStore(s => s.customWidth);
   const setCustomWidth = useWorkspaceStore(s => s.setCustomWidth);
-  const imageAspectRatio = useWorkspaceStore(s => s.imageAspectRatio);
   const colorLimit = useWorkspaceStore(s => s.colorLimit);
   const setColorLimit = useWorkspaceStore(s => s.setColorLimit);
   const brightness = useWorkspaceStore(s => s.brightness);
@@ -97,7 +96,7 @@ export default function ControlPanel({ onReset }: Props) {
               <div className="text-slate-400 text-xs pt-3 font-semibold">×</div>
               <div className="flex-1 flex flex-col gap-1"><span className="text-xs text-slate-400 font-bold uppercase">高度 (锁比例)</span>
                 <div className="w-full p-1.5 border border-slate-100 text-xs text-center font-mono rounded bg-slate-100 text-slate-500 select-none font-semibold">
-                  {Math.max(1, Math.round(customWidth / (imageAspectRatio || localAspectRatio || 1)))}
+                  {Math.max(1, Math.round(customWidth / (localAspectRatio || 1)))}
                 </div>
               </div>
             </div>
@@ -174,7 +173,7 @@ export default function ControlPanel({ onReset }: Props) {
             <button onClick={() => setShowRulers(!showRulers)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${showRulers ? 'bg-indigo-600' : 'bg-slate-200'}`}><span className={`inline-block h-4.5 w-4.5 transform rounded-full bg-white transition-transform ${showRulers ? 'translate-x-5.5' : 'translate-x-0.5'}`} /></button>
           </div>
           <div className="flex items-center justify-between"><span className="text-xs text-slate-700 font-semibold flex items-center gap-1"><Hash className="w-3.5 h-3.5 text-slate-400" /> 图纸格子覆盖色号标识</span>
-            <button onClick={() => setShowNumbers(!showNumbers)} disabled={scale < 12} title={scale < 12 ? '请拉大网格显示尺寸以开启色号' : ''} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${showNumbers ? 'bg-indigo-600' : 'bg-slate-200'}`}><span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${showNumbers ? 'translate-x-4.5' : 'translate-x-1'}`} /></button>
+            <button onClick={() => setShowNumbers(!showNumbers)} disabled={scale < 16} title={scale < 16 ? '请拉大网格显示尺寸以开启色号' : ''} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${showNumbers ? 'bg-indigo-600' : 'bg-slate-200'}`}><span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${showNumbers ? 'translate-x-4.5' : 'translate-x-1'}`} /></button>
           </div>
         </div>
         {scale < 16 && showNumbers && <p className="text-xs text-amber-600 leading-tight">提示: 网格渲染尺寸较小 (当前 {scale}px)，图纸中可能会无法看清标记，建议调拉高上方网格尺寸。</p>}

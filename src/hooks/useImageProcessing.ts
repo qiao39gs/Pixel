@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { TransformedPixel, BeadPaletteItem } from '../types';
 import { rgbToLab, deltaE76, deltaE2000, deltaE94, deltaEWeightedRGB } from '../colorUtils';
 import { recalculateStats } from '../utils/statsUtils';
@@ -30,11 +30,29 @@ export function useImageProcessing({ croppedImageDataUrl, panelPreset, customWid
   const setGridWidthActual = useWorkspaceStore(s => s.setGridWidthActual);
   const setGridHeightActual = useWorkspaceStore(s => s.setGridHeightActual);
   const resetTrim = () => { const s = useWorkspaceStore.getState(); s.setTopTrim(0); s.setBottomTrim(0); s.setLeftTrim(0); s.setRightTrim(0); };
+  const lastImageRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!croppedImageDataUrl) {
       setTransformedPixels([]);
       setStats([]);
+      setIsProcessing(false);
+      return;
+    }
+    if (lastImageRef.current !== croppedImageDataUrl) {
+      lastImageRef.current = croppedImageDataUrl;
+      if (!useWorkspaceStore.getState().restoringProject) {
+        useWorkspaceStore.setState({ currentProjectId: null });
+      }
+    }
+    const store = useWorkspaceStore.getState();
+    if (store.skipNextProcess) {
+      useWorkspaceStore.setState({ skipNextProcess: false, pipelineActive: true, restoringProject: false });
+      setIsProcessing(false);
+      return;
+    }
+    useWorkspaceStore.setState({ restoringProject: false });
+    if (!store.pipelineActive) {
       setIsProcessing(false);
       return;
     }

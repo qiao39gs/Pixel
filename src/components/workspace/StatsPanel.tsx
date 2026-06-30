@@ -30,7 +30,7 @@ export default function StatsPanel() {
   }, [stats]);
 
   return (
-    <div className={`bg-white rounded-3xl border border-black/[0.04] p-6 shadow-sm ${mobileTab === 'canvas' ? 'hidden lg:block' : ''}`}>
+    <div className={`bg-white rounded-3xl border border-black/[0.04] p-6 shadow-sm ${mobileTab !== 'stats' ? 'hidden lg:block' : ''}`}>
       {/* Swap palette popup */}
       {swapSource && (
         <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/30 backdrop-blur-xs" onClick={() => setSwapSource(null)}>
