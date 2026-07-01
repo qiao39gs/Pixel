@@ -76,6 +76,7 @@ src/
     ├── statsUtils.ts                    # 统计计算
     ├── editOperations.ts                # 编辑工具函数
     └── projectStorage.ts               # 项目 localStorage 持久化 & JSON 导入导出
+```
 
 ---
 
