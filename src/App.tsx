@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useCallback } from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import ImageUploader from './components/ImageUploader';
 import PatternWorkspace from './components/PatternWorkspace';
 import { generateHighResPng, generateMultiPagePdf } from './utils/exportUtils';
@@ -131,6 +132,7 @@ export default function App() {
         </footer>
       )}
 
+      <Analytics />
     </div>
   );
 }
