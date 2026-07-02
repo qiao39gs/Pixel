@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { Grid3X3, X, ArrowLeftRight } from 'lucide-react';
 import { BeadPaletteItem } from '../../types';
 import { hexToRgb } from '../../colorUtils';
@@ -28,6 +28,85 @@ export default function StatsPanel() {
     stats.forEach(s => m.set(s.bead.code, s.count));
     return m;
   }, [stats]);
+
+  // 移动端长按拖拽换色：HTML5 DnD 在触屏不触发，改用长按+原生非被动触摸事件
+  const beadByCode = useMemo(() => new Map(stats.map(s => [s.bead.code, s.bead])), [stats]);
+  const beadByCodeRef = useRef(beadByCode);
+  beadByCodeRef.current = beadByCode;
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const touchStartRef = useRef<{ code: string; x: number; y: number } | null>(null);
+  const dragActiveRef = useRef(false);
+  const suppressClickRef = useRef(false);
+  const nativeHandlersRef = useRef<{ move: (e: TouchEvent) => void; end: (e: TouchEvent) => void } | null>(null);
+  const [dragSource, setDragSource] = useState<string | null>(null);
+
+  const findColorCodeAt = useCallback((x: number, y: number): string | null => {
+    const el = document.elementFromPoint(x, y) as HTMLElement | null;
+    if (!el) return null;
+    const item = el.closest('[data-color-code]') as HTMLElement | null;
+    return item?.dataset.colorCode ?? null;
+  }, []);
+
+  const startTouchDrag = useCallback((sourceCode: string) => {
+    dragActiveRef.current = true;
+    setDragSource(sourceCode);
+    if (navigator.vibrate) try { navigator.vibrate(15); } catch { /* ignore */ }
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches.length !== 1) return;
+      e.preventDefault();
+      const t = e.touches[0];
+      const code = findColorCodeAt(t.clientX, t.clientY);
+      setDragOver(code && code !== sourceCode ? code : null);
+    };
+    const onTouchEnd = (e: TouchEvent) => {
+      const t = e.changedTouches[0];
+      const code = findColorCodeAt(t.clientX, t.clientY);
+      if (code && code !== sourceCode) {
+        const targetBead = beadByCodeRef.current.get(code);
+        if (targetBead) swapColor(sourceCode, targetBead);
+      }
+      document.removeEventListener('touchmove', onTouchMove, true);
+      document.removeEventListener('touchend', onTouchEnd, true);
+      nativeHandlersRef.current = null;
+      dragActiveRef.current = false;
+      setDragSource(null);
+      setDragOver(null);
+      suppressClickRef.current = true;
+    };
+    nativeHandlersRef.current = { move: onTouchMove, end: onTouchEnd };
+    document.addEventListener('touchmove', onTouchMove, { capture: true, passive: false });
+    document.addEventListener('touchend', onTouchEnd, { capture: true, passive: false });
+  }, [findColorCodeAt, swapColor]);
+
+  useEffect(() => () => {
+    if (nativeHandlersRef.current) {
+      document.removeEventListener('touchmove', nativeHandlersRef.current.move, true);
+      document.removeEventListener('touchend', nativeHandlersRef.current.end, true);
+    }
+    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+  }, []);
+
+  const onItemTouchStart = (code: string) => (e: React.TouchEvent) => {
+    suppressClickRef.current = false;
+    const t = e.touches[0];
+    touchStartRef.current = { code, x: t.clientX, y: t.clientY };
+    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+    longPressTimerRef.current = setTimeout(() => {
+      longPressTimerRef.current = null;
+      if (!dragActiveRef.current) startTouchDrag(code);
+    }, 350);
+  };
+  const onItemTouchMove = (e: React.TouchEvent) => {
+    if (dragActiveRef.current) return;
+    const start = touchStartRef.current;
+    if (!start) return;
+    const t = e.touches[0];
+    const dx = t.clientX - start.x, dy = t.clientY - start.y;
+    if (dx * dx + dy * dy > 100) { if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null; } }
+  };
+  const onItemTouchEnd = () => {
+    if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null; }
+  };
 
   return (
     <div className={`bg-white rounded-3xl border border-black/[0.04] p-6 shadow-sm ${mobileTab !== 'stats' ? 'hidden lg:block' : ''}`}>
@@ -142,7 +221,13 @@ export default function StatsPanel() {
           </span>
         </div>
         <div className="text-xs text-slate-400 font-semibold md:text-right">
-          {editMode ? '点按色块设为画笔 · 左键画布填充' : '点击色块聚焦高亮 · 拖拽色块至另一色块快速换色'}
+          {editMode ? (<>
+            <span className="hidden md:inline">点击色块设为画笔 · 左键画布填充</span>
+            <span className="md:hidden">点按色块设为画笔 · 点按画布填充</span>
+          </>) : (<>
+            <span className="hidden md:inline">点击色块聚焦高亮 · 拖拽色块至另一色块快速换色</span>
+            <span className="md:hidden">点按色块聚焦高亮 · 长按拖拽至另一色块快速换色</span>
+          </>)}
         </div>
       </div>
       {COLOR_GROUPS.map(group => {
@@ -156,15 +241,19 @@ export default function StatsPanel() {
                 const isSelected = selectedBeadHighlight === statItem.bead.code;
                 return (
                   <div key={statItem.bead.code}
+                    data-color-code={statItem.bead.code}
                     draggable
                     onDragStart={(e) => { e.dataTransfer.setData('text/plain', statItem.bead.code); e.dataTransfer.effectAllowed = 'move'; }}
                     onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDragOver(statItem.bead.code); }}
                     onDragLeave={() => setDragOver(null)}
                     onDrop={(e) => { e.preventDefault(); const src = e.dataTransfer.getData('text/plain'); if (src && src !== statItem.bead.code) swapColor(src, statItem.bead); setDragOver(null); }}
-                    className={`flex items-center justify-between p-3 rounded-2xl border transition-all cursor-pointer ${dragOver === statItem.bead.code ? 'border-dashed border-indigo-400 bg-indigo-50/30 scale-[1.02]' : isSelected ? 'border-indigo-600 bg-indigo-50/20 shadow-xs' : 'border-slate-100 hover:bg-slate-50 bg-white'}`}>
+                    onTouchStart={onItemTouchStart(statItem.bead.code)}
+                    onTouchMove={onItemTouchMove}
+                    onTouchEnd={onItemTouchEnd}
+                    className={`flex items-center justify-between p-3 rounded-2xl border transition-all cursor-pointer select-none ${dragSource === statItem.bead.code ? 'ring-2 ring-amber-400 opacity-70' : dragOver === statItem.bead.code ? 'border-dashed border-indigo-400 bg-indigo-50/30 scale-[1.02]' : isSelected ? 'border-indigo-600 bg-indigo-50/20 shadow-xs' : 'border-slate-100 hover:bg-slate-50 bg-white'}`}>
                     <div className="flex items-center gap-3">
                       <button
-                        onClick={(e) => { e.stopPropagation(); editMode ? setBrushBead(statItem.bead) : setSelectedBeadHighlight(isSelected ? null : statItem.bead.code); }}
+                        onClick={(e) => { e.stopPropagation(); if (suppressClickRef.current) { suppressClickRef.current = false; return; } editMode ? setBrushBead(statItem.bead) : setSelectedBeadHighlight(isSelected ? null : statItem.bead.code); }}
                         className="w-10 h-10 rounded-full shadow-inner border border-black/[0.04] flex items-center justify-center font-mono font-bold text-xs transition-transform hover:scale-110 cursor-pointer flex-shrink-0"
                         style={{ backgroundColor: statItem.bead.hex, color: ['#FFFFFF','#F5F5F5','#FFE0B2'].includes(statItem.bead.hex) ? '#334155' : '#FFFFFF' }}
                         title={editMode ? '设为画笔' : (isSelected ? '取消高亮' : '聚焦高亮')}
@@ -179,7 +268,7 @@ export default function StatsPanel() {
                         <div className="text-[10px] text-slate-400 mt-0.5 font-mono font-semibold">~{(statItem.count / 1000).toFixed(1)} 包</div>
                       </div>
                       <button
-                        onClick={(e) => { e.stopPropagation(); setSwapSource(statItem.bead.code); }}
+                        onClick={(e) => { e.stopPropagation(); if (suppressClickRef.current) { suppressClickRef.current = false; return; } setSwapSource(statItem.bead.code); }}
                         className="px-2 py-1 text-xs font-bold rounded-lg bg-slate-100 text-slate-500 hover:bg-indigo-50 hover:text-indigo-600 transition-colors cursor-pointer flex-shrink-0"
                       >换色</button>
                     </div>
