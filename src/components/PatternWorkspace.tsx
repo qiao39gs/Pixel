@@ -32,6 +32,7 @@ export default function PatternWorkspace({ croppedImageDataUrl, onReset, aspectR
   const contrast = useWorkspaceStore(s => s.contrast);
   const saturation = useWorkspaceStore(s => s.saturation);
   const distanceAlgorithm = useWorkspaceStore(s => s.distanceAlgorithm);
+  const kMedoidsOptimize = useWorkspaceStore(s => s.kMedoidsOptimize);
   const removeBackground = useWorkspaceStore(s => s.removeBackground);
 
   const transformedPixels = useWorkspaceStore(s => s.transformedPixels);
@@ -61,7 +62,7 @@ export default function PatternWorkspace({ croppedImageDataUrl, onReset, aspectR
     BEAD_PALETTE.filter(i => i.brand === 'MGB').map(i => ({ ...i, rgb: hexToRgb(i.hex), lab: rgbToLab(hexToRgb(i.hex)) })),
   []);
 
-  useImageProcessing({ croppedImageDataUrl, panelPreset, customWidth, aspectRatio, removeBackground, colorLimit, distanceAlgorithm, currentPalette, gridWidth, gridHeight, brightness, contrast, saturation });
+  useImageProcessing({ croppedImageDataUrl, panelPreset, customWidth, aspectRatio, removeBackground, colorLimit, distanceAlgorithm, kMedoidsOptimize, currentPalette, gridWidth, gridHeight, brightness, contrast, saturation });
 
   useCanvasRenderer({ canvasRef, transformedPixels, gridWidth: gridWidthActual, gridHeight: gridHeightActual, scale, showNumbers, showRulers, selectedBeadHighlight, editMode, selectedCell, wandMode, wandSelection });
 

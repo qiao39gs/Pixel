@@ -28,6 +28,7 @@ export interface ProjectData {
     saturation: number;
     panelPreset?: string;
     customWidth?: number;
+    kMedoidsOptimize?: boolean;
   };
   originalImage?: string;
   aspectRatio?: string;
@@ -251,7 +252,7 @@ export function importProjectFromJson(file: File): Promise<{ name: string; pixel
           gridWidth,
           gridHeight,
           stats: stats || [],
-          settings: settings || { colorLimit: 12, distanceAlgorithm: 'CIEDE2000', removeBackground: true, brightness: 100, contrast: 100, saturation: 100, panelPreset: 'custom', customWidth: data.gridWidth },
+          settings: settings || { colorLimit: 12, distanceAlgorithm: 'CIEDE2000', removeBackground: true, brightness: 100, contrast: 100, saturation: 100, panelPreset: 'custom', customWidth: data.gridWidth, kMedoidsOptimize: false },
           originalImage,
           aspectRatio,
         });

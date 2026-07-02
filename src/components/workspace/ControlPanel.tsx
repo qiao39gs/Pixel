@@ -32,6 +32,10 @@ export default function ControlPanel({ onReset }: Props) {
   const setCustomWidth = useWorkspaceStore(s => s.setCustomWidth);
   const colorLimit = useWorkspaceStore(s => s.colorLimit);
   const setColorLimit = useWorkspaceStore(s => s.setColorLimit);
+  // k-medoids 开启时，色数滑块改为松手提交，避免拖动中反复跑聚类
+  const colorLimitPending = useRef(colorLimit);
+  const [colorLimitLocal, setColorLimitLocal] = useState(colorLimit);
+  useEffect(() => { if (colorLimitLocal === colorLimitPending.current) { setColorLimitLocal(colorLimit); colorLimitPending.current = colorLimit; } }, [colorLimit]);
   const brightness = useWorkspaceStore(s => s.brightness);
   const setBrightness = useWorkspaceStore(s => s.setBrightness);
   const contrast = useWorkspaceStore(s => s.contrast);
@@ -40,6 +44,8 @@ export default function ControlPanel({ onReset }: Props) {
   const setSaturation = useWorkspaceStore(s => s.setSaturation);
   const distanceAlgorithm = useWorkspaceStore(s => s.distanceAlgorithm);
   const setDistanceAlgorithm = useWorkspaceStore(s => s.setDistanceAlgorithm);
+  const kMedoidsOptimize = useWorkspaceStore(s => s.kMedoidsOptimize);
+  const setKMedoidsOptimize = useWorkspaceStore(s => s.setKMedoidsOptimize);
   const removeBackground = useWorkspaceStore(s => s.removeBackground);
   const setRemoveBackground = useWorkspaceStore(s => s.setRemoveBackground);
   const scale = useWorkspaceStore(s => s.scale);
@@ -104,8 +110,12 @@ export default function ControlPanel({ onReset }: Props) {
         </div>
         <div className="flex flex-col gap-2.5">
           <div className="flex justify-between items-center text-xs"><span className="font-bold text-slate-700">限制色号数量 (色彩量化)</span>
-            <span className="font-mono px-2 py-0.5 bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-md font-bold text-xs">{colorLimit} 色以内</span></div>
-          <input type="range" min="2" max="24" value={colorLimit} onChange={e => setColorLimit(parseInt(e.target.value))} className="w-full h-3 accent-indigo-600 bg-slate-200 rounded-lg cursor-pointer" />
+            <span className="font-mono px-2 py-0.5 bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-md font-bold text-xs">{kMedoidsOptimize ? colorLimitLocal : colorLimit} 色以内</span></div>
+          <input type="range" min="2" max="24"
+            {...(kMedoidsOptimize
+              ? { value: colorLimitLocal, onChange: (e: React.ChangeEvent<HTMLInputElement>) => { const v = parseInt(e.target.value); setColorLimitLocal(v); colorLimitPending.current = v; }, onMouseUp: () => { if (colorLimitPending.current !== colorLimit) setColorLimit(colorLimitPending.current); }, onTouchEnd: () => { if (colorLimitPending.current !== colorLimit) setColorLimit(colorLimitPending.current); } }
+              : { value: colorLimit, onChange: (e: React.ChangeEvent<HTMLInputElement>) => setColorLimit(parseInt(e.target.value)) })}
+            className="w-full h-3 accent-indigo-600 bg-slate-200 rounded-lg cursor-pointer" />
           <span className="text-xs text-slate-400 leading-normal">限制图纸最终出现的最多拼豆颜色，数量少可大幅降低图纸制作与购买复杂度。</span>
         </div>
         <div className="flex flex-col gap-2 p-3 bg-slate-50 border border-slate-100 rounded-2xl">
@@ -116,6 +126,15 @@ export default function ControlPanel({ onReset }: Props) {
             {algoBtn('CIE94', 'CIE94 (感知)', '图形艺术及纺织工业标准')}
             {algoBtn('CIE76', 'CIE76 (常规)', '经典的 CIE L*a*b* 空间常规三维欧氏距离')}
             {algoBtn('WeightedRGB', '红均加权 (RGB)', '针对人眼对不同颜色波长敏感度不一致的动态加权算法')}
+          </div>
+          <div className="flex items-center justify-between mt-1.5 pt-1.5 border-t border-slate-100">
+            <div className="flex flex-col">
+              <span className="text-xs font-bold text-slate-600">智能选色优化 (k-medoids)</span>
+              <span className="text-[11px] text-slate-400 leading-normal mt-0.5">以量化误差最小为准则从色卡精选色号，替代默认频次选取；渐变/照片类图色彩还原更均衡，处理稍慢。</span>
+            </div>
+            <button onClick={() => setKMedoidsOptimize(!kMedoidsOptimize)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer shrink-0 ${kMedoidsOptimize ? 'bg-indigo-600' : 'bg-slate-200'}`}>
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${kMedoidsOptimize ? 'translate-x-6' : 'translate-x-1'}`} />
+            </button>
           </div>
         </div>
         <div className="flex flex-col gap-2.5 pt-3 border-t border-slate-100">

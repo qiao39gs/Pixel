@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { TransformedPixel, BeadPaletteItem } from '../types';
-import { rgbToLab, deltaE76, deltaE2000, deltaE94, deltaEWeightedRGB } from '../colorUtils';
+import { rgbToLab, deltaE76, deltaE2000, deltaE94, deltaEWeightedRGB, LAB, RGB } from '../colorUtils';
 import { recalculateStats } from '../utils/statsUtils';
+import { selectPaletteByKMedoids } from '../utils/kMedoids';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
 type PaletteItemWithCache = BeadPaletteItem & { rgb: { r: number; g: number; b: number }; lab: { l: number; a: number; b: number } };
@@ -14,6 +15,7 @@ interface Params {
   removeBackground: boolean;
   colorLimit: number;
   distanceAlgorithm: 'CIEDE2000' | 'CIE94' | 'CIE76' | 'WeightedRGB';
+  kMedoidsOptimize: boolean;
   currentPalette: PaletteItemWithCache[];
   gridWidth: number;
   gridHeight: number;
@@ -22,7 +24,7 @@ interface Params {
   saturation: number;
 }
 
-export function useImageProcessing({ croppedImageDataUrl, panelPreset, customWidth, aspectRatio, removeBackground, colorLimit, distanceAlgorithm, currentPalette, gridWidth, gridHeight, brightness, contrast, saturation }: Params) {
+export function useImageProcessing({ croppedImageDataUrl, panelPreset, customWidth, aspectRatio, removeBackground, colorLimit, distanceAlgorithm, kMedoidsOptimize, currentPalette, gridWidth, gridHeight, brightness, contrast, saturation }: Params) {
   const setTransformedPixels = useWorkspaceStore(s => s.setTransformedPixels);
   const setStats = useWorkspaceStore(s => s.setStats);
   const setIsProcessing = useWorkspaceStore(s => s.setIsProcessing);
@@ -94,15 +96,14 @@ export function useImageProcessing({ croppedImageDataUrl, panelPreset, customWid
         return [nr, ng, nb];
       };
 
-      const matchBest = (r: number, g: number, b: number, palette: PaletteItemWithCache[]): BeadPaletteItem => {
-        const pixelLab = rgbToLab({ r, g, b });
+      const matchBest = (pixelLab: LAB, rgb: RGB, palette: PaletteItemWithCache[]): BeadPaletteItem => {
         let best = palette[0], minDist = Infinity;
         for (const bead of palette) {
           let dist = 0;
           if (distanceAlgorithm === 'CIEDE2000') dist = deltaE2000(pixelLab, bead.lab);
           else if (distanceAlgorithm === 'CIE94') dist = deltaE94(pixelLab, bead.lab);
           else if (distanceAlgorithm === 'CIE76') dist = deltaE76(pixelLab, bead.lab);
-          else dist = deltaEWeightedRGB({ r, g, b }, bead.rgb);
+          else dist = deltaEWeightedRGB(rgb, bead.rgb);
           if (dist < minDist) { minDist = dist; best = bead; }
         }
         return best;
@@ -111,6 +112,8 @@ export function useImageProcessing({ croppedImageDataUrl, panelPreset, customWid
       const EMPTY: BeadPaletteItem = { code: 'EMPTY', name: '透明背景', hex: 'rgba(0,0,0,0)', brand: 'MGB', series: '' };
       const initialMatched: TransformedPixel[] = [];
       const colorUsageCount: Record<string, number> = {};
+      const nonEmptyPixelLabs: LAB[] = [];
+      const nonEmptyPixelRgbs: RGB[] = [];
 
       for (let y = 0; y < gh; y++) {
         const sy = gh > 1 ? Math.round(y * (sh - 1) / (gh - 1)) : 0;
@@ -123,9 +126,11 @@ export function useImageProcessing({ croppedImageDataUrl, panelPreset, customWid
             continue;
           }
           const [ar, ag, ab] = adjust(r, g, b);
-          const best = matchBest(ar, ag, ab, currentPalette);
+          const rgb: RGB = { r: ar, g: ag, b: ab };
+          const pixelLab = rgbToLab(rgb);
+          const best = matchBest(pixelLab, rgb, currentPalette);
           initialMatched.push({ x, y, matchedBead: best });
-          if (best.code !== 'EMPTY') colorUsageCount[best.code] = (colorUsageCount[best.code] || 0) + 1;
+          if (best.code !== 'EMPTY') { colorUsageCount[best.code] = (colorUsageCount[best.code] || 0) + 1; nonEmptyPixelLabs.push(pixelLab); nonEmptyPixelRgbs.push(rgb); }
         }
       }
 
@@ -135,7 +140,20 @@ export function useImageProcessing({ croppedImageDataUrl, panelPreset, customWid
         return;
       }
 
-      const topCodes = Object.entries(colorUsageCount).sort((a, b) => b[1] - a[1]).slice(0, colorLimit).map(e => e[0]);
+      const freqTopCodes = Object.entries(colorUsageCount).sort((a, b) => b[1] - a[1]).slice(0, colorLimit).map(e => e[0]);
+      let topCodes: string[];
+      if (kMedoidsOptimize && nonEmptyPixelLabs.length > 0) {
+        const candidateItems = currentPalette.filter(b => uniqueBeads.includes(b.code));
+        topCodes = selectPaletteByKMedoids(nonEmptyPixelLabs.length, candidateItems, colorLimit, freqTopCodes, (i, j) => {
+          const pl = nonEmptyPixelLabs[i], c = candidateItems[j];
+          if (distanceAlgorithm === 'CIEDE2000') return deltaE2000(pl, c.lab);
+          if (distanceAlgorithm === 'CIE94') return deltaE94(pl, c.lab);
+          if (distanceAlgorithm === 'CIE76') return deltaE76(pl, c.lab);
+          return deltaEWeightedRGB(nonEmptyPixelRgbs[i], c.rgb);
+        });
+      } else {
+        topCodes = freqTopCodes;
+      }
       const topPalette = currentPalette.filter(b => topCodes.includes(b.code));
       const finalMatched: TransformedPixel[] = [];
 
@@ -149,7 +167,8 @@ export function useImageProcessing({ croppedImageDataUrl, panelPreset, customWid
           const off2 = (sy2 * sw + sx2) * 4;
           const r = srcData[off2], g2 = srcData[off2+1], b2 = srcData[off2+2];
           const [ar2, ag2, ab2] = adjust(r, g2, b2);
-          finalMatched.push({ x, y, matchedBead: matchBest(ar2, ag2, ab2, topPalette) });
+          const rgb2: RGB = { r: ar2, g: ag2, b: ab2 };
+          finalMatched.push({ x, y, matchedBead: matchBest(rgbToLab(rgb2), rgb2, topPalette) });
         }
       }
 
@@ -157,5 +176,5 @@ export function useImageProcessing({ croppedImageDataUrl, panelPreset, customWid
     };
     img.onerror = () => { if (active) setIsProcessing(false); };
     return () => { active = false; };
-  }, [croppedImageDataUrl, gridWidth, gridHeight, colorLimit, currentPalette, distanceAlgorithm, removeBackground, brightness, contrast, saturation, setTransformedPixels, setStats, setIsProcessing, setLocalAspectRatio]);
+  }, [croppedImageDataUrl, gridWidth, gridHeight, colorLimit, currentPalette, distanceAlgorithm, kMedoidsOptimize, removeBackground, brightness, contrast, saturation, setTransformedPixels, setStats, setIsProcessing, setLocalAspectRatio]);
 }

@@ -35,6 +35,7 @@ export default function ProjectPanel({ onReset, croppedImageDataUrl, aspectRatio
   const stats = useWorkspaceStore(s => s.stats);
   const colorLimit = useWorkspaceStore(s => s.colorLimit);
   const distanceAlgorithm = useWorkspaceStore(s => s.distanceAlgorithm);
+  const kMedoidsOptimize = useWorkspaceStore(s => s.kMedoidsOptimize);
   const removeBackground = useWorkspaceStore(s => s.removeBackground);
   const brightness = useWorkspaceStore(s => s.brightness);
   const contrast = useWorkspaceStore(s => s.contrast);
@@ -52,7 +53,7 @@ export default function ProjectPanel({ onReset, croppedImageDataUrl, aspectRatio
   const refreshProjects = () => setProjects(getAllProjects());
 
   const getSettings = (): ProjectData['settings'] => ({
-    colorLimit, distanceAlgorithm, removeBackground, brightness, contrast, saturation, panelPreset, customWidth,
+    colorLimit, distanceAlgorithm, removeBackground, brightness, contrast, saturation, panelPreset, customWidth, kMedoidsOptimize,
   });
 
   const handleSave = () => {

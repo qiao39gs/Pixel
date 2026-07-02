@@ -12,6 +12,7 @@ interface WorkspaceStore {
   contrast: number;
   saturation: number;
   distanceAlgorithm: 'CIEDE2000' | 'CIE94' | 'CIE76' | 'WeightedRGB';
+  kMedoidsOptimize: boolean;
   removeBackground: boolean;
   scale: number;
   showNumbers: boolean;
@@ -53,6 +54,7 @@ interface WorkspaceStore {
   setContrast: (v: number) => void;
   setSaturation: (v: number) => void;
   setDistanceAlgorithm: (v: WorkspaceStore['distanceAlgorithm']) => void;
+  setKMedoidsOptimize: (v: boolean) => void;
   setRemoveBackground: (v: boolean) => void;
   setScale: (v: number) => void;
   setShowNumbers: (v: boolean) => void;
@@ -84,7 +86,7 @@ interface WorkspaceStore {
   redo: () => void;
   denoise: (gridWidth: number, gridHeight: number, palette: BeadPaletteItem[]) => void;
   swapColor: (sourceCode: string, targetBead: BeadPaletteItem) => void;
-  loadProject: (pixels: TransformedPixel[], gridWidth: number, gridHeight: number, stats: IngredientStat[], settings: { colorLimit: number; distanceAlgorithm: string; removeBackground: boolean; brightness: number; contrast: number; saturation: number; panelPreset?: string; customWidth?: number }, hasOriginalImage?: boolean, projectId?: string) => void;
+  loadProject: (pixels: TransformedPixel[], gridWidth: number, gridHeight: number, stats: IngredientStat[], settings: { colorLimit: number; distanceAlgorithm: string; removeBackground: boolean; brightness: number; contrast: number; saturation: number; panelPreset?: string; customWidth?: number; kMedoidsOptimize?: boolean }, hasOriginalImage?: boolean, projectId?: string) => void;
   autoDetectTrim: (gridWidth: number, gridHeight: number) => void;
   setTopTrim: (v: number) => void;
   setBottomTrim: (v: number) => void;
@@ -102,6 +104,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   contrast: 100,
   saturation: 100,
   distanceAlgorithm: 'CIEDE2000',
+  kMedoidsOptimize: false,
   removeBackground: true,
   scale: 14,
   showNumbers: true,
@@ -142,6 +145,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   setContrast: (v) => set({ contrast: v }),
   setSaturation: (v) => set({ saturation: v }),
   setDistanceAlgorithm: (v) => set({ distanceAlgorithm: v }),
+  setKMedoidsOptimize: (v) => set({ kMedoidsOptimize: v }),
   setRemoveBackground: (v) => set({ removeBackground: v }),
   setScale: (v) => set({ scale: v }),
   setShowNumbers: (v) => set({ showNumbers: v }),
@@ -295,6 +299,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
       gridHeightActual: gridHeight,
       colorLimit: settings.colorLimit,
       distanceAlgorithm: settings.distanceAlgorithm as WorkspaceStore['distanceAlgorithm'],
+      kMedoidsOptimize: settings.kMedoidsOptimize ?? false,
       removeBackground: settings.removeBackground,
       brightness: settings.brightness,
       contrast: settings.contrast,
