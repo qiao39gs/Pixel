@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { LayoutGrid, Award, MoreHorizontal } from 'lucide-react';
 import { BeadPaletteItem, TransformedPixel, IngredientStat } from '../../types';
 import { COLOR_GROUPS } from '../../data/palette';
@@ -104,6 +104,29 @@ export default function CanvasViewport({ canvasRef, containerRef, gridWidth, gri
   const handleMouseUp = () => { if (editDragRef.current) { editDragRef.current = false; editFilledRef.current.clear(); return; } setIsPanning(false); };
   const handlePanMove = (e: React.MouseEvent) => { if (!isPanning) return; setPanOffset({ x: e.clientX - panStart.x, y: e.clientY - panStart.y }); };
 
+  // 滚轮缩放（以鼠标位置为中心），与双指捏合同样限制 4-32
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const rect = el.getBoundingClientRect();
+      const cx = e.clientX - rect.left - rect.width / 2;
+      const cy = e.clientY - rect.top - rect.height / 2;
+      const st = useWorkspaceStore.getState();
+      const oldScale = st.scale;
+      const po = st.panOffset;
+      const delta = -e.deltaY * 0.0015;
+      const newScale = Math.max(4, Math.min(32, Math.round(oldScale * (1 + delta))));
+      if (newScale === oldScale) return;
+      const ratio = newScale / oldScale;
+      setScale(newScale);
+      setPanOffset({ x: cx - (cx - po.x) * ratio, y: cy - (cy - po.y) * ratio });
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, [containerRef, setScale, setPanOffset]);
+
   return (
     <div className={`bg-slate-950 border border-[#1D1D21] rounded-3xl p-6 shadow-2xl flex flex-col relative overflow-hidden min-h-[420px] md:min-h-[500px] transition-all ${mobileTab !== 'canvas' ? 'hidden lg:block' : ''}`}>
       <div className="flex flex-wrap justify-between items-center gap-2 mb-4 pb-3 border-b border-white/[0.04] z-10">
@@ -161,7 +184,7 @@ export default function CanvasViewport({ canvasRef, containerRef, gridWidth, gri
         {isProcessing && <div className="absolute inset-0 bg-[#09090B]/80 backdrop-blur-xs flex flex-col items-center justify-center gap-3 z-30 rounded-2xl select-none"><div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div><span className="text-xs font-bold text-slate-300">图纸高精转换与色卡量化中...</span></div>}
         <div className="relative transition-transform duration-75 origin-center" style={{ transform: `translate(${panOffset.x}px, ${panOffset.y}px)` }}><canvas ref={canvasRef} className="block shadow-2xl rounded-md border border-white/[0.08]" /></div>
       </div>
-      <div className="flex justify-center mt-2"><span className="text-xs text-slate-500 bg-white/5 px-3 py-1 rounded-lg border border-white/[0.06] select-none">按住鼠标左键可平移拖拽 · 画布完全支持大尺寸缩放</span></div>
+      <div className="flex justify-center mt-2"><span className="text-xs text-slate-500 bg-white/5 px-3 py-1 rounded-lg border border-white/[0.06] select-none">滚轮缩放 · 按住鼠标左键可平移拖拽 · 画布完全支持大尺寸缩放</span></div>
       <div className="grid grid-cols-2 gap-3.5 mt-5 z-10">
         <button onClick={() => onGeneratePng(transformedPixels, gridWidth, gridHeight, stats, { showRulers, showNumbers })} className="py-3.5 px-4 bg-white/[0.05] hover:bg-white/[0.08] active:scale-98 border border-white/[0.05] text-slate-200 text-xs font-semibold rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-all duration-200"><LayoutGrid className="w-4 h-4 text-emerald-400" />导出高清拼豆图纸 (PNG)</button>
         <button onClick={() => onGeneratePdf(transformedPixels, gridWidth, gridHeight, stats, { showRulers, showNumbers })} className="py-3.5 px-4 bg-gradient-to-tr from-indigo-600 via-indigo-650 to-violet-650 hover:brightness-105 active:scale-98 text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-all duration-200 shadow-lg shadow-indigo-950/20"><Award className="w-4 h-4" />导出 A4 打印标准 PDF</button>
