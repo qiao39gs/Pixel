@@ -63,7 +63,7 @@ export default function App() {
 
       {/* Header */}
       <header className="sticky top-0 z-50 bg-[#FAFAF7]/90 backdrop-blur-md border-b border-black/[0.07] px-4 py-3.5">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
+        <div className="max-w-[1600px] mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <span className="font-display font-bold text-[15px] tracking-tight text-[#18181B]">像素拼豆</span>
             <span className="hidden sm:inline text-xs font-mono text-zinc-400 border border-zinc-200 px-1.5 py-0.5 rounded-md">v1.0.2</span>
@@ -122,7 +122,7 @@ export default function App() {
       {/* Footer */}
       {!croppedImage && (
         <footer className="border-t border-black/[0.06] px-4 py-5">
-          <div className="max-w-6xl mx-auto flex items-center justify-between text-xs text-zinc-400 font-mono">
+          <div className="max-w-[1600px] mx-auto flex items-center justify-between text-xs text-zinc-400 font-mono">
             <span>© 2026 像素拼豆图纸生成器</span>
             <div className="flex items-center gap-4">
               <a href="https://github.com/qiao39gs/Pixel" target="_blank" rel="noopener noreferrer" className="hover:text-[#E8570A] transition-colors">GitHub</a>
