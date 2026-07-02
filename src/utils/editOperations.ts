@@ -15,21 +15,20 @@ export function floodFill(
   const targetCode = startPixel.matchedBead.code;
   const visited = new Set<string>();
   const queue: [number, number][] = [[startX, startY]];
+  let head = 0;
   visited.add(`${startX},${startY}`);
-  while (queue.length > 0) {
-    const [cx, cy] = queue.shift()!;
-    for (let dy = -1; dy <= 1; dy++) {
-      for (let dx = -1; dx <= 1; dx++) {
-        if (dx === 0 && dy === 0) continue;
-        const nx = cx + dx, ny = cy + dy;
-        if (nx < 0 || nx >= gridWidth || ny < 0 || ny >= gridHeight) continue;
-        const key = `${nx},${ny}`;
-        if (visited.has(key)) continue;
-        const pixel = pixels[ny * gridWidth + nx];
-        if (pixel && pixel.matchedBead.code === targetCode) {
-          visited.add(key);
-          queue.push([nx, ny]);
-        }
+  while (head < queue.length) {
+    const [cx, cy] = queue[head++];
+    const dirs: [number, number][] = [[0, -1], [0, 1], [-1, 0], [1, 0]];
+    for (const [dx, dy] of dirs) {
+      const nx = cx + dx, ny = cy + dy;
+      if (nx < 0 || nx >= gridWidth || ny < 0 || ny >= gridHeight) continue;
+      const key = `${nx},${ny}`;
+      if (visited.has(key)) continue;
+      const pixel = pixels[ny * gridWidth + nx];
+      if (pixel && pixel.matchedBead.code === targetCode) {
+        visited.add(key);
+        queue.push([nx, ny]);
       }
     }
   }

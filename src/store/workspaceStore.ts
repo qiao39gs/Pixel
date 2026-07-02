@@ -95,6 +95,14 @@ interface WorkspaceStore {
   applyTrim: (gridWidth: number, gridHeight: number) => void;
 }
 
+const UNDO_LIMIT = 50;
+type Snapshot = { pixels: TransformedPixel[]; stats: IngredientStat[] };
+// 压入当前状态快照并清空 redo，供各编辑 action 复用
+const pushSnapshot = (s: WorkspaceStore): { undoStack: Snapshot[]; redoStack: Snapshot[] } => {
+  const stack = [...s.undoStack, { pixels: [...s.transformedPixels], stats: [...s.stats] }];
+  return { undoStack: stack.length > UNDO_LIMIT ? stack.slice(-UNDO_LIMIT) : stack, redoStack: [] };
+};
+
 export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   panelPreset: '52x52',
   customWidth: 52,
@@ -174,9 +182,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   setPipelineActive: (v) => set({ pipelineActive: v }),
 
   pushUndo: () => {
-    const s = get();
-    const stack = [...s.undoStack, { pixels: [...s.transformedPixels], stats: [...s.stats] }];
-    set({ undoStack: stack.length > 50 ? stack.slice(-50) : stack, redoStack: [] });
+    set(pushSnapshot(get()));
   },
 
   applyBrush: (x, y, gridWidth) => {
@@ -185,10 +191,8 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     if (!targetBead) return;
     const next = [...s.transformedPixels];
     next[y * gridWidth + x] = { x, y, matchedBead: targetBead };
-    const stack = [...s.undoStack, { pixels: [...s.transformedPixels], stats: [...s.stats] }];
     set({
-      undoStack: stack.length > 50 ? stack.slice(-50) : stack,
-      redoStack: [],
+      ...pushSnapshot(s),
       transformedPixels: next,
       stats: recalculateStats(next),
       selectedCell: { x, y },
@@ -215,18 +219,15 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     if (s.redoStack.length === 0) return;
     const redo = [...s.redoStack];
     const next = redo.pop()!;
-    const stack = [...s.undoStack, { pixels: [...s.transformedPixels], stats: [...s.stats] }];
-    set({ undoStack: stack.length > 50 ? stack.slice(-50) : stack, redoStack: redo, transformedPixels: next.pixels, stats: next.stats, wandSelection: new Set(), selectedCell: null });
+    set({ ...pushSnapshot(s), redoStack: redo, transformedPixels: next.pixels, stats: next.stats, wandSelection: new Set(), selectedCell: null });
   },
 
   denoise: (gridWidth, gridHeight, palette) => {
     const s = get();
-    const stack = [...s.undoStack, { pixels: [...s.transformedPixels], stats: [...s.stats] }];
     const { pixels, stats, changed } = denoisePixels(s.transformedPixels, gridWidth, gridHeight, palette);
     if (changed > 0) {
       set({
-        undoStack: stack.length > 50 ? stack.slice(-50) : stack,
-        redoStack: [],
+        ...pushSnapshot(s),
         transformedPixels: pixels,
         stats,
       });
@@ -235,13 +236,11 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
 
   swapColor: (sourceCode, targetBead) => {
     const s = get();
-    const stack = [...s.undoStack, { pixels: [...s.transformedPixels], stats: [...s.stats] }];
     const next = s.transformedPixels.map(p =>
       p.matchedBead.code === sourceCode ? { ...p, matchedBead: targetBead } : p
     );
     set({
-      undoStack: stack.length > 50 ? stack.slice(-50) : stack,
-      redoStack: [],
+      ...pushSnapshot(s),
       transformedPixels: next,
       stats: recalculateStats(next),
     });
@@ -278,10 +277,9 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
         result.push({ x, y, matchedBead: src.matchedBead });
       }
     }
-    const stack = [...s.undoStack, { pixels: [...s.transformedPixels], stats: [...s.stats] }];
+    const stack = pushSnapshot(s);
     set({
-      undoStack: stack.length > 50 ? stack.slice(-50) : stack,
-      redoStack: [],
+      ...stack,
       transformedPixels: result,
       stats: recalculateStats(result),
       gridWidthActual: newWidth,

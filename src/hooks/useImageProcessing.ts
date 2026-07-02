@@ -2,6 +2,8 @@ import { useEffect, useRef } from 'react';
 import { TransformedPixel, BeadPaletteItem } from '../types';
 import { rgbToLab, deltaE76, deltaE2000, deltaE94, deltaEWeightedRGB, LAB, RGB } from '../colorUtils';
 import { recalculateStats } from '../utils/statsUtils';
+import { EMPTY_BEAD } from '../utils/editOperations';
+import { ASPECT_RATIOS } from '../utils/constants';
 import { selectPaletteByKMedoids } from '../utils/kMedoids';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
@@ -75,8 +77,7 @@ export function useImageProcessing({ croppedImageDataUrl, panelPreset, customWid
       else gw = Math.min(150, Math.max(5, customWidth));
       const ratio = (() => {
         if (aspectRatio === 'auto') return 1 / imgRatio;
-        const m: Record<string, number> = { '1:1': 1, '4:3': 3/4, '3:4': 4/3, '16:9': 9/16, '9:16': 16/9 };
-        return m[aspectRatio] ?? 1;
+        return ASPECT_RATIOS[aspectRatio] ?? 1;
       })();
       const gh = Math.max(1, Math.round(gw * ratio));
 
@@ -109,7 +110,7 @@ export function useImageProcessing({ croppedImageDataUrl, panelPreset, customWid
         return best;
       };
 
-      const EMPTY: BeadPaletteItem = { code: 'EMPTY', name: '透明背景', hex: 'rgba(0,0,0,0)', brand: 'MGB', series: '' };
+      const EMPTY = EMPTY_BEAD;
       const initialMatched: TransformedPixel[] = [];
       const colorUsageCount: Record<string, number> = {};
       const nonEmptyPixelLabs: LAB[] = [];

@@ -15,6 +15,11 @@ export interface LAB {
   b: number;
 }
 
+// Rec.601 luminance — perceived brightness weight per channel
+export function luminance(rgb: RGB): number {
+  return rgb.r * 0.299 + rgb.g * 0.587 + rgb.b * 0.114;
+}
+
 // Helper to convert hex to RGB
 export function hexToRgb(hex: string): RGB {
   // Expand shorthand form (e.g. "03F") to full form (e.g. "0033FF")

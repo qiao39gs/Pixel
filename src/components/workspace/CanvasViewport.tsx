@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { LayoutGrid, Award, MoreHorizontal } from 'lucide-react';
 import { BeadPaletteItem, TransformedPixel, IngredientStat } from '../../types';
 import { COLOR_GROUPS } from '../../data/palette';
-import { hexToRgb } from '../../colorUtils';
+import { hexToRgb, luminance } from '../../colorUtils';
 import { EMPTY_BEAD, floodFill as doFloodFill } from '../../utils/editOperations';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
@@ -170,7 +170,7 @@ export default function CanvasViewport({ canvasRef, containerRef, gridWidth, gri
         <div className="mb-3 p-3 bg-[#0F0F13] border border-white/[0.06] rounded-2xl max-h-[320px] overflow-y-auto">
           {COLOR_GROUPS.map(group => { const groupBeads = currentPalette.filter(b => b.series === group.series); if (groupBeads.length === 0) return null; return (
             <div key={group.series} className="mb-3 last:mb-0"><div className="text-xs font-bold text-slate-500 mb-1.5">{group.name}</div><div className="flex flex-wrap gap-1">
-              {groupBeads.map(b => (<button key={b.code} onClick={() => { setBrushBead(b); setIsEraser(false); }} className="w-9 h-9 rounded-md border border-white/[0.06] hover:scale-125 hover:z-10 transition-all cursor-pointer relative group/bead" style={{ backgroundColor: b.hex }} title={b.code + ' ' + b.name}><span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold opacity-0 group-hover/bead:opacity-100" style={{ color: (hexToRgb(b.hex).r * 0.299 + hexToRgb(b.hex).g * 0.587 + hexToRgb(b.hex).b * 0.114) > 140 ? '#000' : '#fff' }}>{b.code}</span></button>))}
+              {groupBeads.map(b => (<button key={b.code} onClick={() => { setBrushBead(b); setIsEraser(false); }} className="w-9 h-9 rounded-md border border-white/[0.06] hover:scale-125 hover:z-10 transition-all cursor-pointer relative group/bead" style={{ backgroundColor: b.hex }} title={b.code + ' ' + b.name}><span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold opacity-0 group-hover/bead:opacity-100" style={{ color: luminance(hexToRgb(b.hex)) > 140 ? '#000' : '#fff' }}>{b.code}</span></button>))}
             </div></div>);})}
         </div>
       )}

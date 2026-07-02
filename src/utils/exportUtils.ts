@@ -1,6 +1,6 @@
 import { jsPDF } from 'jspdf';
 import { TransformedPixel, IngredientStat } from '../types';
-import { hexToRgb } from '../colorUtils';
+import { hexToRgb, luminance } from '../colorUtils';
 
 /**
  * Generate a crystal-clear, high-resolution PNG canvas displaying the grid canvas, annotations, grid lines, and references.
@@ -111,7 +111,7 @@ export function generateHighResPng(
     // Fill custom contrast color lettering center text
     if (showNumbers) {
       const rgb = hexToRgb(p.matchedBead.hex);
-      const luma = rgb.r * 0.299 + rgb.g * 0.587 + rgb.b * 0.114;
+      const luma = luminance(rgb);
       ctx.fillStyle = luma > 140 ? '#0F172A' : '#FFFFFF';
       
       ctx.font = `bold ${Math.floor(scale / 2.5)}px monospace`;
@@ -485,7 +485,7 @@ export function generateMultiPagePdf(
 
           // Draw the textual character Code
           if (showNumbers) {
-            const luma = rgb.r * 0.299 + rgb.g * 0.587 + rgb.b * 0.114;
+            const luma = luminance(rgb);
             pdf.setTextColor(luma > 140 ? '#0F172A' : '#FFFFFF');
             pdf.setFont('helvetica', 'bold');
             pdf.setFontSize(Math.max(4, cellSize * 1.5));

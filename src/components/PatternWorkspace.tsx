@@ -3,6 +3,7 @@ import { Sliders, Grid3X3, Layers, FolderOpen } from 'lucide-react';
 import { TransformedPixel, IngredientStat } from '../types';
 import { BEAD_PALETTE } from '../data/palette';
 import { hexToRgb, rgbToLab } from '../colorUtils';
+import { ASPECT_RATIOS } from '../utils/constants';
 import { useImageProcessing } from '../hooks/useImageProcessing';
 import { useCanvasRenderer } from '../hooks/useCanvasRenderer';
 import { useWorkspaceStore } from '../store/workspaceStore';
@@ -52,8 +53,7 @@ export default function PatternWorkspace({ croppedImageDataUrl, onReset, aspectR
   const setScale = useWorkspaceStore(s => s.setScale);
 
   const { gridWidth, gridHeight } = useMemo(() => {
-    const RATIOS: Record<string, number> = { '1:1': 1, '4:3': 3/4, '3:4': 4/3, '16:9': 9/16, '9:16': 16/9 };
-    const h = (w: number) => aspectRatio === 'auto' ? Math.max(1, Math.round(w / localAspectRatio)) : Math.round(w * (RATIOS[aspectRatio] ?? 1));
+    const h = (w: number) => aspectRatio === 'auto' ? Math.max(1, Math.round(w / localAspectRatio)) : Math.round(w * (ASPECT_RATIOS[aspectRatio] ?? 1));
     const w = panelPreset === '52x52' ? 52 : panelPreset === '78x78' ? 78 : panelPreset === '104x104' ? 104 : Math.min(150, Math.max(5, customWidth));
     return { gridWidth: w, gridHeight: h(w) };
   }, [panelPreset, customWidth, aspectRatio, localAspectRatio]);

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback, RefObject } from 'react';
 import { TransformedPixel } from '../types';
-import { hexToRgb } from '../colorUtils';
+import { hexToRgb, luminance } from '../colorUtils';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
 interface Params {
@@ -142,7 +142,7 @@ export function useCanvasRenderer({ canvasRef, transformedPixels, gridWidth, gri
         if (selectedBeadHighlight !== null && p.matchedBead.code !== selectedBeadHighlight) return;
         if (p.x < leftTrim || p.x >= gridWidth - rightTrim || p.y < topTrim || p.y >= gridHeight - bottomTrim) return;
         const rgb = hexToRgb(p.matchedBead.hex);
-        ctx.fillStyle = (rgb.r * 0.299 + rgb.g * 0.587 + rgb.b * 0.114) > 140 ? '#0F172A' : '#FFFFFF';
+        ctx.fillStyle = luminance(rgb) > 140 ? '#0F172A' : '#FFFFFF';
         ctx.font = `bold ${Math.floor(scale / 2.5)}px monospace`;
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillText(p.matchedBead.code, (p.x - xOff) * scale + scale / 2, (p.y - yOff) * scale + scale / 2 + 0.5);

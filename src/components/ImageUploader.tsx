@@ -1,15 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Upload, Image as ImageIcon, RotateCw, ZoomIn, ZoomOut, Move } from 'lucide-react';
-
-type AspectRatio = '1:1' | '4:3' | '3:4' | '16:9' | '9:16' | 'auto';
-
-const PRESET_RATIOS: Record<string, number> = {
-  '1:1': 1,
-  '4:3': 3 / 4,
-  '3:4': 4 / 3,
-  '16:9': 9 / 16,
-  '9:16': 16 / 9,
-};
+import { ASPECT_RATIOS, AspectRatio } from '../utils/constants';
 
 interface ImageUploaderProps {
   onImageCropped: (imageDataUrl: string) => void;
@@ -120,7 +111,7 @@ export default function ImageUploader({ onImageCropped, aspectRatio, setAspectRa
       const imgRatio = img.width / img.height;
       viewHeight = Math.round(viewWidth / imgRatio);
     } else {
-      viewHeight = Math.round(viewWidth * (PRESET_RATIOS[aspectRatio] ?? 1));
+      viewHeight = Math.round(viewWidth * (ASPECT_RATIOS[aspectRatio] ?? 1));
     }
 
     canvas.width = viewWidth;
@@ -187,7 +178,7 @@ export default function ImageUploader({ onImageCropped, aspectRatio, setAspectRa
       if (aspectRatio === 'auto') {
         return Math.round(viewWidth / (img.width / img.height));
       }
-      return Math.round(viewWidth * (PRESET_RATIOS[aspectRatio] ?? 1));
+      return Math.round(viewWidth * (ASPECT_RATIOS[aspectRatio] ?? 1));
     })();
 
     const imgRatio = img.width / img.height;
@@ -218,7 +209,7 @@ export default function ImageUploader({ onImageCropped, aspectRatio, setAspectRa
       if (aspectRatio === 'auto') {
         return Math.round(viewWidth / (img.width / img.height));
       }
-      return Math.round(viewWidth * (PRESET_RATIOS[aspectRatio] ?? 1));
+      return Math.round(viewWidth * (ASPECT_RATIOS[aspectRatio] ?? 1));
     })();
 
     const imgRatio = img.width / img.height;

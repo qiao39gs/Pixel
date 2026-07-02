@@ -1,8 +1,9 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { Grid3X3, X, ArrowLeftRight } from 'lucide-react';
 import { BeadPaletteItem } from '../../types';
-import { hexToRgb } from '../../colorUtils';
+import { hexToRgb, luminance } from '../../colorUtils';
 import { BEAD_PALETTE, COLOR_GROUPS } from '../../data/palette';
+import { EMPTY_BEAD } from '../../utils/editOperations';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 export default function StatsPanel() {
@@ -171,7 +172,7 @@ export default function StatsPanel() {
               <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">空白格</span>
               <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
                 <button
-                  onClick={() => { swapColor(swapSource, { code: 'EMPTY', name: '透明背景', hex: 'rgba(0,0,0,0)', brand: 'MGB', series: '' }); setSwapSource(null); }}
+                  onClick={() => { swapColor(swapSource, EMPTY_BEAD); setSwapSource(null); }}
                   disabled={swapSource === 'EMPTY'}
                   className={`flex flex-col items-center gap-1 p-2 rounded-xl border transition-all cursor-pointer ${swapSource === 'EMPTY' ? 'border-amber-400 bg-amber-50 ring-1 ring-amber-200' : 'border-zinc-200 hover:border-zinc-300 hover:shadow-sm active:scale-95'}`}
                 >
@@ -191,7 +192,7 @@ export default function StatsPanel() {
                       const isCurrent = b.code === swapSource;
                       const used = usedCounts.get(b.code);
                       const rgb = hexToRgb(b.hex);
-                      const luma = rgb.r * 0.299 + rgb.g * 0.587 + rgb.b * 0.114;
+                      const luma = luminance(rgb);
                       return (
                         <button
                           key={b.code}

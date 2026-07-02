@@ -57,7 +57,7 @@ src/
 - UI 文本、commit message 均为中文
 - commit 不使用 conventional commit 前缀（无 `feat:`, `fix:`）
 - 项目描述、README 文档均为中文
-- Zustand store 的撤销栈上限为 50 步（`workspaceStore.ts:163`）
+- Zustand store 的撤销栈上限为 50 步（`workspaceStore.ts` 的 `UNDO_LIMIT` 常量）
 
 ## 架构要点
 
