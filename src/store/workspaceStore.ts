@@ -37,7 +37,7 @@ interface WorkspaceStore {
   bottomTrim: number;
   leftTrim: number;
   rightTrim: number;
-  mobileTab: 'controls' | 'canvas' | 'stats';
+  mobileTab: 'controls' | 'canvas' | 'stats' | 'project';
   pipelineActive: boolean;
   skipNextProcess: boolean;
   currentProjectId: string | null;

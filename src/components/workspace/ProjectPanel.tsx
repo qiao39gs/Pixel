@@ -136,7 +136,7 @@ export default function ProjectPanel({ onReset, croppedImageDataUrl, aspectRatio
   const hasCurrentPixels = transformedPixels.length > 0;
 
   return (
-    <div className={`bg-white rounded-3xl border border-black/[0.04] p-6 shadow-sm ${mobileTab !== 'stats' ? 'hidden lg:block' : ''}`}>
+    <div className={`bg-white rounded-3xl border border-black/[0.04] p-6 shadow-sm ${mobileTab !== 'project' ? 'hidden lg:block' : ''}`}>
       {/* Header */}
       <div className="flex items-center gap-2 mb-1">
         <FolderKanban className="w-4 h-4 text-[#E8570A]" />

@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useEffect } from 'react';
-import { Sliders, Grid3X3, Layers } from 'lucide-react';
+import { Sliders, Grid3X3, Layers, FolderOpen } from 'lucide-react';
 import { TransformedPixel, IngredientStat } from '../types';
 import { BEAD_PALETTE } from '../data/palette';
 import { hexToRgb, rgbToLab } from '../colorUtils';
@@ -114,6 +114,7 @@ function TabBar() {
         { id: 'controls' as const, label: '参数', Icon: Sliders },
         { id: 'canvas' as const,   label: '画布', Icon: Grid3X3 },
         { id: 'stats' as const,    label: '色卡', Icon: Layers },
+        { id: 'project' as const,  label: '项目', Icon: FolderOpen },
       ]).map(({ id, label, Icon }) => (
         <button
           key={id}
