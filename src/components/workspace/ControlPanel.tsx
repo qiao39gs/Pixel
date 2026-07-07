@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ZoomIn, ZoomOut, Sliders, Hash, Grid3X3, Layers, Trash2 } from 'lucide-react';
+import { ZoomIn, ZoomOut, Sliders, Hash, Grid3X3, Layers, Trash2, Wand2, Loader2, AlertCircle, CheckCircle2, X } from 'lucide-react';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 interface Props {
   onReset: () => void;
+  onTriggerEnhance: () => void;
 }
 
 function AdjustSlider({ label, value, onRelease }: { label: string; value: number; onRelease: (v: number) => void }) {
@@ -25,7 +26,7 @@ function AdjustSlider({ label, value, onRelease }: { label: string; value: numbe
   );
 }
 
-export default function ControlPanel({ onReset }: Props) {
+export default function ControlPanel({ onReset, onTriggerEnhance }: Props) {
   const panelPreset = useWorkspaceStore(s => s.panelPreset);
   const setPanelPreset = useWorkspaceStore(s => s.setPanelPreset);
   const customWidth = useWorkspaceStore(s => s.customWidth);
@@ -68,6 +69,15 @@ export default function ControlPanel({ onReset }: Props) {
   const applyTrim = useWorkspaceStore(s => s.applyTrim);
   const gridWidth = useWorkspaceStore(s => s.gridWidthActual);
   const gridHeight = useWorkspaceStore(s => s.gridHeightActual);
+
+  const isAiEnhancing = useWorkspaceStore(s => s.isAiEnhancing);
+  const aiEnhanceError = useWorkspaceStore(s => s.aiEnhanceError);
+  const aiEnhanceOptions = useWorkspaceStore(s => s.aiEnhanceOptions);
+  const setAiEnhanceOptions = useWorkspaceStore(s => s.setAiEnhanceOptions);
+  const aiEnhancedImage = useWorkspaceStore(s => s.aiEnhancedImage);
+  const setAiEnhancedImage = useWorkspaceStore(s => s.setAiEnhancedImage);
+
+  const hasApiKey = !!(import.meta.env.VITE_POLLINATIONS_API_KEY as string | undefined);
 
   const presetBtn = (val: typeof panelPreset, label: string) => (
     <button onClick={() => setPanelPreset(val)}
@@ -176,6 +186,100 @@ export default function ControlPanel({ onReset }: Props) {
             </div>
           ))}
         </div>
+      </div>
+      <div className="bg-white rounded-3xl border border-black/[0.04] p-5 shadow-sm flex flex-col gap-4">
+        <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+          <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5"><Wand2 className="w-3.5 h-3.5 text-indigo-500" />AI 图像增强</h4>
+        </div>
+        {!hasApiKey && (
+          <p className="text-xs text-amber-600 leading-normal flex items-start gap-1.5">
+            <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+            <span>未配置 API Key。请在项目根目录 <code className="font-mono bg-amber-50 px-1 rounded">.env</code> 文件中设置 <code className="font-mono bg-amber-50 px-1 rounded">VITE_POLLINATIONS_API_KEY</code> 后重启开发服务器。</span>
+          </p>
+        )}
+        {hasApiKey && (
+          <>
+            <div className="flex flex-col gap-1.5 pt-1">
+              <span className="text-xs font-bold text-slate-500">简化强度</span>
+              <div className="grid grid-cols-3 gap-1.5">
+                {([
+                  ['light', '轻度', '保留细节'],
+                  ['medium', '中度', '适度简化'],
+                  ['strong', '强烈', '极致简化'],
+                ] as const).map(([val, label, desc]) => (
+                  <button
+                    key={val}
+                    onClick={() => setAiEnhanceOptions({ enhanceStrength: val })}
+                    className={`flex flex-col items-center py-2 text-xs font-bold rounded-lg border transition-all cursor-pointer ${aiEnhanceOptions.enhanceStrength === val ? 'bg-indigo-50 text-indigo-600 border-indigo-500 shadow-xs' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
+                  >
+                    <span>{label}</span>
+                    <span className="text-[10px] font-normal text-slate-400 mt-0.5">{desc}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="flex flex-col gap-2 pt-1">
+              <span className="text-xs font-bold text-slate-500">增强效果选项</span>
+              {([
+                ['flatColors', '扁平化颜色', '去除渐变，转为均匀色块'],
+                ['cartoonStyle', '卡通风格', '简化细节，矢量画风'],
+              ] as const).map(([key, label, desc]) => (
+                <label key={key} className="flex items-start gap-2.5 cursor-pointer p-2 rounded-lg hover:bg-slate-50 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={aiEnhanceOptions[key]}
+                    onChange={() => setAiEnhanceOptions({ [key]: !aiEnhanceOptions[key] })}
+                    className="mt-0.5 w-4 h-4 accent-indigo-600 cursor-pointer"
+                  />
+                  <div className="flex flex-col">
+                    <span className="text-xs font-bold text-slate-700">{label}</span>
+                    <span className="text-[11px] text-slate-400 leading-normal">{desc}</span>
+                  </div>
+                </label>
+              ))}
+            </div>
+            <div className="flex flex-col gap-1.5 pt-2 border-t border-slate-100">
+              <span className="text-xs font-bold text-slate-500">自定义 prompt（可选）</span>
+              <textarea
+                value={aiEnhanceOptions.customPrompt}
+                onChange={e => setAiEnhanceOptions({ customPrompt: e.target.value })}
+                placeholder="追加到默认 prompt 末尾，例如：anime style, vibrant colors"
+                rows={2}
+                className="w-full p-2.5 border border-slate-200 text-xs rounded-lg bg-white focus:outline-indigo-500 resize-none font-mono"
+              />
+            </div>
+            <div className="flex items-center gap-2 pt-1">
+              <button
+                onClick={onTriggerEnhance}
+                disabled={isAiEnhancing}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${isAiEnhancing ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm'}`}
+              >
+                {isAiEnhancing ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />增强中…</> : <><Wand2 className="w-3.5 h-3.5" />{aiEnhancedImage ? '重新增强' : 'AI 增强'}</>}
+              </button>
+              {aiEnhancedImage && !isAiEnhancing && (
+                <button
+                  onClick={() => setAiEnhancedImage(null)}
+                  title="清除增强结果，使用原图"
+                  className="flex items-center justify-center gap-1.5 py-2.5 px-3 text-xs font-bold rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />清除
+                </button>
+              )}
+            </div>
+            {!isAiEnhancing && aiEnhanceError && (
+              <div className="flex items-start gap-2 text-xs text-rose-600 font-bold">
+                <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                <span className="leading-normal">{aiEnhanceError}</span>
+              </div>
+            )}
+            {aiEnhancedImage && !isAiEnhancing && (
+              <div className="flex items-center gap-2 text-xs text-emerald-600 font-bold">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>增强完成</span>
+              </div>
+            )}
+          </>
+        )}
       </div>
       <div className="bg-white rounded-3xl border border-black/[0.04] p-5 shadow-sm flex flex-col gap-4">
         <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5 pb-2 border-b border-slate-100"><Layers className="w-3.5 h-3.5 text-indigo-500" />视图网格交互</h4>

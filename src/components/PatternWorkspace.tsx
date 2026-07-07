@@ -5,6 +5,7 @@ import { BEAD_PALETTE } from '../data/palette';
 import { hexToRgb, rgbToLab } from '../colorUtils';
 import { ASPECT_RATIOS } from '../utils/constants';
 import { useImageProcessing } from '../hooks/useImageProcessing';
+import { useImageEnhancement } from '../hooks/useImageEnhancement';
 import { useCanvasRenderer } from '../hooks/useCanvasRenderer';
 import { useWorkspaceStore } from '../store/workspaceStore';
 import ControlPanel from './workspace/ControlPanel';
@@ -62,7 +63,9 @@ export default function PatternWorkspace({ croppedImageDataUrl, onReset, aspectR
     BEAD_PALETTE.filter(i => i.brand === 'MGB').map(i => ({ ...i, rgb: hexToRgb(i.hex), lab: rgbToLab(hexToRgb(i.hex)) })),
   []);
 
-  useImageProcessing({ croppedImageDataUrl, panelPreset, customWidth, aspectRatio, removeBackground, colorLimit, distanceAlgorithm, kMedoidsOptimize, currentPalette, gridWidth, gridHeight, brightness, contrast, saturation });
+  const { effectiveImage, triggerEnhance } = useImageEnhancement(croppedImageDataUrl);
+
+  useImageProcessing({ croppedImageDataUrl: effectiveImage, panelPreset, customWidth, aspectRatio, removeBackground, colorLimit, distanceAlgorithm, kMedoidsOptimize, currentPalette, gridWidth, gridHeight, brightness, contrast, saturation });
 
   useCanvasRenderer({ canvasRef, transformedPixels, gridWidth: gridWidthActual, gridHeight: gridHeightActual, scale, showNumbers, showRulers, selectedBeadHighlight, editMode, selectedCell, wandMode, wandSelection });
 
@@ -94,7 +97,7 @@ export default function PatternWorkspace({ croppedImageDataUrl, onReset, aspectR
       {/* Tab bar — reads from store directly now via CanvasViewport */}
       <TabBar />
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start mt-4">
-        <div className="lg:col-span-3"><ControlPanel onReset={onReset} /></div>
+        <div className="lg:col-span-3"><ControlPanel onReset={onReset} onTriggerEnhance={triggerEnhance} /></div>
         <div className="w-full lg:col-span-6 flex flex-col gap-6">
           <CanvasViewport canvasRef={canvasRef} containerRef={containerRef} gridWidth={gridWidthActual} gridHeight={gridHeightActual} currentPalette={currentPalette} onGeneratePng={onGeneratePng} onGeneratePdf={onGeneratePdf} />
           <StatsPanel />

@@ -3,7 +3,18 @@ import { BeadPaletteItem, TransformedPixel, IngredientStat } from '../types';
 import { EMPTY_BEAD, applySelectionFill, denoisePixels } from '../utils/editOperations';
 import { recalculateStats } from '../utils/statsUtils';
 
+export interface AiEnhanceOptions {
+  enhanceStrength: 'light' | 'medium' | 'strong';
+  flatColors: boolean;
+  cartoonStyle: boolean;
+  customPrompt: string;
+}
+
 interface WorkspaceStore {
+  isAiEnhancing: boolean;
+  aiEnhanceError: string | null;
+  aiEnhancedImage: string | null;
+  aiEnhanceOptions: AiEnhanceOptions;
   panelPreset: '52x52' | '78x78' | '104x104' | 'custom';
   customWidth: number;
   localAspectRatio: number;
@@ -46,6 +57,10 @@ interface WorkspaceStore {
   redoStack: { pixels: TransformedPixel[]; stats: IngredientStat[] }[];
 
   // Simple setters
+  setIsAiEnhancing: (v: boolean) => void;
+  setAiEnhanceError: (v: string | null) => void;
+  setAiEnhancedImage: (v: string | null) => void;
+  setAiEnhanceOptions: (v: Partial<AiEnhanceOptions>) => void;
   setPanelPreset: (v: WorkspaceStore['panelPreset']) => void;
   setCustomWidth: (v: number) => void;
   setLocalAspectRatio: (v: number) => void;
@@ -104,6 +119,10 @@ const pushSnapshot = (s: WorkspaceStore): { undoStack: Snapshot[]; redoStack: Sn
 };
 
 export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
+  isAiEnhancing: false,
+  aiEnhanceError: null,
+  aiEnhancedImage: null,
+  aiEnhanceOptions: { enhanceStrength: 'strong', flatColors: true, cartoonStyle: false, customPrompt: '' },
   panelPreset: '52x52',
   customWidth: 52,
   localAspectRatio: 1,
@@ -145,6 +164,10 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   undoStack: [],
   redoStack: [],
 
+  setIsAiEnhancing: (v) => set({ isAiEnhancing: v }),
+  setAiEnhanceError: (v) => set({ aiEnhanceError: v }),
+  setAiEnhancedImage: (v) => set({ aiEnhancedImage: v }),
+  setAiEnhanceOptions: (v) => set({ aiEnhanceOptions: { ...get().aiEnhanceOptions, ...v } }),
   setPanelPreset: (v) => set({ panelPreset: v }),
   setCustomWidth: (v) => set({ customWidth: v }),
   setLocalAspectRatio: (v) => set({ localAspectRatio: v }),
