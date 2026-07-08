@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ZoomIn, ZoomOut, Sliders, Hash, Grid3X3, Layers, Trash2, Wand2, Loader2, AlertCircle, CheckCircle2, X } from 'lucide-react';
 import { useWorkspaceStore } from '../../store/workspaceStore';
+import { checkEnhanceConfigured } from '../../services/pollinationsApi';
 
 interface Props {
   onReset: () => void;
@@ -77,7 +78,8 @@ export default function ControlPanel({ onReset, onTriggerEnhance }: Props) {
   const aiEnhancedImage = useWorkspaceStore(s => s.aiEnhancedImage);
   const setAiEnhancedImage = useWorkspaceStore(s => s.setAiEnhancedImage);
 
-  const hasApiKey = !!(import.meta.env.VITE_POLLINATIONS_API_KEY as string | undefined);
+  const [hasApiKey, setHasApiKey] = useState<boolean | null>(null);
+  useEffect(() => { checkEnhanceConfigured().then(setHasApiKey); }, []);
 
   const presetBtn = (val: typeof panelPreset, label: string) => (
     <button onClick={() => setPanelPreset(val)}
@@ -194,7 +196,7 @@ export default function ControlPanel({ onReset, onTriggerEnhance }: Props) {
         {!hasApiKey && (
           <p className="text-xs text-amber-600 leading-normal flex items-start gap-1.5">
             <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-            <span>未配置 API Key。请在项目根目录 <code className="font-mono bg-amber-50 px-1 rounded">.env</code> 文件中设置 <code className="font-mono bg-amber-50 px-1 rounded">VITE_POLLINATIONS_API_KEY</code> 后重启开发服务器。</span>
+            <span>服务器未配置 Pollinations API Key。请在 Vercel 项目设置的 Environment Variables 中添加 <code className="font-mono bg-amber-50 px-1 rounded">POLLINATIONS_API_KEY</code>。</span>
           </p>
         )}
         {hasApiKey && (

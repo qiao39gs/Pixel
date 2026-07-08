@@ -1,6 +1,6 @@
-const POLLINATIONS_BASE_URL = 'https://gen.pollinations.ai';
-const DEFAULT_MODEL = 'klein';
-const REQUEST_TIMEOUT_MS = 60_000;
+const API_ENDPOINT = '/api/enhance';
+const REQUEST_TIMEOUT_MS = 120_000;
+const MAX_IMAGE_DIMENSION = 1024;
 
 export interface EnhanceOptions {
   prompt: string;
@@ -8,22 +8,29 @@ export interface EnhanceOptions {
   signal?: AbortSignal;
 }
 
-function getApiKey(): string {
-  const key = import.meta.env.VITE_POLLINATIONS_API_KEY as string | undefined;
-  if (!key) throw new Error('未配置 Pollinations API Key，请在 .env 中设置 VITE_POLLINATIONS_API_KEY。');
-  return key;
+function downscaleImage(dataUrl: string, maxDimension: number): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      let { width, height } = img;
+      if (width <= maxDimension && height <= maxDimension) { resolve(dataUrl); return; }
+      const ratio = Math.min(maxDimension / width, maxDimension / height);
+      width = Math.round(width * ratio);
+      height = Math.round(height * ratio);
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) { reject(new Error('Canvas 2D context unavailable')); return; }
+      ctx.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL('image/png'));
+    };
+    img.onerror = () => reject(new Error('图片加载失败'));
+    img.src = dataUrl;
+  });
 }
 
-function getModel(): string {
-  return (import.meta.env.VITE_POLLINATIONS_MODEL as string | undefined) || DEFAULT_MODEL;
-}
-
-async function dataUrlToBlob(dataUrl: string): Promise<Blob> {
-  const res = await fetch(dataUrl);
-  return await res.blob();
-}
-
-function blobToDataUrl(blob: Blob): Promise<string> {
+async function blobToDataUrl(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onloadend = () => {
@@ -35,17 +42,18 @@ function blobToDataUrl(blob: Blob): Promise<string> {
   });
 }
 
-export async function enhanceImage(imageDataUrl: string, options: EnhanceOptions): Promise<string> {
-  const apiKey = getApiKey();
-  const model = options.model || getModel();
+export async function checkEnhanceConfigured(): Promise<boolean> {
+  try {
+    const res = await fetch(API_ENDPOINT, { method: 'GET' });
+    const data = await res.json() as { configured?: boolean };
+    return data.configured === true;
+  } catch {
+    return false;
+  }
+}
 
-  const imageBlob = await dataUrlToBlob(imageDataUrl);
-  const formData = new FormData();
-  formData.append('image', imageBlob, 'source.png');
-  formData.append('prompt', options.prompt);
-  formData.append('model', model);
-  formData.append('n', '1');
-  formData.append('size', 'auto');
+export async function enhanceImage(imageDataUrl: string, options: EnhanceOptions): Promise<string> {
+  const downscaled = await downscaleImage(imageDataUrl, MAX_IMAGE_DIMENSION);
 
   const timeoutController = new AbortController();
   const timeoutId = setTimeout(() => timeoutController.abort(), REQUEST_TIMEOUT_MS);
@@ -56,10 +64,14 @@ export async function enhanceImage(imageDataUrl: string, options: EnhanceOptions
 
   let response: Response;
   try {
-    response = await fetch(`${POLLINATIONS_BASE_URL}/v1/images/edits`, {
+    response = await fetch(API_ENDPOINT, {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${apiKey}` },
-      body: formData,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        image: downscaled,
+        prompt: options.prompt,
+        model: options.model,
+      }),
       signal,
     });
   } catch (err: unknown) {
@@ -71,46 +83,17 @@ export async function enhanceImage(imageDataUrl: string, options: EnhanceOptions
   }
   clearTimeout(timeoutId);
 
+  const data = await response.json() as { image?: string; error?: string };
+
   if (!response.ok) {
-    let message = `API 错误 (${response.status})`;
-    try {
-      const errBody = await response.json() as { error?: { message?: string }; message?: string };
-      const inner = errBody?.error?.message || errBody?.message;
-      if (inner) message = `${message}：${inner}`;
-    } catch { /* ignore */ }
-    if (response.status === 401) message = 'API Key 无效或未授权，请检查 VITE_POLLINATIONS_API_KEY。';
-    else if (response.status === 402) message = 'Pollinations 账户余额不足。';
-    throw new Error(message);
+    throw new Error(data.error || `服务器错误 (${response.status})`);
   }
 
-  const contentType = response.headers.get('content-type') || '';
-
-  if (contentType.startsWith('image/')) {
-    const blob = await response.blob();
-    return blobToDataUrl(blob);
+  if (!data.image) {
+    throw new Error('服务器响应中未找到图片数据。');
   }
 
-  const data = await response.json() as {
-    data?: Array<{ b64_json?: string; url?: string }>;
-    b64_json?: string;
-    url?: string;
-  };
-
-  const first = data?.data?.[0];
-  if (first?.b64_json) return `data:image/png;base64,${first.b64_json}`;
-  if (first?.url) {
-    const imgRes = await fetch(first.url);
-    const blob = await imgRes.blob();
-    return blobToDataUrl(blob);
-  }
-  if (data?.b64_json) return `data:image/png;base64,${data.b64_json}`;
-  if (data?.url) {
-    const imgRes = await fetch(data.url);
-    const blob = await imgRes.blob();
-    return blobToDataUrl(blob);
-  }
-
-  throw new Error('API 响应中未找到图片数据。');
+  return data.image;
 }
 
 function mergeSignals(...signals: (AbortSignal | undefined)[]): AbortSignal {
