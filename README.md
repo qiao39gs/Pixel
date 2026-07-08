@@ -1,8 +1,8 @@
 # 像素拼豆图纸生成器
 
-> Pixel Bead Pattern Generator — v1.0.3
+> Pixel Bead Pattern Generator — v1.0.4
 
-纯浏览器端运行，上传图片 → 生成拼豆像素网格图纸。MARD 标准色卡匹配、CIEDE2000 色差体系、手动编辑、项目持久化、A4 分页 PDF 导出。
+纯浏览器端运行，上传图片 → 生成拼豆像素网格图纸。MARD 标准色卡匹配、CIEDE2000 色差体系、手动编辑、项目持久化、A4 分页 PDF 导出、AI 图像增强。
 
 ---
 
@@ -12,6 +12,7 @@
 - **智能色卡匹配** — CIEDE2000 空间色差算法，最近邻像素映射到 MARD 221 色标准色卡
 - **智能选色优化 (k-medoids)** — 可选开关，以量化误差最小为准则从色卡精选色号，替代默认频次选取；渐变/照片类图色彩还原更均衡，复用用户选定的色差算法
 - **亮度/对比度/饱和度调节** — 松手后触发图像重处理，避免频繁渲染
+- **AI 图像增强** — 通过 Pollinations 图生图 API 在源图进入拼豆管线前进行简化/降噪预处理；三档简化强度（轻度/中度/强烈）、扁平化颜色与卡通风格可选、自定义 prompt 追加
 - **裁边修整** — 自动裁剪四边空白 + 四方向滑块手动精调边距
 - **画布滚轮缩放** — 桌面端滚轮以鼠标位置为中心缩放画布，双指捏合移动端缩放
 - **换色面板** — 已有色独立置顶分组、环形占比图、拖拽快速换色、系列快捷导航
@@ -43,8 +44,9 @@
 | 状态管理 | Zustand |
 | 图标 | Lucide React |
 | 色差算法 | CIEDE2000 / CIE94 / CIE76 / WeightedRGB |
+| AI 增强 | Pollinations img2img API（Vercel serverless 代理） |
 | 导出 | jsPDF + Canvas API |
-| 持久化 | localStorage（像素色号压缩存储） |
+| 持久化 | localStorage |
 | 字体 | Syne / DM Sans / JetBrains Mono |
 
 ---
@@ -58,11 +60,15 @@ src/
 ├── index.css                            # Tailwind + 自定义样式
 ├── types.ts                             # 类型定义
 ├── colorUtils.ts                        # 色彩空间转换 & 色差公式
+├── vite-env.d.ts                        # Vite 环境变量类型声明
 ├── store/
-│   └── workspaceStore.ts               # Zustand 全局状态（含撤销/重做栈）
+│   └── workspaceStore.ts               # Zustand 全局状态
 ├── hooks/
 │   ├── useImageProcessing.ts           # 图像采样 & 色卡匹配管道
+│   ├── useImageEnhancement.ts          # AI 图像增强
 │   └── useCanvasRenderer.ts            # Canvas 离屏渲染
+├── services/
+│   └── pollinationsApi.ts              # Pollinations API 客户端封装 + prompt 构建
 ├── components/
 │   ├── ImageUploader.tsx               # 图片上传 & 裁切
 │   ├── PatternWorkspace.tsx            # 工作台主组件
@@ -78,6 +84,8 @@ src/
     ├── statsUtils.ts                    # 统计计算
     ├── editOperations.ts                # 编辑工具函数
     └── projectStorage.ts               # 项目 localStorage 持久化 & JSON 导入导出
+api/
+└── enhance.ts                           # Vercel serverless 函数：代理 Pollinations img2img API
 ```
 
 ---
@@ -102,11 +110,25 @@ src/
 
 ```bash
 npm install
-npm run dev      # http://localhost:3000
+npm run dev      # http://localhost:3000（纯前端，AI 增强不可用）
 npm run lint     # tsc --noEmit
 npm run build    # 生产构建
 npm run preview  # 预览构建结果
 ```
+
+> AI 图像增强依赖 Vercel serverless 函数 (`api/enhance.ts`)，本地开发需使用 `vercel dev` 替代 `npm run dev`。
+
+---
+
+## 环境变量
+
+AI 图像增强功能需要配置 Pollinations API Key：
+
+| 变量名 | 位置 | 说明 |
+|--------|------|------|
+| `POLLINATIONS_API_KEY` | Vercel 项目设置 → Environment Variables | 从 [enter.pollinations.ai](https://enter.pollinations.ai) 获取，仅服务端可见 |
+
+配置后需重新部署（推送任意 commit 即可触发）才会生效。
 
 ---
 
