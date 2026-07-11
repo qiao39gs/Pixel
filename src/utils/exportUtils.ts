@@ -206,7 +206,6 @@ export function generateHighResPng(
     ctx.fillText('Code', colX[1], tableY + statsHeaderH);
     ctx.fillText('Name', colX[2], tableY + statsHeaderH);
     ctx.fillText('Count / 用量', colX[3], tableY + statsHeaderH);
-    ctx.fillText('~Packs (1K/bag)', colX[4], tableY + statsHeaderH);
     
     // Separator line
     ctx.strokeStyle = '#E2E8F0';
@@ -242,12 +241,6 @@ export function generateHighResPng(
       ctx.fillStyle = '#0F172A';
       ctx.font = 'bold 22px monospace';
       ctx.fillText(`${item.count}`, colX[3], y);
-      
-      // Packs
-      ctx.fillStyle = '#64748B';
-      ctx.font = '22px "Helvetica Neue", Arial, sans-serif';
-      const packs = (item.count / 1000).toFixed(1);
-      ctx.fillText(`~${packs}`, colX[4], y);
     });
   }
 
@@ -327,7 +320,6 @@ export function generateMultiPagePdf(
   pdf.text('Code', 42, 120);
   pdf.text('Code', 65, 120);
   pdf.text('Bead Count / Usage', 115, 120);
-  pdf.text('Approx Bags (1000/bag)', 155, 120);
 
   // Render rows of inventory (approx 15 can fit, if more we add paging or squeeze size)
   let yOffset = 123;
@@ -344,7 +336,6 @@ export function generateMultiPagePdf(
       pdf.text('Code', 42, 20);
       pdf.text('Code', 65, 20);
       pdf.text('Bead Count / Usage', 115, 20);
-      pdf.text('Approx Bags (1000/bag)', 155, 20);
       
       yOffset = 23;
     }
@@ -369,11 +360,6 @@ export function generateMultiPagePdf(
     pdf.setFont('helvetica', 'bold');
     pdf.setTextColor('#0F172A');
     pdf.text(`${item.count} pcs`, 115, yOffset + 4);
-    
-    pdf.setFont('helvetica', 'normal');
-    pdf.setTextColor('#64748B');
-    const packs = (item.count / 1000).toFixed(1);
-    pdf.text(`~ ${packs} pack`, 155, yOffset + 4);
 
     yOffset += 7.5;
   });

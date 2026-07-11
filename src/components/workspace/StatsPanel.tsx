@@ -265,8 +265,7 @@ export default function StatsPanel() {
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="text-right">
-                        <div className="font-sans font-bold text-slate-800 text-xs tabular-nums">{statItem.count} <span className="text-xs font-normal text-slate-400">颗</span></div>
-                        <div className="text-[10px] text-slate-400 mt-0.5 font-mono font-semibold">~{(statItem.count / 1000).toFixed(1)} 包</div>
+                        <div className="font-sans font-bold text-slate-800 text-sm tabular-nums">{statItem.count} <span className="text-xs font-normal text-slate-400">颗</span></div>
                       </div>
                       <button
                         onClick={(e) => { e.stopPropagation(); if (suppressClickRef.current) { suppressClickRef.current = false; return; } setSwapSource(statItem.bead.code); }}

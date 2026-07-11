@@ -56,7 +56,6 @@ export default function ControlPanel({ onReset, onTriggerEnhance }: Props) {
   const setShowNumbers = useWorkspaceStore(s => s.setShowNumbers);
   const showRulers = useWorkspaceStore(s => s.showRulers);
   const setShowRulers = useWorkspaceStore(s => s.setShowRulers);
-  const mobileTab = useWorkspaceStore(s => s.mobileTab);
   const localAspectRatio = useWorkspaceStore(s => s.localAspectRatio);
   const autoDetectTrim = useWorkspaceStore(s => s.autoDetectTrim);
   const topTrim = useWorkspaceStore(s => s.topTrim);
@@ -92,7 +91,7 @@ export default function ControlPanel({ onReset, onTriggerEnhance }: Props) {
   );
 
   return (
-    <div className={`w-full lg:col-span-4 flex flex-col gap-5 ${mobileTab !== 'controls' ? 'hidden lg:flex' : ''}`}>
+    <div className="w-full flex flex-col gap-5">
       <div className="bg-white rounded-3xl border border-black/[0.04] p-6 shadow-sm flex flex-col gap-5 transition-all">
         <div className="flex justify-between items-center pb-3 border-b border-slate-100">
           <h3 className="font-sans font-semibold text-slate-900 flex items-center gap-2 text-sm leading-none"><Sliders className="w-4 h-4 text-indigo-600" />生成图纸规格</h3>

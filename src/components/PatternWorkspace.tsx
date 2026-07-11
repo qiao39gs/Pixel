@@ -52,6 +52,7 @@ export default function PatternWorkspace({ croppedImageDataUrl, onReset, aspectR
   const undo = useWorkspaceStore(s => s.undo);
   const redo = useWorkspaceStore(s => s.redo);
   const setScale = useWorkspaceStore(s => s.setScale);
+  const mobileTab = useWorkspaceStore(s => s.mobileTab);
 
   const { gridWidth, gridHeight } = useMemo(() => {
     const h = (w: number) => aspectRatio === 'auto' ? Math.max(1, Math.round(w / localAspectRatio)) : Math.round(w * (ASPECT_RATIOS[aspectRatio] ?? 1));
@@ -97,12 +98,12 @@ export default function PatternWorkspace({ croppedImageDataUrl, onReset, aspectR
       {/* Tab bar — reads from store directly now via CanvasViewport */}
       <TabBar />
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start mt-4">
-        <div className="lg:col-span-3"><ControlPanel onReset={onReset} onTriggerEnhance={triggerEnhance} /></div>
-        <div className="w-full lg:col-span-6 flex flex-col gap-6">
+        <div className={`lg:col-span-3 ${mobileTab !== 'controls' ? 'hidden lg:block' : ''}`}><ControlPanel onReset={onReset} onTriggerEnhance={triggerEnhance} /></div>
+        <div className={`w-full lg:col-span-6 flex flex-col gap-6 ${mobileTab !== 'canvas' && mobileTab !== 'stats' ? 'hidden lg:flex' : ''}`}>
           <CanvasViewport canvasRef={canvasRef} containerRef={containerRef} gridWidth={gridWidthActual} gridHeight={gridHeightActual} currentPalette={currentPalette} onGeneratePng={onGeneratePng} onGeneratePdf={onGeneratePdf} />
           <StatsPanel />
         </div>
-        <div className="lg:col-span-3"><ProjectPanel onReset={onReset} croppedImageDataUrl={croppedImageDataUrl} aspectRatio={aspectRatio} onRestoreImage={onRestoreImage} /></div>
+        <div className={`lg:col-span-3 ${mobileTab !== 'project' ? 'hidden lg:block' : ''}`}><ProjectPanel onReset={onReset} croppedImageDataUrl={croppedImageDataUrl} aspectRatio={aspectRatio} onRestoreImage={onRestoreImage} /></div>
       </div>
     </div>
   );
