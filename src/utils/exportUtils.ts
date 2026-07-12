@@ -1,9 +1,10 @@
 import { jsPDF } from 'jspdf';
 import { TransformedPixel, IngredientStat } from '../types';
 import { hexToRgb, luminance } from '../colorUtils';
+import { COLOR_GROUPS } from '../data/palette';
 
 /**
- * Generate a crystal-clear, high-resolution PNG canvas displaying the grid canvas, annotations, grid lines, and references.
+ * Generate a high-resolution PNG with the bead grid and a grouped circular swatch inventory.
  */
 export function generateHighResPng(
   pixels: TransformedPixel[],
@@ -14,77 +15,93 @@ export function generateHighResPng(
 ): string {
   const { showRulers, showNumbers } = options;
   const scale = 40;
-  const padding = 120;
-  const rulerOffset = 40;
-  
-  // Stats table dimensions
-  const statsHeaderH = 60;
-  const statsRowH = 56;
-  const statsAreaH = stats.length > 0 ? statsHeaderH + stats.length * statsRowH + 80 : 0;
-  
-  const totalWidth = Math.max(gridWidth * scale + padding * 2, padding * 2 + 860 + 280);
-  const totalHeight = gridHeight * scale + padding * 2 + statsAreaH + 80;
+  const padding = 100;
+
+  // --- Materials section layout ---
+  const beadRadius = 25;
+  const beadDiameter = beadRadius * 2;
+  const countGap = 10;
+  const beadPad = 28;
+  const rowPad = 30;
+  const groupLabelH = 48;
+  const groupGap = 36;
+
+  // Group stats by color series
+  const usedSeries = COLOR_GROUPS.map(g => ({
+    name: g.name,
+    series: g.series,
+    items: stats.filter(s => s.bead.series === g.series),
+  })).filter(g => g.items.length > 0);
+
+  const gridW = gridWidth * scale;
+  const materialsAreaWidth = Math.max(gridW, 760);
+  const slot = beadDiameter + countGap + 60 + beadPad;
+
+  // Flow-pack each series into rows; compute height
+  const seriesRows: { x: number; item: IngredientStat }[][][] = [];
+  let materialsH = 0;
+  if (usedSeries.length > 0) {
+    materialsH += 64;
+    usedSeries.forEach(g => {
+      materialsH += groupLabelH;
+      let row: { x: number; item: IngredientStat }[] = [];
+      let rowX = 0;
+      const rows: { x: number; item: IngredientStat }[][] = [];
+      g.items.forEach(item => {
+        if (rowX + slot > materialsAreaWidth && row.length > 0) {
+          rows.push(row);
+          materialsH += beadDiameter + rowPad;
+          row = [];
+          rowX = 0;
+        }
+        row.push({ x: rowX + beadRadius, item });
+        rowX += slot;
+      });
+      if (row.length > 0) {
+        rows.push(row);
+        materialsH += beadDiameter + rowPad;
+      }
+      seriesRows.push(rows);
+      materialsH += groupGap;
+    });
+  }
+
+  const totalWidth = Math.max(gridW + padding * 2, materialsAreaWidth + padding * 2);
+  const totalHeight = gridHeight * scale + padding * 2 + materialsH - groupGap;
 
   const canvas = document.createElement('canvas');
   canvas.width = totalWidth;
   canvas.height = totalHeight;
   const ctx = canvas.getContext('2d');
-  
   if (!ctx) return '';
 
-  // 1. Fill clean white paper canvas
-  ctx.fillStyle = '#FFFFFF';
+  // Paper background — warm fine-art paper
+  ctx.fillStyle = '#FAF8F5';
   ctx.fillRect(0, 0, totalWidth, totalHeight);
 
-  // 2. Draw aesthetic canvas title & layout details
-  ctx.fillStyle = '#0F172A';
-  ctx.font = 'bold 36px "Helvetica Neue", Arial, sans-serif';
-  ctx.fillText('像素拼豆制作图纸 (Pixel Bead Design Core Manual)', padding, 60);
-
-  ctx.fillStyle = '#64748B';
-  ctx.font = '16px "Helvetica Neue", Arial, sans-serif';
-  ctx.fillText(
-    `当前规格: ${gridWidth}x${gridHeight} 孔位(格) | 匹配色卡总计: ${stats.length} 色 | 耗材颗粒: ${pixels.filter(p => p.matchedBead.code !== 'EMPTY').length} 颗`,
-    padding,
-    95
-  );
-
-  // Translate coordinates to draw-plane
+  // --- Grid ---
   ctx.save();
-  ctx.translate(padding, padding + 20);
+  ctx.translate(padding, padding);
 
-  // Draw 2D coordinates background ruler guides
   if (showRulers) {
-    ctx.fillStyle = '#94A3B8';
-    ctx.font = '12px monospace';
+    ctx.fillStyle = '#9B958C';
+    ctx.font = '12px "JetBrains Mono", monospace';
     ctx.textAlign = 'center';
-
-    // Columns indicators numbers (every single one for micro precision)
+    ctx.textBaseline = 'alphabetic';
     for (let x = 1; x <= gridWidth; x++) {
-      ctx.fillText(
-        x.toString(),
-        (x - 1) * scale + scale / 2,
-        -10
-      );
+      ctx.fillText(x.toString(), (x - 1) * scale + scale / 2, -14);
     }
-
-    // Row indicators numbers (every single one)
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
     for (let y = 1; y <= gridHeight; y++) {
-      ctx.fillText(
-        y.toString(),
-        -10,
-        (y - 1) * scale + scale / 2
-      );
+      ctx.fillText(y.toString(), -14, (y - 1) * scale + scale / 2);
     }
   }
 
-  // 3. Render pixel blocks
+  // Pixel blocks
   pixels.forEach(p => {
     if (p.matchedBead.code === 'EMPTY') {
-      // Draw a translucent guide peg circle
-      ctx.strokeStyle = '#E2E8F0';
+      ctx.strokeStyle = '#E8E3DB';
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.arc(p.x * scale + scale / 2, p.y * scale + scale / 2, scale / 8, 0, 2 * Math.PI);
@@ -92,11 +109,10 @@ export function generateHighResPng(
       return;
     }
 
-    // Fill genuine solid bead color
     ctx.fillStyle = p.matchedBead.hex;
     ctx.fillRect(p.x * scale, p.y * scale, scale, scale);
 
-    // Render little 3D cylinder texture for realism
+    // bead texture
     ctx.strokeStyle = 'rgba(255,255,255,0.18)';
     ctx.lineWidth = 2.0;
     ctx.beginPath();
@@ -108,25 +124,19 @@ export function generateHighResPng(
     ctx.arc(p.x * scale + scale / 2, p.y * scale + scale / 2, scale / 5, 0, 2 * Math.PI);
     ctx.stroke();
 
-    // Fill custom contrast color lettering center text
     if (showNumbers) {
       const rgb = hexToRgb(p.matchedBead.hex);
       const luma = luminance(rgb);
-      ctx.fillStyle = luma > 140 ? '#0F172A' : '#FFFFFF';
-      
-      ctx.font = `bold ${Math.floor(scale / 2.5)}px monospace`;
+      ctx.fillStyle = luma > 140 ? '#1C1B1A' : '#FFFFFF';
+      ctx.font = `bold ${Math.floor(scale / 2.5)}px "JetBrains Mono", monospace`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(
-        p.matchedBead.code,
-        p.x * scale + scale / 2,
-        p.y * scale + scale / 2 + 1
-      );
+      ctx.fillText(p.matchedBead.code, p.x * scale + scale / 2, p.y * scale + scale / 2 + 1);
     }
   });
 
-  // 4. Draw crisp pixel delimiters (Grid lines)
-  ctx.strokeStyle = '#E2E8F0';
+  // Grid lines
+  ctx.strokeStyle = '#E8E3DB';
   ctx.lineWidth = 0.5;
   for (let x = 1; x < gridWidth; x++) {
     ctx.beginPath();
@@ -141,106 +151,129 @@ export function generateHighResPng(
     ctx.stroke();
   }
 
-  // 5. Draw bold pegboard alignment red rulers
+  // Pegboard alignment lines
   for (let x = 1; x < gridWidth; x++) {
     if (x % 10 === 0) {
-      ctx.strokeStyle = '#EF4444'; // solid boundary red-line
+      ctx.strokeStyle = '#E8570A';
       ctx.lineWidth = 2.0;
       ctx.beginPath();
       ctx.moveTo(x * scale, 0);
       ctx.lineTo(x * scale, gridHeight * scale);
       ctx.stroke();
     } else if (x % 5 === 0) {
-      ctx.strokeStyle = '#F87171'; // dashed divider red-line
+      ctx.strokeStyle = 'rgba(232,87,10,0.4)';
       ctx.lineWidth = 1.0;
       ctx.setLineDash([6, 6]);
       ctx.beginPath();
       ctx.moveTo(x * scale, 0);
       ctx.lineTo(x * scale, gridHeight * scale);
       ctx.stroke();
-      ctx.setLineDash([]); // clear
+      ctx.setLineDash([]);
     }
   }
 
   for (let y = 1; y < gridHeight; y++) {
     if (y % 10 === 0) {
-      ctx.strokeStyle = '#EF4444';
+      ctx.strokeStyle = '#E8570A';
       ctx.lineWidth = 2.0;
       ctx.beginPath();
       ctx.moveTo(0, y * scale);
       ctx.lineTo(gridWidth * scale, y * scale);
       ctx.stroke();
     } else if (y % 5 === 0) {
-      ctx.strokeStyle = '#F87171';
+      ctx.strokeStyle = 'rgba(232,87,10,0.4)';
       ctx.lineWidth = 1.0;
       ctx.setLineDash([6, 6]);
       ctx.beginPath();
       ctx.moveTo(0, y * scale);
       ctx.lineTo(gridWidth * scale, y * scale);
       ctx.stroke();
-      ctx.setLineDash([]); // clear
+      ctx.setLineDash([]);
     }
   }
 
-  // Frame outermost boundary
-  ctx.strokeStyle = '#CBD5E1';
-  ctx.lineWidth = 3;
+  // Frame
+  ctx.strokeStyle = '#D4CFC4';
+  ctx.lineWidth = 2;
   ctx.strokeRect(0, 0, gridWidth * scale, gridHeight * scale);
 
   ctx.restore();
 
-  // 7. Draw material stats table below the grid
-  if (stats.length > 0) {
-    const tableY = padding + gridHeight * scale + 120;
-    const colX = [padding, padding + 120, padding + 320, padding + 620, padding + 860];
-    
-    // Table header
-    ctx.fillStyle = '#0F172A';
-    ctx.font = 'bold 24px "Helvetica Neue", Arial, sans-serif';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('Material Checklist / 耗材清单', padding, tableY);
-    
-    ctx.fillStyle = '#94A3B8';
-    ctx.font = 'bold 20px "Helvetica Neue", Arial, sans-serif';
-    ctx.fillText('Code', colX[1], tableY + statsHeaderH);
-    ctx.fillText('Name', colX[2], tableY + statsHeaderH);
-    ctx.fillText('Count / 用量', colX[3], tableY + statsHeaderH);
-    
-    // Separator line
-    ctx.strokeStyle = '#E2E8F0';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(padding, tableY + statsHeaderH + 36);
-    ctx.lineTo(padding + colX[4] + 240, tableY + statsHeaderH + 36);
-    ctx.stroke();
-    
-    stats.forEach((item, i) => {
-      const y = tableY + statsHeaderH + 56 + i * statsRowH;
-      
-      // Color swatch
-      ctx.fillStyle = item.bead.hex;
-      ctx.fillRect(colX[1] - 60, y - 16, 44, 44);
-      ctx.strokeStyle = '#CBD5E1';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(colX[1] - 60, y - 16, 44, 44);
-      
-      // Code
-      ctx.fillStyle = '#0F172A';
-      ctx.font = 'bold 22px monospace';
+  // --- Materials: weight-mapped bead flow, grouped by series ---
+  if (usedSeries.length > 0) {
+    const matX = padding;
+    let matY = padding + gridHeight * scale + 64;
+
+    usedSeries.forEach((g, gi) => {
+      const rows = seriesRows[gi];
+
+      // Series label — editorial chapter marker
+      const labelY = matY + groupLabelH / 2;
+
+      ctx.fillStyle = '#1C1B1A';
+      ctx.fillRect(matX, labelY - 11, 3, 22);
+
+      ctx.fillStyle = '#1C1B1A';
+      ctx.font = '600 17px "Helvetica Neue", Arial, sans-serif';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
-      ctx.fillText(item.bead.code, colX[1], y);
-      
-      // Name (Chinese via system font)
-      ctx.fillStyle = '#475569';
-      ctx.font = '22px "PingFang SC", "Microsoft YaHei", "Helvetica Neue", sans-serif';
-      ctx.fillText(item.bead.name, colX[2], y);
-      
-      // Count
-      ctx.fillStyle = '#0F172A';
-      ctx.font = 'bold 22px monospace';
-      ctx.fillText(`${item.count}`, colX[3], y);
+      ctx.fillText(g.name, matX + 16, labelY);
+
+      const labelW = ctx.measureText(g.name).width;
+      ctx.strokeStyle = '#E8E3DB';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(matX + 16 + labelW + 18, labelY);
+      ctx.lineTo(matX + materialsAreaWidth, labelY);
+      ctx.stroke();
+
+      ctx.fillStyle = '#B8B2A8';
+      ctx.font = '13px "Helvetica Neue", Arial, sans-serif';
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`${g.items.length} 色`, matX + materialsAreaWidth, labelY);
+
+      matY += groupLabelH;
+
+      // Render flow-packed rows; uniform bead size
+      rows.forEach(row => {
+        row.forEach(b => {
+          const cx = matX + b.x;
+          const cy = matY + beadRadius;
+
+          // Bead body
+          ctx.fillStyle = b.item.bead.hex;
+          ctx.beginPath();
+          ctx.arc(cx, cy, beadRadius, 0, 2 * Math.PI);
+          ctx.fill();
+
+          // Outer rim
+          ctx.strokeStyle = 'rgba(0,0,0,0.12)';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.arc(cx, cy, beadRadius, 0, 2 * Math.PI);
+          ctx.stroke();
+
+          // Code on bead face
+          const rgb = hexToRgb(b.item.bead.hex);
+          const luma = luminance(rgb);
+          ctx.fillStyle = luma > 140 ? '#1C1B1A' : '#FFFFFF';
+          ctx.font = `bold 16px "JetBrains Mono", monospace`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(b.item.bead.code, cx, cy + 1);
+
+          // Quantity beside bead
+          ctx.fillStyle = '#1C1B1A';
+          ctx.font = `bold 22px "JetBrains Mono", monospace`;
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(`${b.item.count}`, cx + beadRadius + countGap, cy);
+        });
+        matY += beadDiameter + rowPad;
+      });
+
+      matY += groupGap - rowPad;
     });
   }
 
