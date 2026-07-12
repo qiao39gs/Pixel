@@ -66,7 +66,7 @@ export default function App() {
         <div className="max-w-[1600px] mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <span className="font-display font-bold text-[15px] tracking-tight text-[#18181B]">像素拼豆</span>
-            <span className="hidden sm:inline text-xs font-mono text-zinc-400 border border-zinc-200 px-1.5 py-0.5 rounded-md">v1.0.3</span>
+            <span className="hidden sm:inline text-xs font-mono text-zinc-400 border border-zinc-200 px-1.5 py-0.5 rounded-md">v1.0.4</span>
           </div>
           <span className="text-xs text-zinc-400 font-mono hidden md:block">PIXEL BEAD PATTERN GENERATOR</span>
         </div>
