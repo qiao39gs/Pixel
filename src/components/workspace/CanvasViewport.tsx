@@ -1,10 +1,10 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useMemo, useCallback } from 'react';
 import { LayoutGrid, Award, Move, Eraser, Sparkles, Wand2, Palette, X, Pencil, Focus } from 'lucide-react';
 import { BeadPaletteItem, TransformedPixel, IngredientStat } from '../../types';
 import { COLOR_GROUPS } from '../../data/palette';
 import { hexToRgb, luminance } from '../../colorUtils';
-import { EMPTY_BEAD, floodFill as doFloodFill } from '../../utils/editOperations';
 import { useWorkspaceStore } from '../../store/workspaceStore';
+import { PointerInteraction } from '../../utils/pointerInteraction';
 
 interface Props {
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
@@ -17,16 +17,9 @@ interface Props {
 }
 
 export default function CanvasViewport({ canvasRef, containerRef, gridWidth, gridHeight, currentPalette, onGeneratePng, onGeneratePdf }: Props) {
-  const editDragRef = useRef(false);
-  const editFilledRef = useRef(new Set<string>());
-  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const longPressPickedRef = useRef(false);
-  const touchStartCoordsRef = useRef<{ x: number; y: number } | null>(null);
-  const pinchRef = useRef<{ dist: number; scale: number } | null>(null);
   const [dragMode, setDragMode] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
 
-  // Read from store
   const editMode = useWorkspaceStore(s => s.editMode);
   const brushBead = useWorkspaceStore(s => s.brushBead);
   const isEraser = useWorkspaceStore(s => s.isEraser);
@@ -44,11 +37,12 @@ export default function CanvasViewport({ canvasRef, containerRef, gridWidth, gri
   const scale = useWorkspaceStore(s => s.scale);
   const topTrim = useWorkspaceStore(s => s.topTrim);
   const leftTrim = useWorkspaceStore(s => s.leftTrim);
+  const rightTrim = useWorkspaceStore(s => s.rightTrim);
+  const bottomTrim = useWorkspaceStore(s => s.bottomTrim);
   const transformedPixels = useWorkspaceStore(s => s.transformedPixels);
   const stats = useWorkspaceStore(s => s.stats);
   const mobileTab = useWorkspaceStore(s => s.mobileTab);
 
-  // Store setters
   const setEditMode = useWorkspaceStore(s => s.setEditMode);
   const setBrushBead = useWorkspaceStore(s => s.setBrushBead);
   const setSelectedCell = useWorkspaceStore(s => s.setSelectedCell);
@@ -61,8 +55,6 @@ export default function CanvasViewport({ canvasRef, containerRef, gridWidth, gri
   const setPanOffset = useWorkspaceStore(s => s.setPanOffset);
   const setPanStart = useWorkspaceStore(s => s.setPanStart);
   const setScale = useWorkspaceStore(s => s.setScale);
-
-  // Store actions
   const applyBrush = useWorkspaceStore(s => s.applyBrush);
   const applyWandFill = useWorkspaceStore(s => s.applyWandFill);
   const pushUndo = useWorkspaceStore(s => s.pushUndo);
@@ -70,7 +62,7 @@ export default function CanvasViewport({ canvasRef, containerRef, gridWidth, gri
   const redo = useWorkspaceStore(s => s.redo);
   const denoise = useWorkspaceStore(s => s.denoise);
 
-  const coordToGrid = (clientX: number, clientY: number) => {
+  const coordToGrid = useCallback((clientX: number, clientY: number) => {
     const canvas = canvasRef.current;
     if (!canvas) return null;
     const rect = canvas.getBoundingClientRect();
@@ -79,54 +71,40 @@ export default function CanvasViewport({ canvasRef, containerRef, gridWidth, gri
     const mx = (clientX - rect.left) * sx - rulerSize;
     const my = (clientY - rect.top) * sy - rulerSize;
     const gx = Math.floor(mx / scale) + leftTrim, gy = Math.floor(my / scale) + topTrim;
-    if (gx < leftTrim || gx >= gridWidth - (useWorkspaceStore.getState().rightTrim) || gy < topTrim || gy >= gridHeight - (useWorkspaceStore.getState().bottomTrim)) return null;
+    if (gx < leftTrim || gx >= gridWidth - rightTrim || gy < topTrim || gy >= gridHeight - bottomTrim) return null;
     return { x: gx, y: gy };
-  };
+  }, [canvasRef, showRulers, scale, leftTrim, topTrim, rightTrim, bottomTrim, gridWidth, gridHeight]);
 
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (editMode) {
-      if (e.button === 2) { e.preventDefault(); const cell = coordToGrid(e.clientX, e.clientY); if (cell) { const p = transformedPixels[cell.y * gridWidth + cell.x]; if (p && p.matchedBead.code !== 'EMPTY') { setBrushBead(p.matchedBead); setSelectedCell(cell); } } return; }
-      if (e.button === 0) {
-        if (wandMode) { const cell = coordToGrid(e.clientX, e.clientY); if (cell) { if (brushBead || isEraser) { const sel = doFloodFill(transformedPixels, cell.x, cell.y, gridWidth, gridHeight); pushUndo(); applyWandFill(cell, sel, isEraser ? EMPTY_BEAD : brushBead!, gridWidth); } else { setWandSelection(doFloodFill(transformedPixels, cell.x, cell.y, gridWidth, gridHeight)); setSelectedCell(cell); } } return; }
-        if (brushBead || isEraser) { editDragRef.current = true; editFilledRef.current.clear(); const cell = coordToGrid(e.clientX, e.clientY); if (cell) applyBrush(cell.x, cell.y, gridWidth); } else { setSelectedCell(coordToGrid(e.clientX, e.clientY)); }
-        return;
-      }
-    }
-    if (e.button !== 0) return; setIsPanning(true); setPanStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
-  };
+  const interaction = useMemo(() => new PointerInteraction({
+    editMode, dragMode, brushBead, isEraser, wandMode,
+    transformedPixels, gridWidth, gridHeight, scale, panOffset, isPanning, panStart,
+    coordToGrid,
+    setBrushBead, setIsEraser, setSelectedCell, setWandSelection,
+    setIsPanning, setPanStart, setPanOffset, setScale,
+    applyBrush, applyWandFill, pushUndo,
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), []);
 
-  const handleMouseMoveEdit = (e: React.MouseEvent) => {
-    if (!editDragRef.current || (!brushBead && !isEraser)) return;
-    const cell = coordToGrid(e.clientX, e.clientY); if (!cell) return;
-    const key = `${cell.x},${cell.y}`; if (editFilledRef.current.has(key)) return;
-    editFilledRef.current.add(key); applyBrush(cell.x, cell.y, gridWidth);
-  };
+  useEffect(() => {
+    interaction.updateCtx({
+      editMode, dragMode, brushBead, isEraser, wandMode,
+      transformedPixels, gridWidth, gridHeight, scale, panOffset, isPanning, panStart,
+      coordToGrid,
+    });
+  }, [interaction, editMode, dragMode, brushBead, isEraser, wandMode, transformedPixels, gridWidth, gridHeight, scale, panOffset, isPanning, panStart, coordToGrid]);
 
-  const handleMouseUp = () => { if (editDragRef.current) { editDragRef.current = false; editFilledRef.current.clear(); return; } setIsPanning(false); };
-  const handlePanMove = (e: React.MouseEvent) => { if (!isPanning) return; setPanOffset({ x: e.clientX - panStart.x, y: e.clientY - panStart.y }); };
+  useEffect(() => () => interaction.destroy(), [interaction]);
 
-  // 滚轮缩放（以鼠标位置为中心），与双指捏合同样限制 4-32
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
-      const rect = el.getBoundingClientRect();
-      const cx = e.clientX - rect.left - rect.width / 2;
-      const cy = e.clientY - rect.top - rect.height / 2;
-      const st = useWorkspaceStore.getState();
-      const oldScale = st.scale;
-      const po = st.panOffset;
-      const delta = -e.deltaY * 0.0015;
-      const newScale = Math.max(4, Math.min(32, Math.round(oldScale * (1 + delta))));
-      if (newScale === oldScale) return;
-      const ratio = newScale / oldScale;
-      setScale(newScale);
-      setPanOffset({ x: cx - (cx - po.x) * ratio, y: cy - (cy - po.y) * ratio });
+      interaction.onWheel(e, el.getBoundingClientRect());
     };
     el.addEventListener('wheel', onWheel, { passive: false });
     return () => el.removeEventListener('wheel', onWheel);
-  }, [containerRef, setScale, setPanOffset]);
+  }, [containerRef, interaction]);
 
   useEffect(() => { if (!editMode) { setDragMode(false); setToolsOpen(false); } }, [editMode]);
   useEffect(() => { if (mobileTab !== 'canvas') { setDragMode(false); setToolsOpen(false); } }, [mobileTab]);
@@ -179,15 +157,18 @@ export default function CanvasViewport({ canvasRef, containerRef, gridWidth, gri
       )}
 
       <div ref={containerRef} className="flex-1 w-full overflow-hidden flex items-center justify-center relative border-2 border-dashed border-white/[0.06] rounded-2xl bg-[#09090B] p-4 group min-h-[320px] md:min-h-[380px]" style={{ cursor: (editMode && !dragMode) ? 'crosshair' : 'grab', touchAction: 'none' }}
-        onMouseDown={handleMouseDown} onMouseMove={editMode ? handleMouseMoveEdit : handlePanMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}
-        onTouchStart={(e) => { if (e.touches.length >= 2) { const d = Math.hypot(e.touches[1].clientX - e.touches[0].clientX, e.touches[1].clientY - e.touches[0].clientY); pinchRef.current = { dist: d, scale }; if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current); return; } if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current); const t = e.touches[0]; const cx = t.clientX, cy = t.clientY; if (!editMode || dragMode) { setPanStart({ x: cx - panOffset.x, y: cy - panOffset.y }); setIsPanning(true); return; } longPressPickedRef.current = false; longPressTimerRef.current = setTimeout(() => { longPressTimerRef.current = null; const cell = coordToGrid(cx, cy); if (cell) { const pixel = transformedPixels[cell.y * gridWidth + cell.x]; if (pixel && pixel.matchedBead.code !== 'EMPTY') { setBrushBead(pixel.matchedBead); setIsEraser(false); longPressPickedRef.current = true; editDragRef.current = false; } } }, 500); if (wandMode) { const cell = coordToGrid(cx, cy); if (cell) { if (brushBead || isEraser) { touchStartCoordsRef.current = { x: cx, y: cy }; } else { setWandSelection(doFloodFill(transformedPixels, cell.x, cell.y, gridWidth, gridHeight)); } setSelectedCell(cell); } return; } if (brushBead || isEraser) { editFilledRef.current.clear(); touchStartCoordsRef.current = { x: cx, y: cy }; } else { setSelectedCell(coordToGrid(cx, cy)); } }}
-        onTouchMove={(e) => { if (e.touches.length >= 2 && pinchRef.current) { const d = Math.hypot(e.touches[1].clientX - e.touches[0].clientX, e.touches[1].clientY - e.touches[0].clientY); const ns = Math.max(4, Math.min(32, Math.round(pinchRef.current.scale * d / pinchRef.current.dist))); setScale(ns); return; } if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null; } const t = e.touches[0]; if (!editMode || dragMode) { if (!isPanning) return; setPanOffset({ x: t.clientX - panStart.x, y: t.clientY - panStart.y }); return; } if (wandMode || (!brushBead && !isEraser) || longPressPickedRef.current) return; if (!editDragRef.current) { editDragRef.current = true; if (touchStartCoordsRef.current) { const sc = coordToGrid(touchStartCoordsRef.current.x, touchStartCoordsRef.current.y); if (sc) { const k = `${sc.x},${sc.y}`; if (!editFilledRef.current.has(k)) { editFilledRef.current.add(k); applyBrush(sc.x, sc.y, gridWidth); } } } } const cell = coordToGrid(t.clientX, t.clientY); if (!cell) return; const key = `${cell.x},${cell.y}`; if (editFilledRef.current.has(key)) return; editFilledRef.current.add(key); applyBrush(cell.x, cell.y, gridWidth); }}
-        onTouchEnd={() => { pinchRef.current = null; if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null; } if (editMode && !dragMode) { if ((brushBead || isEraser) && !longPressPickedRef.current && !editDragRef.current && touchStartCoordsRef.current) { const cell = coordToGrid(touchStartCoordsRef.current.x, touchStartCoordsRef.current.y); if (cell) { if (wandMode) { const sel = doFloodFill(transformedPixels, cell.x, cell.y, gridWidth, gridHeight); pushUndo(); applyWandFill(cell, sel, isEraser ? EMPTY_BEAD : brushBead!, gridWidth); } else { applyBrush(cell.x, cell.y, gridWidth); } } } editDragRef.current = false; editFilledRef.current.clear(); touchStartCoordsRef.current = null; longPressPickedRef.current = false; } else { setIsPanning(false); } }}
+        onMouseDown={(e) => interaction.onMouseDown(e)}
+        onMouseMove={(e) => interaction.onMouseMove(e)}
+        onMouseUp={() => interaction.onMouseUp()}
+        onMouseLeave={() => interaction.onMouseUp()}
+        onTouchStart={(e) => interaction.onTouchStart(e)}
+        onTouchMove={(e) => interaction.onTouchMove(e)}
+        onTouchEnd={() => interaction.onTouchEnd()}
         onContextMenu={(e) => e.preventDefault()}>
         {isProcessing && <div className="absolute inset-0 bg-[#09090B]/80 backdrop-blur-xs flex flex-col items-center justify-center gap-3 z-30 rounded-2xl select-none"><div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div><span className="text-xs font-bold text-slate-300">图纸高精转换与色卡量化中...</span></div>}
         <div className="relative transition-transform duration-75 origin-center" style={{ transform: `translate(${panOffset.x}px, ${panOffset.y}px)` }}><canvas ref={canvasRef} className="block shadow-2xl rounded-md border border-white/[0.08]" /></div>
         <button onClick={resetView} className="absolute top-2 right-2 z-20 p-2 rounded-lg bg-white/10 backdrop-blur-sm text-white/60 hover:text-white hover:bg-white/20 transition-all" title="还原视图" onTouchStart={e => e.stopPropagation()} onTouchMove={e => e.stopPropagation()} onTouchEnd={e => e.stopPropagation()}><Focus className="w-4 h-4" /></button>
-        {editMode && <div className="sm:hidden absolute bottom-3 right-3 z-20 flex flex-col items-end gap-1.5" onTouchStart={e => e.stopPropagation()} onTouchMove={e => e.stopPropagation()} onTouchEnd={e => e.stopPropagation()}>{toolsOpen && <div className="flex flex-col items-end gap-1.5 mb-1"><button onClick={() => { toggleDragMode(); setToolsOpen(false); }} className={`flex items-center gap-2 pl-3 pr-2.5 py-2 rounded-full shadow-lg transition-all ${dragMode ? 'bg-amber-500 text-white' : 'bg-white/15 text-slate-200'}`} title="拖拽模式"><span className="text-xs font-bold">拖拽</span><Move className="w-4 h-4" /></button><button onClick={() => { setIsEraser(!isEraser); setBrushBead(null); setDragMode(false); setToolsOpen(false); }} className={`flex items-center gap-2 pl-3 pr-2.5 py-2 rounded-full shadow-lg transition-all ${isEraser ? 'bg-red-500 text-white' : 'bg-white/15 text-slate-200'}`} title="橡皮擦"><span className="text-xs font-bold">橡皮</span><Eraser className="w-4 h-4" /></button><button onClick={() => { denoise(gridWidth, gridHeight, currentPalette); setToolsOpen(false); }} className="flex items-center gap-2 pl-3 pr-2.5 py-2 rounded-full bg-white/15 text-slate-200 shadow-lg transition-all hover:bg-emerald-500/20 hover:text-emerald-400" title="去杂色"><span className="text-xs font-bold">去杂</span><Sparkles className="w-4 h-4" /></button><button onClick={() => { setWandMode(!wandMode); setWandSelection(new Set()); setIsEraser(false); setDragMode(false); setToolsOpen(false); }} className={`flex items-center gap-2 pl-3 pr-2.5 py-2 rounded-full shadow-lg transition-all ${wandMode ? 'bg-cyan-500 text-white' : 'bg-white/15 text-slate-200'}`} title="魔棒"><span className="text-xs font-bold">魔棒</span><Wand2 className="w-4 h-4" /></button><button onClick={() => { setShowPalettePanel(!showPalettePanel); setDragMode(false); setToolsOpen(false); }} className={`flex items-center gap-2 pl-3 pr-2.5 py-2 rounded-full shadow-lg transition-all ${showPalettePanel ? 'bg-violet-500 text-white' : 'bg-white/15 text-slate-200'}`} title="色板"><span className="text-xs font-bold">色板</span><Palette className="w-4 h-4" /></button></div>}<button onClick={() => setToolsOpen(!toolsOpen)} className={`w-10 h-10 rounded-full flex items-center justify-center shadow-lg transition-all ${toolsOpen ? 'bg-white/20 text-white' : 'bg-amber-500 text-white'}`}>{toolsOpen ? <X className="w-5 h-5" /> : dragMode ? <Move className="w-5 h-5" /> : <Pencil className="w-5 h-5" />}</button></div>}
+        {editMode && <div className="sm:hidden absolute bottom-3 right-3 z-20 flex flex-col items-end gap-1.5" onTouchStart={e => e.stopPropagation()} onTouchMove={e => e.stopPropagation()} onTouchEnd={e => e.stopPropagation()}>{toolsOpen && <div className="flex flex-col items-end gap-1.5 mb-1"><button onClick={() => { toggleDragMode(); setToolsOpen(false); }} className={`flex items-center gap-2 pl-3 pr-2.5 py-2 rounded-full shadow-lg transition-all ${dragMode ? 'bg-amber-500 text-white' : 'bg-white/15 text-slate-200'}`} title="拖拽模式"><span className="text-xs font-bold">拖拽</span><Move className="w-4 h-4" /></button><button onClick={() => { setIsEraser(!isEraser); setBrushBead(null); setDragMode(false); setToolsOpen(false); }} className={`flex items-center gap-2 pl-3 pr-2.5 py-2 rounded-full shadow-lg transition-all ${isEraser ? 'bg-red-500 text-white' : 'bg-white/15 text-slate-200'}`} title="橡皮擦"><span className="text-xs font-bold">橡皮</span><Eraser className="w-4 h-4" /></button><button onClick={() => { denoise(gridWidth, gridHeight, currentPalette); setToolsOpen(false); }} className="flex items-center gap-2 pl-3 pr-2.5 py-2 rounded-full bg-white/15 text-slate-200 shadow-lg transition-all hover:bg-emerald-500/20 hover:text-emerald-400" title="去杂色"><span className="text-xs font-bold">去杂</span><Sparkles className="w-4 h-4" /></button><button onClick={() => { setWandMode(!wandMode); setWandSelection(new Set()); setIsEraser(false); setDragMode(false); setToolsOpen(false); }} className={`flex items-center gap-2 pl-3 pr-2.5 py-2 rounded-full shadow-lg transition-all ${wandMode ? 'bg-cyan-500 text-white' : 'bg-white/15 text-slate-200'}`} title="魔棒"><span className="text-xs font-bold">魔棒</span><Wand2 className="w-4 h-4" /></button><button onClick={() => { setShowPalettePanel(!showPalettePanel); setDragMode(false); setToolsOpen(false); }} className={`flex items-center gap-2 pl-3 pr-2.5 py-2 rounded-full shadow-lg transition-all ${showPalettePanel ? 'bg-violet-500 text-white' : 'bg-white/15 text-slate-200'}`} title="色板"><span className="text-xs font-bold">色板</span><Palette className="w-4 h-4" /></button></div>}<button onClick={() => setToolsOpen(!toolsOpen)} className="flex items-center justify-center w-10 h-10 rounded-full bg-white/15 backdrop-blur-sm text-white shadow-lg transition-all hover:bg-white/25">{toolsOpen ? <X className="w-4 h-4" /> : <Pencil className="w-4 h-4" />}</button></div>}
       </div>
       <div className="flex justify-center mt-2"><span className="text-xs text-slate-500 bg-white/5 px-3 py-1 rounded-lg border border-white/[0.06] select-none hidden md:inline">{editMode ? '滚轮缩放 · 左键拖拽平移 · 右键取色 · 画笔点击或拖拽填充' : '滚轮缩放 · 按住鼠标左键可平移拖拽 · 画布完全支持大尺寸缩放'}</span><span className="text-xs text-slate-500 bg-white/5 px-3 py-1 rounded-lg border border-white/[0.06] select-none md:hidden">{editMode ? (dragMode ? '单指拖拽平移 · 双指缩放 · 点击还原视图复位' : '双指缩放 · 长按取色 · 点击右下工具栏切换编辑工具') : '单指拖拽平移 · 双指缩放 · 点击右上角还原视图'}</span></div>
       <div className="grid grid-cols-2 gap-3.5 mt-5 z-10">
