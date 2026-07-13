@@ -85,9 +85,8 @@ interface WorkspaceStore {
   setWandMode: (v: boolean) => void;
   setWandSelection: (v: Set<string>) => void;
   setShowPalettePanel: (v: boolean) => void;
+  /** 加载管线输出。清空 undo/redo 栈 — 管线结果是新基线，不可撤销。 */
   setPipelineResult: (pixels: TransformedPixel[], stats: IngredientStat[]) => void;
-  setTransformedPixels: (v: TransformedPixel[]) => void;
-  setStats: (v: IngredientStat[]) => void;
   setIsProcessing: (v: boolean) => void;
   setGridWidthActual: (v: number) => void;
   setGridHeightActual: (v: number) => void;
@@ -113,7 +112,8 @@ interface WorkspaceStore {
 
 const editor = new PatternEditor();
 
-const syncEditor = () => ({
+/** 单向快照：Editor → Store。Store 永远不回写 Editor。 */
+const snapshotEditor = () => ({
   transformedPixels: editor.pixels,
   stats: editor.stats,
   undoStack: [...editor.undoStack],
@@ -192,9 +192,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   setWandMode: (v) => set({ wandMode: v }),
   setWandSelection: (v) => set({ wandSelection: v }),
   setShowPalettePanel: (v) => set({ showPalettePanel: v }),
-  setPipelineResult: (pixels, stats) => { editor.load(pixels, stats); set(syncEditor()); },
-  setTransformedPixels: (v) => { editor.load(v); set(syncEditor()); },
-  setStats: (v) => set({ stats: v }),
+  setPipelineResult: (pixels, stats) => { editor.load(pixels, stats); set(snapshotEditor()); },
   setIsProcessing: (v) => set({ isProcessing: v }),
   setGridWidthActual: (v) => set({ gridWidthActual: v }),
   setGridHeightActual: (v) => set({ gridHeightActual: v }),
@@ -207,7 +205,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
 
   pushUndo: () => {
     editor.pushUndo();
-    set(syncEditor());
+    set(snapshotEditor());
   },
 
   applyBrush: (x, y, gridWidth) => {
@@ -215,34 +213,34 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     const targetBead = s.isEraser ? EMPTY_BEAD : s.brushBead;
     if (!targetBead) return;
     editor.brush(x, y, gridWidth, targetBead);
-    set({ ...syncEditor(), selectedCell: { x, y } });
+    set({ ...snapshotEditor(), selectedCell: { x, y } });
   },
 
   applyWandFill: (cell, selection, targetBead, gridWidth) => {
     editor.wandFill(selection, targetBead, gridWidth);
-    set({ ...syncEditor(), wandSelection: new Set(), selectedCell: cell });
+    set({ ...snapshotEditor(), wandSelection: new Set(), selectedCell: cell });
   },
 
   undo: () => {
     if (editor.undoStack.length === 0) return;
     editor.undo();
-    set({ ...syncEditor(), wandSelection: new Set(), selectedCell: null });
+    set({ ...snapshotEditor(), wandSelection: new Set(), selectedCell: null });
   },
 
   redo: () => {
     if (editor.redoStack.length === 0) return;
     editor.redo();
-    set({ ...syncEditor(), wandSelection: new Set(), selectedCell: null });
+    set({ ...snapshotEditor(), wandSelection: new Set(), selectedCell: null });
   },
 
   denoise: (gridWidth, gridHeight, palette) => {
     const changed = editor.denoise(gridWidth, gridHeight, palette);
-    if (changed > 0) set(syncEditor());
+    if (changed > 0) set(snapshotEditor());
   },
 
   swapColor: (sourceCode, targetBead) => {
     editor.swapColor(sourceCode, targetBead);
-    set(syncEditor());
+    set(snapshotEditor());
   },
 
   autoDetectTrim: (gridWidth, gridHeight) => {
@@ -255,7 +253,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     const result = editor.trim(topTrim, bottomTrim, leftTrim, rightTrim, gridWidth, gridHeight);
     if (!result) return;
     set({
-      ...syncEditor(),
+      ...snapshotEditor(),
       gridWidthActual: result.width,
       gridHeightActual: result.height,
       topTrim: 0, bottomTrim: 0, leftTrim: 0, rightTrim: 0,
@@ -266,7 +264,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     const preset = (settings.panelPreset as WorkspaceStore['panelPreset']) || 'custom';
     editor.load(pixels, stats);
     set({
-      ...syncEditor(),
+      ...snapshotEditor(),
       gridWidthActual: gridWidth,
       gridHeightActual: gridHeight,
       colorLimit: settings.colorLimit,
