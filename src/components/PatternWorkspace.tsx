@@ -66,7 +66,7 @@ export default function PatternWorkspace({ croppedImageDataUrl, onReset, aspectR
 
   const { effectiveImage, triggerEnhance } = useImageEnhancement(croppedImageDataUrl);
 
-  useImageProcessing({ croppedImageDataUrl: effectiveImage, panelPreset, customWidth, aspectRatio, removeBackground, colorLimit, distanceAlgorithm, kMedoidsOptimize, currentPalette, gridWidth, gridHeight, brightness, contrast, saturation });
+  useImageProcessing({ croppedImageDataUrl: effectiveImage, removeBackground, colorLimit, distanceAlgorithm, kMedoidsOptimize, currentPalette, gridWidth, gridHeight, brightness, contrast, saturation });
 
   useCanvasRenderer({ canvasRef, transformedPixels, gridWidth: gridWidthActual, gridHeight: gridHeightActual, scale, showNumbers, showRulers, selectedBeadHighlight, editMode, selectedCell, wandMode, wandSelection });
 

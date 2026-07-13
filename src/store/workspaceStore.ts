@@ -3,6 +3,8 @@ import { BeadPaletteItem, TransformedPixel, IngredientStat } from '../types';
 import { EMPTY_BEAD, applySelectionFill, denoisePixels } from '../utils/editOperations';
 import { recalculateStats } from '../utils/statsUtils';
 
+export type PipelineMode = 'process' | 'skipOnce' | 'skipAndHold' | 'paused';
+
 export interface AiEnhanceOptions {
   enhanceStrength: 'light' | 'medium' | 'strong';
   flatColors: boolean;
@@ -49,10 +51,8 @@ interface WorkspaceStore {
   leftTrim: number;
   rightTrim: number;
   mobileTab: 'controls' | 'canvas' | 'stats' | 'project';
-  pipelineActive: boolean;
-  skipNextProcess: boolean;
+  pipelineMode: PipelineMode;
   currentProjectId: string | null;
-  restoringProject: boolean;
   undoStack: { pixels: TransformedPixel[]; stats: IngredientStat[] }[];
   redoStack: { pixels: TransformedPixel[]; stats: IngredientStat[] }[];
 
@@ -91,7 +91,7 @@ interface WorkspaceStore {
   setGridWidthActual: (v: number) => void;
   setGridHeightActual: (v: number) => void;
   setMobileTab: (v: WorkspaceStore['mobileTab']) => void;
-  setPipelineActive: (v: boolean) => void;
+  setPipelineMode: (v: PipelineMode) => void;
 
   // Complex actions
   pushUndo: () => void;
@@ -157,10 +157,8 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   leftTrim: 0,
   rightTrim: 0,
   mobileTab: 'canvas' as const,
-  pipelineActive: true,
-  skipNextProcess: false,
+  pipelineMode: 'process' as PipelineMode,
   currentProjectId: null,
-  restoringProject: false,
   undoStack: [],
   redoStack: [],
 
@@ -202,7 +200,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   setLeftTrim: (v) => set({ leftTrim: v }),
   setRightTrim: (v) => set({ rightTrim: v }),
   setMobileTab: (v) => set({ mobileTab: v }),
-  setPipelineActive: (v) => set({ pipelineActive: v }),
+  setPipelineMode: (v) => set({ pipelineMode: v }),
 
   pushUndo: () => {
     set(pushSnapshot(get()));
@@ -341,9 +339,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
       leftTrim: 0,
       rightTrim: 0,
       panOffset: { x: 0, y: 0 },
-      pipelineActive: hasOriginalImage === true,
-      skipNextProcess: hasOriginalImage === true,
-      restoringProject: true,
+      pipelineMode: hasOriginalImage === true ? 'skipOnce' : 'skipAndHold',
       currentProjectId: projectId ?? null,
     });
   },

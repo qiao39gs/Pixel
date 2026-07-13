@@ -1,22 +1,12 @@
 import { useEffect, useRef } from 'react';
-import { TransformedPixel, BeadPaletteItem } from '../types';
-import { rgbToLab, deltaE76, deltaE2000, deltaE94, deltaEWeightedRGB, LAB, RGB } from '../colorUtils';
-import { recalculateStats } from '../utils/statsUtils';
-import { EMPTY_BEAD } from '../utils/editOperations';
-import { ASPECT_RATIOS } from '../utils/constants';
-import { selectPaletteByKMedoids } from '../utils/kMedoids';
+import { quantizeImage, PaletteItemWithCache, DistanceAlgorithm } from '../utils/quantizeImage';
 import { useWorkspaceStore } from '../store/workspaceStore';
-
-type PaletteItemWithCache = BeadPaletteItem & { rgb: { r: number; g: number; b: number }; lab: { l: number; a: number; b: number } };
 
 interface Params {
   croppedImageDataUrl: string;
-  panelPreset: '52x52' | '78x78' | '104x104' | 'custom';
-  customWidth: number;
-  aspectRatio: '1:1' | '4:3' | '3:4' | '16:9' | '9:16' | 'auto';
   removeBackground: boolean;
   colorLimit: number;
-  distanceAlgorithm: 'CIEDE2000' | 'CIE94' | 'CIE76' | 'WeightedRGB';
+  distanceAlgorithm: DistanceAlgorithm;
   kMedoidsOptimize: boolean;
   currentPalette: PaletteItemWithCache[];
   gridWidth: number;
@@ -26,14 +16,18 @@ interface Params {
   saturation: number;
 }
 
-export function useImageProcessing({ croppedImageDataUrl, panelPreset, customWidth, aspectRatio, removeBackground, colorLimit, distanceAlgorithm, kMedoidsOptimize, currentPalette, gridWidth, gridHeight, brightness, contrast, saturation }: Params) {
+export function useImageProcessing({
+  croppedImageDataUrl, removeBackground,
+  colorLimit, distanceAlgorithm, kMedoidsOptimize, currentPalette,
+  gridWidth, gridHeight, brightness, contrast, saturation,
+}: Params) {
   const setTransformedPixels = useWorkspaceStore(s => s.setTransformedPixels);
   const setStats = useWorkspaceStore(s => s.setStats);
   const setIsProcessing = useWorkspaceStore(s => s.setIsProcessing);
   const setLocalAspectRatio = useWorkspaceStore(s => s.setLocalAspectRatio);
   const setGridWidthActual = useWorkspaceStore(s => s.setGridWidthActual);
   const setGridHeightActual = useWorkspaceStore(s => s.setGridHeightActual);
-  const resetTrim = () => { const s = useWorkspaceStore.getState(); s.setTopTrim(0); s.setBottomTrim(0); s.setLeftTrim(0); s.setRightTrim(0); };
+  const setPipelineMode = useWorkspaceStore(s => s.setPipelineMode);
   const lastImageRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -43,139 +37,63 @@ export function useImageProcessing({ croppedImageDataUrl, panelPreset, customWid
       setIsProcessing(false);
       return;
     }
+
     if (lastImageRef.current !== croppedImageDataUrl) {
       lastImageRef.current = croppedImageDataUrl;
-      if (!useWorkspaceStore.getState().restoringProject) {
+      if (useWorkspaceStore.getState().pipelineMode !== 'skipOnce' && useWorkspaceStore.getState().pipelineMode !== 'skipAndHold') {
         useWorkspaceStore.setState({ currentProjectId: null });
       }
     }
-    const store = useWorkspaceStore.getState();
-    if (store.skipNextProcess) {
-      useWorkspaceStore.setState({ skipNextProcess: false, pipelineActive: true, restoringProject: false });
+
+    const mode = useWorkspaceStore.getState().pipelineMode;
+    if (mode === 'skipOnce') {
+      setPipelineMode('process');
       setIsProcessing(false);
       return;
     }
-    useWorkspaceStore.setState({ restoringProject: false });
-    if (!store.pipelineActive) {
+    if (mode === 'skipAndHold' || mode === 'paused') {
       setIsProcessing(false);
       return;
     }
+
     setIsProcessing(true);
     let active = true;
     const img = new Image();
     img.src = croppedImageDataUrl;
     img.onload = () => {
       if (!active) return;
-      const imgRatio = img.width / img.height;
-      const sw = img.width, sh = img.height;
-      setLocalAspectRatio(imgRatio);
-
-      let gw: number;
-      if (panelPreset === '52x52') gw = 52;
-      else if (panelPreset === '78x78') gw = 78;
-      else if (panelPreset === '104x104') gw = 104;
-      else gw = Math.min(150, Math.max(5, customWidth));
-      const ratio = (() => {
-        if (aspectRatio === 'auto') return 1 / imgRatio;
-        return ASPECT_RATIOS[aspectRatio] ?? 1;
-      })();
-      const gh = Math.max(1, Math.round(gw * ratio));
+      setLocalAspectRatio(img.width / img.height);
 
       const srcCanvas = document.createElement('canvas');
-      srcCanvas.width = sw; srcCanvas.height = sh;
+      srcCanvas.width = img.width;
+      srcCanvas.height = img.height;
       const srcCtx = srcCanvas.getContext('2d');
       if (!srcCtx) { setIsProcessing(false); return; }
       srcCtx.drawImage(img, 0, 0);
-      const srcData = srcCtx.getImageData(0, 0, sw, sh).data;
+      const imageData = srcCtx.getImageData(0, 0, img.width, img.height);
 
-      const bri = brightness / 100, con = contrast / 100, sat = saturation / 100;
-      const adjust = (r: number, g: number, b: number): [number, number, number] => {
-        let nr = r, ng = g, nb = b;
-        if (bri !== 1) { nr = Math.min(255, Math.max(0, nr * bri)); ng = Math.min(255, Math.max(0, ng * bri)); nb = Math.min(255, Math.max(0, nb * bri)); }
-        if (con !== 1) { nr = Math.min(255, Math.max(0, ((nr/255 - 0.5) * con + 0.5) * 255)); ng = Math.min(255, Math.max(0, ((ng/255 - 0.5) * con + 0.5) * 255)); nb = Math.min(255, Math.max(0, ((nb/255 - 0.5) * con + 0.5) * 255)); }
-        if (sat !== 1) { const lum = 0.299*nr + 0.587*ng + 0.114*nb; nr = Math.min(255, Math.max(0, lum + sat*(nr-lum))); ng = Math.min(255, Math.max(0, lum + sat*(ng-lum))); nb = Math.min(255, Math.max(0, lum + sat*(nb-lum)));}
-        return [nr, ng, nb];
-      };
+      const result = quantizeImage(imageData, currentPalette, {
+        gridWidth, gridHeight, colorLimit, distanceAlgorithm,
+        kMedoidsOptimize, removeBackground, brightness, contrast, saturation,
+      });
 
-      const matchBest = (pixelLab: LAB, rgb: RGB, palette: PaletteItemWithCache[]): BeadPaletteItem => {
-        let best = palette[0], minDist = Infinity;
-        for (const bead of palette) {
-          let dist = 0;
-          if (distanceAlgorithm === 'CIEDE2000') dist = deltaE2000(pixelLab, bead.lab);
-          else if (distanceAlgorithm === 'CIE94') dist = deltaE94(pixelLab, bead.lab);
-          else if (distanceAlgorithm === 'CIE76') dist = deltaE76(pixelLab, bead.lab);
-          else dist = deltaEWeightedRGB(rgb, bead.rgb);
-          if (dist < minDist) { minDist = dist; best = bead; }
-        }
-        return best;
-      };
-
-      const EMPTY = EMPTY_BEAD;
-      const initialMatched: TransformedPixel[] = [];
-      const colorUsageCount: Record<string, number> = {};
-      const nonEmptyPixelLabs: LAB[] = [];
-      const nonEmptyPixelRgbs: RGB[] = [];
-
-      for (let y = 0; y < gh; y++) {
-        const sy = gh > 1 ? Math.round(y * (sh - 1) / (gh - 1)) : 0;
-        for (let x = 0; x < gw; x++) {
-          const sx = gw > 1 ? Math.round(x * (sw - 1) / (gw - 1)) : 0;
-          const off = (sy * sw + sx) * 4;
-          const r = srcData[off], g = srcData[off+1], b = srcData[off+2], a = srcData[off+3];
-          if (a < 80 || (removeBackground && r > 245 && g > 245 && b > 245)) {
-            initialMatched.push({ x, y, matchedBead: EMPTY });
-            continue;
-          }
-          const [ar, ag, ab] = adjust(r, g, b);
-          const rgb: RGB = { r: ar, g: ag, b: ab };
-          const pixelLab = rgbToLab(rgb);
-          const best = matchBest(pixelLab, rgb, currentPalette);
-          initialMatched.push({ x, y, matchedBead: best });
-          if (best.code !== 'EMPTY') { colorUsageCount[best.code] = (colorUsageCount[best.code] || 0) + 1; nonEmptyPixelLabs.push(pixelLab); nonEmptyPixelRgbs.push(rgb); }
-        }
-      }
-
-      const uniqueBeads = Object.keys(colorUsageCount);
-      if (uniqueBeads.length <= colorLimit) {
-        if (active) { setTransformedPixels(initialMatched); setStats(recalculateStats(initialMatched)); setGridWidthActual(gw); setGridHeightActual(gh); resetTrim(); setIsProcessing(false); }
-        return;
-      }
-
-      const freqTopCodes = Object.entries(colorUsageCount).sort((a, b) => b[1] - a[1]).slice(0, colorLimit).map(e => e[0]);
-      let topCodes: string[];
-      if (kMedoidsOptimize && nonEmptyPixelLabs.length > 0) {
-        const candidateItems = currentPalette.filter(b => uniqueBeads.includes(b.code));
-        topCodes = selectPaletteByKMedoids(nonEmptyPixelLabs.length, candidateItems, colorLimit, freqTopCodes, (i, j) => {
-          const pl = nonEmptyPixelLabs[i], c = candidateItems[j];
-          if (distanceAlgorithm === 'CIEDE2000') return deltaE2000(pl, c.lab);
-          if (distanceAlgorithm === 'CIE94') return deltaE94(pl, c.lab);
-          if (distanceAlgorithm === 'CIE76') return deltaE76(pl, c.lab);
-          return deltaEWeightedRGB(nonEmptyPixelRgbs[i], c.rgb);
-        });
-      } else {
-        topCodes = freqTopCodes;
-      }
-      const topPalette = currentPalette.filter(b => topCodes.includes(b.code));
-      const finalMatched: TransformedPixel[] = [];
-
-      for (let y = 0; y < gh; y++) {
-        for (let x = 0; x < gw; x++) {
-          const init = initialMatched[y * gw + x];
-          if (init.matchedBead.code === 'EMPTY') { finalMatched.push(init); continue; }
-          if (topCodes.includes(init.matchedBead.code)) { finalMatched.push(init); continue; }
-          const sy2 = gh > 1 ? Math.round(y * (sh - 1) / (gh - 1)) : 0;
-          const sx2 = gw > 1 ? Math.round(x * (sw - 1) / (gw - 1)) : 0;
-          const off2 = (sy2 * sw + sx2) * 4;
-          const r = srcData[off2], g2 = srcData[off2+1], b2 = srcData[off2+2];
-          const [ar2, ag2, ab2] = adjust(r, g2, b2);
-          const rgb2: RGB = { r: ar2, g: ag2, b: ab2 };
-          finalMatched.push({ x, y, matchedBead: matchBest(rgbToLab(rgb2), rgb2, topPalette) });
-        }
-      }
-
-      if (active) { setTransformedPixels(finalMatched); setStats(recalculateStats(finalMatched)); setGridWidthActual(gw); setGridHeightActual(gh); resetTrim(); setIsProcessing(false); }
+      if (!active) return;
+      setTransformedPixels(result.pixels);
+      setStats(result.stats);
+      setGridWidthActual(result.gridWidth);
+      setGridHeightActual(result.gridHeight);
+      useWorkspaceStore.getState().setTopTrim(0);
+      useWorkspaceStore.getState().setBottomTrim(0);
+      useWorkspaceStore.getState().setLeftTrim(0);
+      useWorkspaceStore.getState().setRightTrim(0);
+      setIsProcessing(false);
     };
     img.onerror = () => { if (active) setIsProcessing(false); };
     return () => { active = false; };
-  }, [croppedImageDataUrl, gridWidth, gridHeight, colorLimit, currentPalette, distanceAlgorithm, kMedoidsOptimize, removeBackground, brightness, contrast, saturation, setTransformedPixels, setStats, setIsProcessing, setLocalAspectRatio]);
+  }, [
+    croppedImageDataUrl, gridWidth, gridHeight, colorLimit, currentPalette,
+    distanceAlgorithm, kMedoidsOptimize, removeBackground, brightness, contrast, saturation,
+    setTransformedPixels, setStats, setIsProcessing, setLocalAspectRatio,
+    setGridWidthActual, setGridHeightActual, setPipelineMode,
+  ]);
 }
