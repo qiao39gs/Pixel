@@ -21,8 +21,6 @@ export function useImageProcessing({
   colorLimit, distanceAlgorithm, kMedoidsOptimize, currentPalette,
   gridWidth, gridHeight, brightness, contrast, saturation,
 }: Params) {
-  const setTransformedPixels = useWorkspaceStore(s => s.setTransformedPixels);
-  const setStats = useWorkspaceStore(s => s.setStats);
   const setIsProcessing = useWorkspaceStore(s => s.setIsProcessing);
   const setLocalAspectRatio = useWorkspaceStore(s => s.setLocalAspectRatio);
   const setGridWidthActual = useWorkspaceStore(s => s.setGridWidthActual);
@@ -32,8 +30,7 @@ export function useImageProcessing({
 
   useEffect(() => {
     if (!croppedImageDataUrl) {
-      setTransformedPixels([]);
-      setStats([]);
+      useWorkspaceStore.getState().setPipelineResult([], []);
       setIsProcessing(false);
       return;
     }
@@ -78,8 +75,7 @@ export function useImageProcessing({
       });
 
       if (!active) return;
-      setTransformedPixels(result.pixels);
-      setStats(result.stats);
+      useWorkspaceStore.getState().setPipelineResult(result.pixels, result.stats);
       setGridWidthActual(result.gridWidth);
       setGridHeightActual(result.gridHeight);
       useWorkspaceStore.getState().setTopTrim(0);
@@ -93,7 +89,7 @@ export function useImageProcessing({
   }, [
     croppedImageDataUrl, gridWidth, gridHeight, colorLimit, currentPalette,
     distanceAlgorithm, kMedoidsOptimize, removeBackground, brightness, contrast, saturation,
-    setTransformedPixels, setStats, setIsProcessing, setLocalAspectRatio,
+    setIsProcessing, setLocalAspectRatio,
     setGridWidthActual, setGridHeightActual, setPipelineMode,
   ]);
 }

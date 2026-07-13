@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { BeadPaletteItem, TransformedPixel, IngredientStat } from '../types';
-import { EMPTY_BEAD, applySelectionFill, denoisePixels } from '../utils/editOperations';
-import { recalculateStats } from '../utils/statsUtils';
+import { EMPTY_BEAD } from '../utils/editOperations';
+import { PatternEditor } from '../utils/patternEditor';
 
 export type PipelineMode = 'process' | 'skipOnce' | 'skipAndHold' | 'paused';
 
@@ -85,6 +85,7 @@ interface WorkspaceStore {
   setWandMode: (v: boolean) => void;
   setWandSelection: (v: Set<string>) => void;
   setShowPalettePanel: (v: boolean) => void;
+  setPipelineResult: (pixels: TransformedPixel[], stats: IngredientStat[]) => void;
   setTransformedPixels: (v: TransformedPixel[]) => void;
   setStats: (v: IngredientStat[]) => void;
   setIsProcessing: (v: boolean) => void;
@@ -110,13 +111,14 @@ interface WorkspaceStore {
   applyTrim: (gridWidth: number, gridHeight: number) => void;
 }
 
-const UNDO_LIMIT = 50;
-type Snapshot = { pixels: TransformedPixel[]; stats: IngredientStat[] };
-// 压入当前状态快照并清空 redo，供各编辑 action 复用
-const pushSnapshot = (s: WorkspaceStore): { undoStack: Snapshot[]; redoStack: Snapshot[] } => {
-  const stack = [...s.undoStack, { pixels: [...s.transformedPixels], stats: [...s.stats] }];
-  return { undoStack: stack.length > UNDO_LIMIT ? stack.slice(-UNDO_LIMIT) : stack, redoStack: [] };
-};
+const editor = new PatternEditor();
+
+const syncEditor = () => ({
+  transformedPixels: editor.pixels,
+  stats: editor.stats,
+  undoStack: [...editor.undoStack],
+  redoStack: [...editor.redoStack],
+});
 
 export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   isAiEnhancing: false,
@@ -147,8 +149,8 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   wandMode: false,
   wandSelection: new Set(),
   showPalettePanel: false,
-  transformedPixels: [],
-  stats: [],
+  transformedPixels: editor.pixels,
+  stats: editor.stats,
   isProcessing: false,
   gridWidthActual: 52,
   gridHeightActual: 52,
@@ -159,8 +161,8 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   mobileTab: 'canvas' as const,
   pipelineMode: 'process' as PipelineMode,
   currentProjectId: null,
-  undoStack: [],
-  redoStack: [],
+  undoStack: editor.undoStack,
+  redoStack: editor.redoStack,
 
   setIsAiEnhancing: (v) => set({ isAiEnhancing: v }),
   setAiEnhanceError: (v) => set({ aiEnhanceError: v }),
@@ -190,7 +192,8 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   setWandMode: (v) => set({ wandMode: v }),
   setWandSelection: (v) => set({ wandSelection: v }),
   setShowPalettePanel: (v) => set({ showPalettePanel: v }),
-  setTransformedPixels: (v) => set({ transformedPixels: v }),
+  setPipelineResult: (pixels, stats) => { editor.load(pixels, stats); set(syncEditor()); },
+  setTransformedPixels: (v) => { editor.load(v); set(syncEditor()); },
   setStats: (v) => set({ stats: v }),
   setIsProcessing: (v) => set({ isProcessing: v }),
   setGridWidthActual: (v) => set({ gridWidthActual: v }),
@@ -203,117 +206,67 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   setPipelineMode: (v) => set({ pipelineMode: v }),
 
   pushUndo: () => {
-    set(pushSnapshot(get()));
+    editor.pushUndo();
+    set(syncEditor());
   },
 
   applyBrush: (x, y, gridWidth) => {
     const s = get();
     const targetBead = s.isEraser ? EMPTY_BEAD : s.brushBead;
     if (!targetBead) return;
-    const next = [...s.transformedPixels];
-    next[y * gridWidth + x] = { x, y, matchedBead: targetBead };
-    set({
-      ...pushSnapshot(s),
-      transformedPixels: next,
-      stats: recalculateStats(next),
-      selectedCell: { x, y },
-    });
+    editor.brush(x, y, gridWidth, targetBead);
+    set({ ...syncEditor(), selectedCell: { x, y } });
   },
 
   applyWandFill: (cell, selection, targetBead, gridWidth) => {
-    const s = get();
-    const { pixels, stats } = applySelectionFill(s.transformedPixels, selection, targetBead, gridWidth);
-    set({ transformedPixels: pixels, stats, wandSelection: new Set(), selectedCell: cell });
+    editor.wandFill(selection, targetBead, gridWidth);
+    set({ ...syncEditor(), wandSelection: new Set(), selectedCell: cell });
   },
 
   undo: () => {
-    const s = get();
-    if (s.undoStack.length === 0) return;
-    const stack = [...s.undoStack];
-    const prev = stack.pop()!;
-    const redo = [...s.redoStack, { pixels: [...s.transformedPixels], stats: [...s.stats] }];
-    set({ undoStack: stack, redoStack: redo, transformedPixels: prev.pixels, stats: prev.stats, wandSelection: new Set(), selectedCell: null });
+    if (editor.undoStack.length === 0) return;
+    editor.undo();
+    set({ ...syncEditor(), wandSelection: new Set(), selectedCell: null });
   },
 
   redo: () => {
-    const s = get();
-    if (s.redoStack.length === 0) return;
-    const redo = [...s.redoStack];
-    const next = redo.pop()!;
-    set({ ...pushSnapshot(s), redoStack: redo, transformedPixels: next.pixels, stats: next.stats, wandSelection: new Set(), selectedCell: null });
+    if (editor.redoStack.length === 0) return;
+    editor.redo();
+    set({ ...syncEditor(), wandSelection: new Set(), selectedCell: null });
   },
 
   denoise: (gridWidth, gridHeight, palette) => {
-    const s = get();
-    const { pixels, stats, changed } = denoisePixels(s.transformedPixels, gridWidth, gridHeight, palette);
-    if (changed > 0) {
-      set({
-        ...pushSnapshot(s),
-        transformedPixels: pixels,
-        stats,
-      });
-    }
+    const changed = editor.denoise(gridWidth, gridHeight, palette);
+    if (changed > 0) set(syncEditor());
   },
 
   swapColor: (sourceCode, targetBead) => {
-    const s = get();
-    const next = s.transformedPixels.map(p =>
-      p.matchedBead.code === sourceCode ? { ...p, matchedBead: targetBead } : p
-    );
-    set({
-      ...pushSnapshot(s),
-      transformedPixels: next,
-      stats: recalculateStats(next),
-    });
+    editor.swapColor(sourceCode, targetBead);
+    set(syncEditor());
   },
 
   autoDetectTrim: (gridWidth, gridHeight) => {
-    const s = get();
-    let top = gridHeight, bottom = 0, left = gridWidth, right = 0;
-    for (let y = 0; y < gridHeight; y++) {
-      for (let x = 0; x < gridWidth; x++) {
-        const p = s.transformedPixels[y * gridWidth + x];
-        if (p && p.matchedBead.code !== 'EMPTY') {
-          if (y < top) top = y;
-          if (y > bottom) bottom = y;
-          if (x < left) left = x;
-          if (x > right) right = x;
-        }
-      }
-    }
-    if (top > bottom || left > right) return;
-    set({ topTrim: top, bottomTrim: gridHeight - 1 - bottom, leftTrim: left, rightTrim: gridWidth - 1 - right });
+    const bounds = editor.detectBounds(gridWidth, gridHeight);
+    if (!bounds) return;
+    set({ topTrim: bounds.top, bottomTrim: gridHeight - 1 - bounds.bottom, leftTrim: bounds.left, rightTrim: gridWidth - 1 - bounds.right });
   },
   applyTrim: (gridWidth, gridHeight) => {
-    const s = get();
-    const { topTrim, bottomTrim, leftTrim, rightTrim } = s;
-    if (topTrim + bottomTrim + leftTrim + rightTrim === 0) return;
-    const newWidth = gridWidth - leftTrim - rightTrim;
-    const newHeight = gridHeight - topTrim - bottomTrim;
-    if (newWidth <= 0 || newHeight <= 0) return;
-    const result: TransformedPixel[] = [];
-    for (let y = 0; y < newHeight; y++) {
-      for (let x = 0; x < newWidth; x++) {
-        const src = s.transformedPixels[(topTrim + y) * gridWidth + (leftTrim + x)];
-        result.push({ x, y, matchedBead: src.matchedBead });
-      }
-    }
-    const stack = pushSnapshot(s);
+    const { topTrim, bottomTrim, leftTrim, rightTrim } = get();
+    const result = editor.trim(topTrim, bottomTrim, leftTrim, rightTrim, gridWidth, gridHeight);
+    if (!result) return;
     set({
-      ...stack,
-      transformedPixels: result,
-      stats: recalculateStats(result),
-      gridWidthActual: newWidth,
-      gridHeightActual: newHeight,
+      ...syncEditor(),
+      gridWidthActual: result.width,
+      gridHeightActual: result.height,
       topTrim: 0, bottomTrim: 0, leftTrim: 0, rightTrim: 0,
     });
   },
 
   loadProject: (pixels, gridWidth, gridHeight, stats, settings, hasOriginalImage, projectId) => {
     const preset = (settings.panelPreset as WorkspaceStore['panelPreset']) || 'custom';
+    editor.load(pixels, stats);
     set({
-      transformedPixels: pixels,
-      stats,
+      ...syncEditor(),
       gridWidthActual: gridWidth,
       gridHeightActual: gridHeight,
       colorLimit: settings.colorLimit,
@@ -326,8 +279,6 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
       panelPreset: preset,
       customWidth: settings.customWidth || gridWidth,
       localAspectRatio: gridWidth / gridHeight,
-      undoStack: [],
-      redoStack: [],
       wandSelection: new Set(),
       selectedCell: null,
       editMode: false,

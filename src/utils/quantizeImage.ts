@@ -67,9 +67,9 @@ export function quantizeImage(
     return [srcData[off], srcData[off + 1], srcData[off + 2], srcData[off + 3]];
   };
 
-  const matchBest = (pixelLab: LAB, rgb: RGB): BeadPaletteItem => {
-    let best = palette[0], minDist = Infinity;
-    for (const bead of palette) {
+  const matchBest = (pixelLab: LAB, rgb: RGB, searchPalette: PaletteItemWithCache[] = palette): BeadPaletteItem => {
+    let best = searchPalette[0], minDist = Infinity;
+    for (const bead of searchPalette) {
       const d = dist(pixelLab, rgb, bead);
       if (d < minDist) { minDist = d; best = bead; }
     }
@@ -135,7 +135,7 @@ export function quantizeImage(
       const [r, g, b] = sampleSrc(x, y);
       const [ar, ag, ab] = adjust(r, g, b);
       const rgb: RGB = { r: ar, g: ag, b: ab };
-      finalMatched.push({ x, y, matchedBead: matchBest(rgbToLab(rgb), rgb) });
+      finalMatched.push({ x, y, matchedBead: matchBest(rgbToLab(rgb), rgb, topPalette) });
     }
   }
 
