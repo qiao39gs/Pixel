@@ -9,7 +9,7 @@
 ## 功能
 
 - **图片上传裁切** — 1:1 / 4:3 / 3:4 / 16:9 / 9:16 / 自动比例裁切，拖拽旋转缩放
-- **智能色卡匹配** — CIEDE2000 空间色差算法，最近邻像素映射到 MARD 221 色标准色卡
+- **智能色卡匹配** — CIEDE2000 空间色差算法，最近邻像素映射到 MARD 221 色标准色卡，限色后二次重匹配仅使用精选色号
 - **智能选色优化 (k-medoids)** — 可选开关，以量化误差最小为准则从色卡精选色号，替代默认频次选取；渐变/照片类图色彩还原更均衡，复用用户选定的色差算法
 - **亮度/对比度/饱和度调节** — 松手后触发图像重处理，避免频繁渲染
 - **AI 图像增强** — 通过 Pollinations 图生图 API 在源图进入拼豆管线前进行简化/降噪预处理；三档简化强度（轻度/中度/强烈）、扁平化颜色与卡通风格可选、自定义 prompt 追加
@@ -53,9 +53,9 @@ src/
 ├── colorUtils.ts                        # 色彩空间转换 & 色差公式
 ├── vite-env.d.ts                        # Vite 环境变量类型声明
 ├── store/
-│   └── workspaceStore.ts               # Zustand 全局状态
+│   └── workspaceStore.ts               # Zustand 全局状态 + PipelineMode 枚举
 ├── hooks/
-│   ├── useImageProcessing.ts           # 图像采样 & 色卡匹配管道
+│   ├── useImageProcessing.ts           # 图像处理 adapter：加载图片 → 调 quantizeImage → 写回 store
 │   ├── useImageEnhancement.ts          # AI 图像增强
 │   └── useCanvasRenderer.ts            # Canvas 离屏渲染
 ├── services/
@@ -65,16 +65,22 @@ src/
 │   ├── PatternWorkspace.tsx            # 工作台主组件
 │   └── workspace/
 │       ├── ControlPanel.tsx             # 左侧控制面板
-│       ├── CanvasViewport.tsx           # 画布视口 + 编辑交互
+│       ├── CanvasViewport.tsx           # 画布视口 + 指针交互委派
 │       ├── StatsPanel.tsx               # 底部色卡用量统计
 │       └── ProjectPanel.tsx             # 右侧项目管理面板
 ├── data/
 │   └── palette.ts                       # MARD 221 色标准色卡
 └── utils/
-    ├── exportUtils.ts                   # PNG & PDF 导出
+    ├── quantizeImage.ts                 # 量化管线：采样+色彩调整+匹配+限色+k-medoids
+    ├── patternEditor.ts                 # 图纸编辑器：统管 pixels+stats+undo/redo
+    ├── pointerInteraction.ts            # 画布指针交互状态机
+    ├── renderLayout.ts                  # 导出渲染布局 + RenderAdapter 接口
+    ├── exportUtils.ts                   # PNG & PDF 导出（双 adapter）
+    ├── editOperations.ts                # 泛洪填充 + EMPTY_BEAD 常量
     ├── statsUtils.ts                    # 统计计算
-    ├── editOperations.ts                # 编辑工具函数
-    └── projectStorage.ts               # 项目 localStorage 持久化 & JSON 导入导出
+    ├── kMedoids.ts                      # k-medoids 贪心选色优化
+    ├── projectStorage.ts               # 项目 localStorage 持久化 & JSON 导入导出
+    └── constants.ts                     # ASPECT_RATIOS 等常量
 api/
 └── enhance.ts                           # Vercel serverless 函数：代理 Pollinations img2img API
 ```

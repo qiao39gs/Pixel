@@ -33,9 +33,9 @@ src/
 ├── index.css            # Tailwind v4 @import + @theme（字体、颜色、动画）
 ├── colorUtils.ts        # hexToRgb, rgbToLab, deltaE76/94/2000/WeightedRGB
 ├── data/palette.ts      # MARD 221 色标准色卡 + COLOR_GROUPS
-├── store/workspaceStore.ts  # Zustand 全局状态（~30 字段，含撤销栈 上限 50）
+├── store/workspaceStore.ts  # Zustand 全局状态（~30 字段）+ PipelineMode 枚举
 ├── hooks/
-│   ├── useImageProcessing.ts  # 像素采样 + 颜色匹配管线
+│   ├── useImageProcessing.ts  # ~90 行 adapter：加载 Image → 调 quantizeImage → 写回 store
 │   ├── useImageEnhancement.ts # AI 图像增强（Pollinations img2img 预处理）
 │   └── useCanvasRenderer.ts   # Canvas 离屏渲染
 ├── services/
@@ -45,20 +45,22 @@ src/
 │   ├── PatternWorkspace.tsx    # 主工作区编排器
 │   └── workspace/
 │       ├── ControlPanel.tsx    # 左面板：预设、滑块、算法、AI 增强、导出
-│       ├── CanvasViewport.tsx  # 画布显示 + 编辑交互
+│       ├── CanvasViewport.tsx  # 画布显示 + 指针交互委派给 PointerInteraction
 │       ├── StatsPanel.tsx      # 底部统计：颜色用量、换色面板
 │       └── ProjectPanel.tsx    # 右面板：项目画廊、JSON 导入导出
 ├── utils/
-│   ├── exportUtils.ts      # 高分辨率 PNG + A4 多页 PDF（jsPDF）
-│   ├── editOperations.ts   # 泛洪填充、降噪、自动裁剪
+│   ├── quantizeImage.ts    # 量化管线深模块：采样+色彩调整+匹配+限色+k-medoids 一体纯函数
+│   ├── patternEditor.ts    # 图纸编辑器深模块：统管 pixels+stats+undo/redo，brush/wandFill/denoise/swapColor/trim/detectBounds
+│   ├── pointerInteraction.ts # 画布指针交互模块：显式状态机（idle/panning/brushing/pinch/longPress）
+│   ├── renderLayout.ts     # 导出渲染布局模块：RenderAdapter 接口 + renderGrid/renderGridChunk
+│   ├── exportUtils.ts      # PNG + PDF 导出（使用 renderLayout + Canvas/jsPDF 双 adapter）
+│   ├── editOperations.ts   # EMPTY_BEAD 常量 + floodFill 泛洪填充
 │   ├── statsUtils.ts       # 耗材统计重算
 │   ├── kMedoids.ts         # k-medoids 贪心选色优化
 │   ├── projectStorage.ts   # 项目 localStorage 持久化 & JSON 导入导出
-│   └── constants.ts        # ASPECT_RATIOS、EMPTY_BEAD 等常量
+│   └── constants.ts        # ASPECT_RATIOS 等常量
 api/
 └── enhance.ts              # Vercel serverless 函数：代理 Pollinations img2img API
-docs/
-└── adr/                    # 架构决策记录
 ```
 
 ## 路径别名
@@ -71,17 +73,19 @@ docs/
 - UI 文本、commit message 均为中文
 - commit 不使用 conventional commit 前缀（无 `feat:`, `fix:`）
 - 项目描述、README 文档均为中文
-- Zustand store 的撤销栈上限为 50 步（`workspaceStore.ts` 的 `UNDO_LIMIT` 常量）
+- PatternEditor 的撤销栈上限为 50 步（`patternEditor.ts` 的 `UNDO_LIMIT` 常量）
 
 ## 架构要点
 
-- **状态管理**：单一 Store，所有状态集中在 `workspaceStore.ts`。编辑操作（画笔、橡皮、魔棒、换色、降噪、裁剪）都在 store action 中实现，同步操作撤销栈
-- **图像处理管线**：`useImageProcessing` hook 监控参数变化 → 在 offscreen canvas 上采样源图 → 逐像素匹配 MARD 色卡（默认 CIEDE2000 色彩距离）→ 若超过 `colorLimit` 则二次只使用 top-N 色号重匹配
+- **状态管理**：单一 Store，所有 UI 状态集中在 `workspaceStore.ts`。编辑操作（画笔、橡皮、魔棒、换色、降噪、裁剪）委托给 `PatternEditor` 深模块，store 通过 `snapshotEditor()` 单向同步编辑器状态到 store 字段供 React 订阅
+- **管线调度**：三布尔标志位（`pipelineActive`/`skipNextProcess`/`restoringProject`）已合并为 `pipelineMode: PipelineMode` 枚举（`process`/`skipOnce`/`skipAndHold`/`paused`），`loadProject` 一次性设 mode，hook 消费后自动转回
+- **图像处理管线**：`quantizeImage` 深模块（纯函数，吃 `ImageData` + 预计算色卡 + options，吐 `{ pixels, stats, gw, gh }`）统管采样 + 色彩调整 + 匹配 + 限色重匹配 + k-medoids；`useImageProcessing` hook 退化为 ~90 行 adapter，仅负责图片加载与结果写回
 - **AI 图像增强**：`useImageEnhancement` hook 监听 `aiEnhanceOptions` 变化 → 客户端压缩图片至 1024px → 调用 Vercel serverless (`api/enhance.ts`) 代理 Pollinations img2img API → 返回增强后图片进入主处理管线。API Key 仅存于服务端，客户端不可见
 - **颜色匹配算法**：支持 CIEDE2000 / CIE94 / CIE76 / WeightedRGB 四种，通过 Lab 色彩空间转换实现
-- **导出**：PNG 使用 Canvas API 本地渲染（`generateHighResPng`），暖纸底艺术化排版——耗材按色卡系列分组排列，圆形色卡标注色号与所需数量，画布高度动态紧贴内容；PDF 使用 jsPDF（`generateMultiPagePdf`），按每页 29×29 网格分块，自动分页
+- **画布指针交互**：`PointerInteraction` 类拥有显式状态机（idle/panning/brushing/pinch/longPress），持有长按定时器、捏合几何、画笔去重集；`CanvasViewport` 组件通过 `onMouseDown/Move/Up` + `onTouchStart/Move/End` + `onWheel` 委派
+- **导出**：`renderLayout` 模块定义 `RenderAdapter` 接口（渲染原语）+ `renderGrid`/`renderGridChunk`（描述"画什么"）；Canvas 和 jsPDF 各实现一个 adapter，6 项共用渲染意图（像素块/网格线/5-10参考线/标尺/色号文字/外框）集中一处；PNG 独有耗材面板，PDF 独有封面/分页/页脚说明
 - **移动端适配**：`mobileTab` 状态控制四面板切换（controls/canvas/stats/projects），条件渲染当前 Tab 面板（非 `hidden` 隐藏）以消除间距差异；编辑模式下支持拖拽平移、悬浮工具栏、"…"展开编辑工具、还原视图按钮；支持双指缩放和触摸编辑
-- **裁剪修整**：支持四边手动调节滑块 + `autoDetectTrim` 自动检测有效像素边界
+- **裁剪修整**：`PatternEditor.detectBounds` 检测有效像素边界 + `PatternEditor.trim` 执行裁剪，store 的 `autoDetectTrim`/`applyTrim` action 退化为薄 adapter
 
 ## 环境变量
 
