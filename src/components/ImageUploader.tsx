@@ -375,6 +375,32 @@ export default function ImageUploader({ onImageCropped, aspectRatio, setAspectRa
     };
   }, [imageSrc]);
 
+  // 5. Ctrl+V paste image from clipboard
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      const active = document.activeElement;
+      if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) return;
+
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      for (const item of Array.from(items)) {
+        if (item.type.startsWith('image/')) {
+          e.preventDefault();
+          const file = item.getAsFile();
+          if (file) {
+            handleFile(file);
+            return;
+          }
+          break;
+        }
+      }
+    };
+
+    window.addEventListener('paste', handlePaste);
+    return () => window.removeEventListener('paste', handlePaste);
+  }, []);
+
   return (
     <div className="w-full bg-white border border-black/[0.04] rounded-3xl p-6 shadow-sm overflow-hidden transition-all duration-300">
       {/* Upload area if no image selected */}
@@ -405,7 +431,7 @@ export default function ImageUploader({ onImageCropped, aspectRatio, setAspectRa
             点击上传 或拖拽图片文件到这里
           </h3>
           <p className="text-xs text-slate-500 max-w-sm mb-5 leading-relaxed">
-            支持 JPEG/PNG 动图或日常照片。算法将自动对齐拼豆色卡体系，并生成颗粒用量预估。
+             支持 JPEG/PNG 动图或日常照片<span className="hidden md:inline">，也可 Ctrl+V 直接粘贴截图</span>。算法将自动对齐拼豆色卡体系，并生成颗粒用量预估。
           </p>
         </div>
       ) : (
@@ -416,7 +442,8 @@ export default function ImageUploader({ onImageCropped, aspectRatio, setAspectRa
             <div className="flex-1 flex flex-col items-center justify-center bg-slate-50/80 rounded-2xl p-4 border border-black/[0.02] overflow-hidden">
               <span className="text-xs font-medium text-slate-400 mb-3 self-start flex items-center gap-1.5 flex-wrap">
                 <Move className="w-3.5 h-3.5 text-indigo-500" /> 
-                <span>鼠标拖拽/单指平移 · 鼠标滚轮/双指捏合缩放 · 键盘方向键/快捷键微调</span>
+                <span className="hidden md:inline">鼠标拖拽/单指平移 · 鼠标滚轮/双指捏合缩放 · 键盘方向键/快捷键微调 · Ctrl+V 粘贴换图</span>
+                <span className="md:hidden">单指平移 · 双指捏合缩放</span>
               </span>
               
               <div 
