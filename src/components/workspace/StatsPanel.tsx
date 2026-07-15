@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { Grid3X3, X, ArrowLeftRight } from 'lucide-react';
 import { BeadPaletteItem } from '../../types';
-import { hexToRgb, luminance } from '../../colorUtils';
+import { hexToRgb, luminance, rgbToLab, deltaE2000 } from '../../colorUtils';
 import { BEAD_PALETTE, COLOR_GROUPS } from '../../data/palette';
 import { EMPTY_BEAD } from '../../utils/editOperations';
 import { useWorkspaceStore } from '../../store/workspaceStore';
@@ -30,6 +30,45 @@ export default function StatsPanel() {
     return m;
   }, [stats]);
 
+  const [dragSource, setDragSource] = useState<string | null>(null);
+
+  // Precompute Lab values for all displayed colors (for similarity calculation)
+  const labCache = useMemo(() => {
+    const m = new Map<string, ReturnType<typeof rgbToLab>>();
+    stats.forEach(s => {
+      if (!m.has(s.bead.code)) m.set(s.bead.code, rgbToLab(hexToRgb(s.bead.hex)));
+    });
+    return m;
+  }, [stats]);
+
+  // When dragging, compute similarity percentage to the dragged color
+  const similarityMap = useMemo(() => {
+    if (!dragSource) return null;
+    const sourceLab = labCache.get(dragSource);
+    if (!sourceLab) return null;
+    const m = new Map<string, number>();
+    labCache.forEach((lab, code) => {
+      if (code === dragSource) return;
+      const de = deltaE2000(sourceLab, lab);
+      m.set(code, Math.max(0, Math.round(100 - de)));
+    });
+    return m;
+  }, [dragSource, labCache]);
+
+  // When swapping, compute similarity to the source color
+  const swapSimilarityMap = useMemo(() => {
+    if (!swapSource) return null;
+    const sourceLab = labCache.get(swapSource);
+    if (!sourceLab) return null;
+    const m = new Map<string, number>();
+    labCache.forEach((lab, code) => {
+      if (code === swapSource) return;
+      const de = deltaE2000(sourceLab, lab);
+      m.set(code, Math.max(0, Math.round(100 - de)));
+    });
+    return m;
+  }, [swapSource, labCache]);
+
   // 移动端长按拖拽换色：HTML5 DnD 在触屏不触发，改用长按+原生非被动触摸事件
   const beadByCode = useMemo(() => new Map(stats.map(s => [s.bead.code, s.bead])), [stats]);
   const beadByCodeRef = useRef(beadByCode);
@@ -39,7 +78,6 @@ export default function StatsPanel() {
   const dragActiveRef = useRef(false);
   const suppressClickRef = useRef(false);
   const nativeHandlersRef = useRef<{ move: (e: TouchEvent) => void; end: (e: TouchEvent) => void } | null>(null);
-  const [dragSource, setDragSource] = useState<string | null>(null);
 
   const findColorCodeAt = useCallback((x: number, y: number): string | null => {
     const el = document.elementFromPoint(x, y) as HTMLElement | null;
@@ -162,6 +200,12 @@ export default function StatsPanel() {
                       </div>
                       <span className={`text-xs font-mono font-bold ${isCurrent ? 'text-amber-700' : 'text-slate-800'}`}>{b.code}</span>
                       <span className={`text-[9px] font-mono font-bold ${isCurrent ? 'text-amber-600' : 'text-slate-400'}`}>{pct}%</span>
+                      {!isCurrent && swapSimilarityMap && (() => {
+                        const sim = swapSimilarityMap.get(b.code);
+                        if (sim === undefined) return null;
+                        const colorCls = sim >= 90 ? 'text-emerald-600' : sim >= 70 ? 'text-amber-600' : 'text-slate-400';
+                        return <span className={`text-[9px] font-mono font-bold ${colorCls}`}>{sim}% 相似</span>;
+                      })()}
                     </button>
                   );
                 }); })()}
@@ -244,10 +288,11 @@ export default function StatsPanel() {
                   <div key={statItem.bead.code}
                     data-color-code={statItem.bead.code}
                     draggable
-                    onDragStart={(e) => { e.dataTransfer.setData('text/plain', statItem.bead.code); e.dataTransfer.effectAllowed = 'move'; }}
+                    onDragStart={(e) => { e.dataTransfer.setData('text/plain', statItem.bead.code); e.dataTransfer.effectAllowed = 'move'; setDragSource(statItem.bead.code); }}
                     onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDragOver(statItem.bead.code); }}
                     onDragLeave={() => setDragOver(null)}
-                    onDrop={(e) => { e.preventDefault(); const src = e.dataTransfer.getData('text/plain'); if (src && src !== statItem.bead.code) swapColor(src, statItem.bead); setDragOver(null); }}
+                    onDragEnd={() => { setDragSource(null); setDragOver(null); }}
+                    onDrop={(e) => { e.preventDefault(); const src = e.dataTransfer.getData('text/plain'); if (src && src !== statItem.bead.code) swapColor(src, statItem.bead); setDragSource(null); setDragOver(null); }}
                     onTouchStart={onItemTouchStart(statItem.bead.code)}
                     onTouchMove={onItemTouchMove}
                     onTouchEnd={onItemTouchEnd}
@@ -261,7 +306,19 @@ export default function StatsPanel() {
                       >
                         {statItem.bead.code}
                       </button>
-                      <div className="flex flex-col"><span className="font-bold text-slate-900 text-xs leading-none">{statItem.bead.name}</span><span className="text-xs text-slate-400 mt-0.5 font-mono">#{statItem.bead.code}</span></div>
+                      <div className="flex flex-col">
+                        <span className="font-bold text-slate-900 text-xs leading-none">{statItem.bead.name}</span>
+                        <span className="text-xs text-slate-400 mt-0.5 font-mono">#{statItem.bead.code}</span>
+                        {similarityMap && dragSource !== statItem.bead.code && (() => {
+                          const sim = similarityMap.get(statItem.bead.code);
+                          if (sim === undefined) return null;
+                          const colorCls = sim >= 90 ? 'text-emerald-600' : sim >= 70 ? 'text-amber-600' : 'text-slate-400';
+                          return <span className={`text-[10px] font-mono font-bold mt-0.5 ${colorCls}`}>{sim}% 相似</span>;
+                        })()}
+                        {dragSource === statItem.bead.code && (
+                          <span className="text-[10px] font-mono font-bold mt-0.5 text-amber-500">拖拽中</span>
+                        )}
+                      </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="text-right">
