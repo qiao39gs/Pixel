@@ -4,11 +4,12 @@ import { ASPECT_RATIOS, AspectRatio } from '../utils/constants';
 
 interface ImageUploaderProps {
   onImageCropped: (imageDataUrl: string) => void;
+  onImageStateChange?: (hasImage: boolean) => void;
   aspectRatio: AspectRatio;
   setAspectRatio: (ratio: AspectRatio) => void;
 }
 
-export default function ImageUploader({ onImageCropped, aspectRatio, setAspectRatio }: ImageUploaderProps) {
+export default function ImageUploader({ onImageCropped, onImageStateChange, aspectRatio, setAspectRatio }: ImageUploaderProps) {
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState<boolean>(false);
   const [zoom, setZoom] = useState<number>(1);
@@ -75,6 +76,10 @@ export default function ImageUploader({ onImageCropped, aspectRatio, setAspectRa
       handleFile(e.target.files[0]);
     }
   };
+
+  useEffect(() => {
+    onImageStateChange?.(!!imageSrc);
+  }, [imageSrc, onImageStateChange]);
 
   // 1. Separate HTMLImageElement loading from render cycles (Massive Performance Booster!)
   useEffect(() => {

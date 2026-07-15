@@ -13,6 +13,7 @@ import { TransformedPixel, IngredientStat } from './types';
 export default function App() {
   const [croppedImage, setCroppedImage] = useState<string | null>(null);
   const [aspectRatio, setAspectRatio] = useState<'1:1' | '4:3' | 'auto'>('auto');
+  const [uploaderHasImage, setUploaderHasImage] = useState(false);
 
   // Completed Crop phase
   const handleImageCropped = useCallback((imageDataUrl: string) => {
@@ -68,15 +69,14 @@ export default function App() {
             <span className="font-display font-bold text-[15px] tracking-tight text-[#18181B]">像素拼豆</span>
             <span className="hidden sm:inline text-xs font-mono text-zinc-400 border border-zinc-200 px-1.5 py-0.5 rounded-md">v1.0.4</span>
           </div>
-          <span className="text-xs text-zinc-400 font-mono hidden md:block">PIXEL BEAD PATTERN GENERATOR</span>
+          <a href="https://github.com/qiao39gs/Pixel" target="_blank" rel="noopener noreferrer" className="text-xs text-zinc-400 font-mono hover:text-[#E8570A] transition-colors">GitHub</a>
         </div>
       </header>
 
       {/* Main */}
       <main className="flex-1 w-full mx-auto px-4 py-6 md:py-8 flex flex-col gap-8">
 
-        {/* Hero — only when no image */}
-        {!croppedImage && (
+        {!croppedImage && !uploaderHasImage && (
           <div className="relative text-center max-w-lg mx-auto pt-6 pb-2 flex flex-col items-center gap-3 animate-fade-in">
             {/* Pixel grid decoration */}
             <div
@@ -97,9 +97,10 @@ export default function App() {
 
         {/* Upload / Workspace */}
         {!croppedImage ? (
-          <div className="max-w-2xl w-full mx-auto animate-fade-in">
+          <div className="max-w-4xl w-full mx-auto animate-fade-in">
             <ImageUploader
               onImageCropped={handleImageCropped}
+              onImageStateChange={setUploaderHasImage}
               aspectRatio={aspectRatio}
               setAspectRatio={setAspectRatio}
             />
@@ -125,7 +126,6 @@ export default function App() {
           <div className="max-w-[1600px] mx-auto flex items-center justify-between text-xs text-zinc-400 font-mono">
             <span>© 2026 像素拼豆图纸生成器</span>
             <div className="flex items-center gap-4">
-              <a href="https://github.com/qiao39gs/Pixel" target="_blank" rel="noopener noreferrer" className="hover:text-[#E8570A] transition-colors">GitHub</a>
               <span>Perler Bead Pattern Generator</span>
             </div>
           </div>
