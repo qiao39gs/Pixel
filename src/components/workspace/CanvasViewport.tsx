@@ -123,7 +123,7 @@ export default function CanvasViewport({ canvasRef, containerRef, gridWidth, gri
   };
 
   return (
-    <div className={`bg-slate-950 border border-[#1D1D21] rounded-3xl p-6 shadow-2xl flex flex-col relative overflow-hidden min-h-[calc(100dvh-130px)] md:min-h-[500px] transition-all ${mobileTab !== 'canvas' ? 'hidden lg:block' : ''}`}>
+    <div className={`bg-slate-950 border border-[#1D1D21] rounded-3xl p-6 shadow-2xl flex flex-col relative overflow-hidden min-h-[calc(100dvh-130px)] md:min-h-[500px] max-h-[calc(100dvh-80px)] transition-all ${mobileTab !== 'canvas' ? 'hidden lg:block' : ''}`}>
       <div className="flex flex-wrap justify-between items-center gap-2 mb-4 pb-3 border-b border-white/[0.04] z-10">
         <div className="flex items-center gap-2 text-white"><span className="text-xs font-bold px-2.5 py-1 bg-white/[0.06] border border-white/[0.04] rounded-lg text-slate-300 font-mono">{gridWidth} × {gridHeight} 画幅规格</span><span className="text-xs text-slate-400 font-semibold">( 最终已精准出数: <strong className="text-indigo-400">{stats.length} 色</strong> )</span></div>
         <div className="flex items-center gap-2 flex-wrap">
