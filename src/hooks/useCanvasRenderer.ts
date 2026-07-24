@@ -171,11 +171,11 @@ function renderTextLayer(
   const ew = gridWidth - leftTrim - rightTrim;
   const eh = gridHeight - topTrim - bottomTrim;
 
-  // 分级显示：highlight/hover 色号始终显示；普通色号 scale >= 13 显示（约 90%）
+  // 分级显示：highlight/hover 色号始终显示；普通色号 scale >= 17 显示（120% 起）
   const alwaysShowCode = highlight ?? hoverHighlight;
   if (showNumbers) {
     const fontSize = Math.max(8, Math.floor(scale / 2.5));
-    const showNormal = scale >= 13;
+    const showNormal = scale >= 17;
     if (showNormal || alwaysShowCode) {
       pixels.forEach(p => {
         if (p.matchedBead.code === 'EMPTY') return;

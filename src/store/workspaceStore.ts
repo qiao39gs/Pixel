@@ -99,6 +99,8 @@ interface WorkspaceStore {
   setPanelOpen: (v: WorkspaceStore['panelOpen']) => void;
   setLeftDrawerTab: (v: WorkspaceStore['leftDrawerTab']) => void;
   setMobileToolbarOpen: (v: boolean) => void;
+  collapsedGroups: Set<string>;
+  toggleGroupCollapse: (series: string) => void;
   setProjectPanelOpen: (v: boolean) => void;
   toggleProjectPanel: () => void;
   setDragMode: (v: boolean) => void;
@@ -177,6 +179,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   panelOpen: 'right' as const,
   leftDrawerTab: 'spec' as const,
   mobileToolbarOpen: false,
+  collapsedGroups: new Set<string>(),
   projectPanelOpen: false,
   dragMode: false,
   toasts: [],
@@ -225,6 +228,11 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   setPanelOpen: (v) => set({ panelOpen: v }),
   setLeftDrawerTab: (v) => set({ leftDrawerTab: v }),
   setMobileToolbarOpen: (v) => set({ mobileToolbarOpen: v }),
+  toggleGroupCollapse: (series) => set((s) => {
+    const next = new Set(s.collapsedGroups);
+    if (next.has(series)) next.delete(series); else next.add(series);
+    return { collapsedGroups: next };
+  }),
   setProjectPanelOpen: (v) => set({ projectPanelOpen: v }),
   toggleProjectPanel: () => set((s) => ({ projectPanelOpen: !s.projectPanelOpen })),
   setDragMode: (v) => set({ dragMode: v }),

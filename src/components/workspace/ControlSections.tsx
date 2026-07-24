@@ -346,7 +346,7 @@ export function ViewSection() {
           <button onClick={() => setShowNumbers(!showNumbers)} disabled={scale < 12 && !showNumbers} title={scale < 12 ? '请拉大网格尺寸以开启色号' : ''} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${showNumbers ? 'bg-indigo-500' : 'bg-slate-300'} ${scale < 12 && !showNumbers ? 'opacity-40 cursor-not-allowed' : ''}`}><span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${showNumbers ? 'translate-x-6' : 'translate-x-1'}`} /></button>
         </div>
       </div>
-      {scale < 12 && <p className="text-[13px] text-slate-500 leading-tight">当前缩放较小 ({scale}px)，开启色号后字号会自动缩小。</p>}
+      {scale < 17 && <p className="text-[13px] text-slate-500 leading-tight">当前缩放较小 ({scale}px)，色号仅在选中/悬停时显示；放大到 120% 以上可全部显示。</p>}
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
-import { Grid3X3, X, ArrowLeftRight } from 'lucide-react';
+import { Grid3X3, X, ArrowLeftRight, ChevronDown, HelpCircle } from 'lucide-react';
 import { BeadPaletteItem } from '../../types';
 import { hexToRgb, luminance, rgbToLab, deltaE2000 } from '../../colorUtils';
 import { BEAD_PALETTE, COLOR_GROUPS } from '../../data/palette';
@@ -15,6 +15,8 @@ export default function StatsPanel() {
   const setHoverBeadHighlight = useWorkspaceStore(s => s.setHoverBeadHighlight);
   const transformedPixels = useWorkspaceStore(s => s.transformedPixels);
   const swapColor = useWorkspaceStore(s => s.swapColor);
+  const collapsedGroups = useWorkspaceStore(s => s.collapsedGroups);
+  const toggleGroupCollapse = useWorkspaceStore(s => s.toggleGroupCollapse);
 
   const [swapSource, setSwapSource] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState<string | null>(null);
@@ -258,21 +260,22 @@ export default function StatsPanel() {
         </div>
       )}
 
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center pb-3 mb-5 gap-3 border-b border-slate-200/60">
-        <div className="flex flex-col">
+      <div className="flex items-center justify-between pb-3 mb-5 border-b border-slate-200/60">
+        <div className="flex flex-col gap-1">
           <h3 className="font-sans font-bold text-slate-800 text-sm flex items-center gap-2 leading-none"><Grid3X3 className="w-4 h-4 text-slate-400" />MARD 标准色卡</h3>
-          <span className="text-[13px] text-slate-500 font-semibold mt-1 font-mono uppercase tracking-wider">
-            材料总用量: <strong className="text-slate-800">{transformedPixels.filter(p => p.matchedBead.code !== 'EMPTY').length} 颗</strong>
-          </span>
+          <div className="flex items-baseline gap-2">
+            <span className="text-[12px] text-slate-500 font-medium">材料总用量</span>
+            <strong className="text-[16px] text-slate-800 font-mono font-bold tabular-nums">{transformedPixels.filter(p => p.matchedBead.code !== 'EMPTY').length}</strong>
+            <span className="text-[12px] text-slate-500">颗</span>
+          </div>
         </div>
-        <div className="text-[13px] text-slate-500 font-semibold md:text-right">
-          {editMode ? (<>
-            <span className="hidden md:inline">点击色块设为画笔 · 左键画布填充</span>
-            <span className="md:hidden">点按色块设为画笔 · 点按画布填充</span>
-          </>) : (<>
-            <span className="hidden md:inline">点击色块聚焦 · 拖拽至另一色块换色</span>
-            <span className="md:hidden">点按色块聚焦 · 长按拖拽换色</span>
-          </>)}
+        <div className="group relative shrink-0">
+          <button className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors cursor-pointer" title="操作说明">
+            <HelpCircle className="w-4 h-4" />
+          </button>
+          <div className="absolute right-0 top-full mt-1 hidden group-hover:block z-20 w-max max-w-[220px] p-2.5 rounded-lg bg-slate-800 text-slate-100 text-[12px] leading-relaxed shadow-lg pointer-events-none">
+            {editMode ? '点击色块设为画笔 · 左键画布填充' : '点击色块聚焦高亮 · 拖拽至另一色块换色'}
+          </div>
         </div>
       </div>
       {COLOR_GROUPS.map(group => {
@@ -280,10 +283,14 @@ export default function StatsPanel() {
         if (seriesStats.length === 0) return null;
         return (
 <div key={group.series} className="mb-6">
-          <div className="flex items-center justify-between mb-3 px-1">
-            <span className="text-[13px] font-bold text-slate-600 uppercase tracking-wider">{group.name}</span>
-            <span className="text-[13px] text-slate-500 font-mono">{seriesStats.reduce((sum, s) => sum + s.count, 0)} 颗 · {seriesStats.length} 色</span>
+          <div className="flex items-center justify-between h-9 mb-2 px-1 cursor-pointer select-none hover:bg-slate-50/60 rounded-md transition-colors" onClick={() => toggleGroupCollapse(group.series)}>
+            <div className="flex items-center gap-1.5">
+              <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${collapsedGroups.has(group.series) ? '-rotate-90' : ''}`} />
+              <span className="text-[13px] font-bold text-slate-600 uppercase tracking-wider">{group.name}</span>
+            </div>
+            <span className="text-[13px] text-slate-500 font-mono tabular-nums"><strong className="text-slate-600 tabular-nums">{seriesStats.reduce((sum, s) => sum + s.count, 0)}</strong> 颗 · {seriesStats.length} 色</span>
           </div>
+          {!collapsedGroups.has(group.series) && (
           <div className="grid grid-cols-1 gap-2">
             {seriesStats.map(statItem => {
               const isSelected = selectedBeadHighlight === statItem.bead.code;
@@ -336,10 +343,11 @@ export default function StatsPanel() {
                   >
                     <ArrowLeftRight className="w-4 h-4" />
                   </button>
-                </div>
+</div>
               );
             })}
           </div>
+          )}
         </div>
         );
       })}
