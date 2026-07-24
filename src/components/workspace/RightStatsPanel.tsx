@@ -21,10 +21,10 @@ export default function RightStatsPanel() {
           <X className="w-4 h-4" />
         </button>
       </header>
-      <div className="flex-1 overflow-y-auto p-5 pb-10 scrollbar-dark relative">
+      <div className="flex-1 overflow-y-auto p-5 pb-12 scrollbar-dark relative">
         <StatsPanel />
       </div>
-      <div className="pointer-events-none absolute left-0 right-0 bottom-10 h-10 bg-gradient-to-t from-[#F8FAFC] to-transparent z-10" />
+      <div className="pointer-events-none absolute left-0 right-0 bottom-0 h-14 bg-gradient-to-t from-[#F1F5F9] via-[#F1F5F9]/60 to-transparent z-10" />
     </div>
   );
 }
