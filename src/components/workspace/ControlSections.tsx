@@ -9,7 +9,7 @@ function AdjustSlider({ label, value, onRelease }: { label: string; value: numbe
   useEffect(() => { if (local === pending.current) { setLocal(value); pending.current = value; } }, [value]);
   return (
     <div className="flex items-center gap-2.5">
-      <span className="text-xs font-mono font-bold text-slate-500 w-11 text-right">{label}</span>
+      <span className="text-[13px] font-mono font-bold text-slate-500 w-11 text-right">{label}</span>
       <input
         type="range" min="0" max="200" value={local}
         onChange={e => { const v = parseInt(e.target.value); setLocal(v); pending.current = v; }}
@@ -17,12 +17,32 @@ function AdjustSlider({ label, value, onRelease }: { label: string; value: numbe
         onTouchEnd={() => { if (pending.current !== value) onRelease(pending.current); }}
         className="flex-1 h-2.5 accent-[#E8570A] bg-slate-200 rounded-lg cursor-pointer"
       />
-      <span className="text-xs font-mono font-bold text-slate-500 w-9">{local}</span>
+      <span className="text-[13px] font-mono font-bold text-slate-500 w-9">{local}</span>
     </div>
   );
 }
 
-const HEADER_CLS = "font-sans font-semibold text-slate-900 flex items-center gap-2 text-sm leading-none";
+// ── 统一分组标题 ──
+function SectionTitle({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-2 pb-2.5 mb-4">
+      <span className="text-slate-400">{icon}</span>
+      <span className="text-[13px] font-bold text-slate-700">{children}</span>
+    </div>
+  );
+}
+
+// ── 状态化 toggle——我统一样式 ──
+function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
+  return (
+    <button onClick={onClick} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer shrink-0 ${on ? 'bg-indigo-500' : 'bg-slate-300'}`}>
+      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${on ? 'translate-x-6' : 'translate-x-1'}`} />
+    </button>
+  );
+}
+
+const SECTION_GAP = 'gap-6';
+const GROUP_BG = 'bg-slate-50/60 border border-slate-200/60 rounded-xl p-3.5';
 
 export function SpecSection() {
   const panelPreset = useWorkspaceStore(s => s.panelPreset);
@@ -42,67 +62,71 @@ export function SpecSection() {
 
   const presetBtn = (val: typeof panelPreset, label: string) => (
     <button onClick={() => setPanelPreset(val)}
-      className={`py-2.5 px-3 text-xs font-bold rounded-xl text-center border cursor-pointer transition-all ${panelPreset === val ? 'bg-indigo-50 text-indigo-600 border-indigo-500 shadow-xs' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>{label}</button>
+      className={`h-10 px-3 text-[13px] font-bold rounded-lg text-center border cursor-pointer transition-all ${panelPreset === val ? 'bg-indigo-50 text-indigo-600 border-indigo-400' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>{label}</button>
   );
   const algoBtn = (val: typeof distanceAlgorithm, label: string, title: string) => (
     <button onClick={() => setDistanceAlgorithm(val)} title={title}
-      className={`py-2 text-xs font-bold rounded-lg text-center transition-all cursor-pointer ${distanceAlgorithm === val ? 'bg-white text-indigo-600 shadow-xs border border-indigo-100 font-extrabold' : 'text-slate-400 hover:text-slate-600'}`}>{label}</button>
+      className={`h-9 px-2 text-[13px] font-bold rounded-lg text-center transition-all cursor-pointer ${distanceAlgorithm === val ? 'bg-white text-indigo-600 border border-indigo-200 font-extrabold' : 'text-slate-500 hover:text-slate-700'}`}>{label}</button>
   );
 
   return (
-    <div className="flex flex-col gap-5">
-      <div className="flex justify-between items-center pb-3 border-b border-slate-100">
-        <h3 className={HEADER_CLS}><Sliders className="w-4 h-4 text-indigo-600" />生成图纸规格</h3>
-      </div>
-      <div className="flex flex-col gap-2.5">
-        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">模板画布规格 (格子数)</label>
-        <div className="grid grid-cols-2 gap-2">
-          {presetBtn('52x52', '52 × 52 (小)')}
-          {presetBtn('78x78', '78 × 78 (中)')}
-          {presetBtn('104x104', '104 × 104 (大)')}
-          {presetBtn('custom', '自定义规格')}
-        </div>
-        {panelPreset === 'custom' && (
-          <div className="flex items-center gap-2.5 mt-2.5 p-2.5 bg-slate-50 rounded-xl border border-black/[0.02]">
-            <div className="flex-1 flex flex-col gap-1"><span className="text-xs text-slate-400 font-bold uppercase">宽度 (格子)</span>
-              <input type="number" min="5" max="150" value={customWidth} onChange={e => setCustomWidth(parseInt(e.target.value) || 29)} className="w-full p-2.5 border border-slate-200 text-xs text-center font-mono rounded bg-white focus:outline-indigo-500" />
-            </div>
-            <div className="text-slate-400 text-xs pt-3 font-semibold">×</div>
-            <div className="flex-1 flex flex-col gap-1"><span className="text-xs text-slate-400 font-bold uppercase">高度 (锁比例)</span>
-              <div className="w-full p-1.5 border border-slate-100 text-xs text-center font-mono rounded bg-slate-100 text-slate-500 select-none font-semibold">
-                {Math.max(1, Math.round(customWidth / (localAspectRatio || 1)))}
+    <div className={`flex flex-col ${SECTION_GAP}`}>
+      <div>
+        <SectionTitle icon={<Sliders className="w-4 h-4" />}>生成图纸规格</SectionTitle>
+        <div className="flex flex-col gap-3">
+          <label className="text-[13px] font-bold text-slate-500">模板画布规格 (格子数)</label>
+          <div className="grid grid-cols-2 gap-2">
+            {presetBtn('52x52', '52 × 52 (小)')}
+            {presetBtn('78x78', '78 × 78 (中)')}
+            {presetBtn('104x104', '104 × 104 (大)')}
+            {presetBtn('custom', '自定义规格')}
+          </div>
+          {panelPreset === 'custom' && (
+            <div className="flex items-center gap-2.5 mt-1 p-3 bg-slate-50/60 border border-slate-200/60 rounded-xl">
+              <div className="flex-1 flex flex-col gap-1"><span className="text-[13px] text-slate-500 font-bold">宽度 (格子)</span>
+                <input type="number" min="5" max="150" value={customWidth} onChange={e => setCustomWidth(parseInt(e.target.value) || 29)} className="h-9 w-full px-2.5 border border-slate-200 text-[13px] text-center font-mono rounded-lg bg-white focus:outline-indigo-400" />
+              </div>
+              <div className="text-slate-400 text-[13px] pt-4 font-semibold">×</div>
+              <div className="flex-1 flex flex-col gap-1"><span className="text-[13px] text-slate-500 font-bold">高度 (锁比例)</span>
+                <div className="h-9 w-full px-2.5 border border-slate-200/60 text-[13px] text-center font-mono rounded-lg bg-slate-100 text-slate-500 select-none font-semibold flex items-center justify-center">
+                  {Math.max(1, Math.round(customWidth / (localAspectRatio || 1)))}
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
-      <div className="flex flex-col gap-2.5">
-        <div className="flex justify-between items-center text-xs"><span className="font-bold text-slate-700">限制色号数量 (色彩量化)</span>
-          <span className="font-mono px-2 py-0.5 bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-md font-bold text-xs">{kMedoidsOptimize ? colorLimitLocal : colorLimit} 色以内</span></div>
+
+      <div className="flex flex-col gap-2.5 pt-1">
+        <div className="flex justify-between items-center">
+          <span className="text-[13px] font-bold text-slate-700">限制色号数量 (色彩量化)</span>
+          <span className="font-mono px-2 py-0.5 bg-indigo-50 text-indigo-600 border border-indigo-200 rounded-md font-bold text-[13px]">{kMedoidsOptimize ? colorLimitLocal : colorLimit} 色</span>
+        </div>
         <input type="range" min="2" max="24"
           {...(kMedoidsOptimize
             ? { value: colorLimitLocal, onChange: (e: React.ChangeEvent<HTMLInputElement>) => { const v = parseInt(e.target.value); setColorLimitLocal(v); colorLimitPending.current = v; }, onMouseUp: () => { if (colorLimitPending.current !== colorLimit) setColorLimit(colorLimitPending.current); }, onTouchEnd: () => { if (colorLimitPending.current !== colorLimit) setColorLimit(colorLimitPending.current); } }
             : { value: colorLimit, onChange: (e: React.ChangeEvent<HTMLInputElement>) => setColorLimit(parseInt(e.target.value)) })}
-          className="w-full h-3 accent-indigo-600 bg-slate-200 rounded-lg cursor-pointer" />
-        <span className="text-xs text-slate-400 leading-normal">限制图纸最终出现的最多拼豆颜色，数量少可大幅降低图纸制作与购买复杂度。</span>
+          className="w-full h-3 accent-indigo-500 bg-slate-200 rounded-lg cursor-pointer" />
+        <p className="text-[13px] text-slate-500 leading-normal">限制最终颜色数量，少则制作更简单。</p>
       </div>
-      <div className="flex flex-col gap-2 p-3 bg-slate-50 border border-slate-100 rounded-2xl">
-        <div className="flex justify-between items-center text-xs text-slate-500"><span className="font-bold text-slate-600">空间色差比对算法</span>
-          <span className="font-mono text-xs bg-white border border-slate-200 text-slate-600 px-1.5 py-0.5 rounded-md font-bold">{distanceAlgorithm}</span></div>
-        <div className="grid grid-cols-2 gap-1.5 mt-1.5">
+
+      <div className={`${GROUP_BG} flex flex-col gap-3`}>
+        <div className="flex justify-between items-center">
+          <span className="text-[13px] font-bold text-slate-600">空间色差比对算法</span>
+          <span className="font-mono text-[13px] bg-white border border-slate-200 text-slate-600 px-1.5 py-0.5 rounded-md font-bold">{distanceAlgorithm}</span>
+        </div>
+        <div className="grid grid-cols-2 gap-1.5">
           {algoBtn('CIEDE2000', 'CIEDE2000 (精细)', '国际照明委员会推荐的最精确感知色差计算公式')}
           {algoBtn('CIE94', 'CIE94 (感知)', '图形艺术及纺织工业标准')}
-          {algoBtn('CIE76', 'CIE76 (常规)', '经典的 CIE L*a*b* 空间常规三维欧氏距离')}
-          {algoBtn('WeightedRGB', '红均加权 (RGB)', '针对人眼对不同颜色波长敏感度不一致的动态加权算法')}
+          {algoBtn('CIE76', 'CIE76 (常规)', '经典 CIE L*a*b* 空间欧氏距离')}
+          {algoBtn('WeightedRGB', '红均加权 (RGB)', '人眼波长敏感度动态加权')}
         </div>
-        <div className="flex items-center justify-between mt-1.5 pt-1.5 border-t border-slate-100">
+        <div className="flex items-center justify-between pt-2 border-t border-slate-200/60">
           <div className="flex flex-col">
-            <span className="text-xs font-bold text-slate-600">智能选色优化 (k-medoids)</span>
-            <span className="text-[11px] text-slate-400 leading-normal mt-0.5">以量化误差最小为准则从色卡精选色号，替代默认频次选取；渐变/照片类图色彩还原更均衡，处理稍慢。</span>
+            <span className="text-[13px] font-bold text-slate-700">智能选色优化 (k-medoids)</span>
+            <span className="text-[13px] text-slate-500 leading-normal mt-0.5">以量化误差最小为准则精选色号；渐变/照片类色彩还原更均衡。</span>
           </div>
-          <button onClick={() => setKMedoidsOptimize(!kMedoidsOptimize)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer shrink-0 ${kMedoidsOptimize ? 'bg-indigo-600' : 'bg-slate-200'}`}>
-            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${kMedoidsOptimize ? 'translate-x-6' : 'translate-x-1'}`} />
-          </button>
+          <Toggle on={kMedoidsOptimize} onClick={() => setKMedoidsOptimize(!kMedoidsOptimize)} />
         </div>
       </div>
     </div>
@@ -120,24 +144,21 @@ export function AdjustSection() {
   const setRemoveBackground = useWorkspaceStore(s => s.setRemoveBackground);
 
   return (
-    <div className="flex flex-col gap-5">
-      <div className="flex justify-between items-center pb-3 border-b border-slate-100">
-        <h3 className={HEADER_CLS}><Sliders className="w-4 h-4 text-indigo-600" />图像与色彩调节</h3>
-      </div>
-      <div className="flex flex-col gap-3 pt-1">
-        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">亮度 / 对比度 / 饱和度</span>
-        <AdjustSlider label="亮度" value={brightness} onRelease={setBrightness} />
-        <AdjustSlider label="对比度" value={contrast} onRelease={setContrast} />
-        <AdjustSlider label="饱和度" value={saturation} onRelease={setSaturation} />
-      </div>
-      <div className="flex flex-col gap-3 pt-3 border-t border-slate-100">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-bold text-slate-700">自动过滤白色/浅色背景</span>
-          <button onClick={() => setRemoveBackground(!removeBackground)} className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors cursor-pointer ${removeBackground ? 'bg-indigo-600' : 'bg-slate-200'}`}>
-            <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${removeBackground ? 'translate-x-6' : 'translate-x-1'}`} />
-          </button>
+    <div className={`flex flex-col ${SECTION_GAP}`}>
+      <div>
+        <SectionTitle icon={<Sliders className="w-4 h-4" />}>图像与色彩调节</SectionTitle>
+        <div className="flex flex-col gap-3">
+          <AdjustSlider label="亮度" value={brightness} onRelease={setBrightness} />
+          <AdjustSlider label="对比度" value={contrast} onRelease={setContrast} />
+          <AdjustSlider label="饱和度" value={saturation} onRelease={setSaturation} />
         </div>
-        <p className="text-xs text-slate-400 leading-normal">开启后将智能识别灰度接近纯白的浅色底背景像素。</p>
+      </div>
+      <div className="pt-2">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-[13px] font-bold text-slate-700">自动过滤白色/浅色背景</span>
+          <Toggle on={removeBackground} onClick={() => setRemoveBackground(!removeBackground)} />
+        </div>
+        <p className="text-[13px] text-slate-500 leading-normal">智能识别灰度接近纯白的浅色底背景像素。</p>
       </div>
     </div>
   );
@@ -158,29 +179,27 @@ export function TrimSection() {
   const gridHeight = useWorkspaceStore(s => s.gridHeightActual);
 
   return (
-    <div className="flex flex-col gap-5">
-      <div className="flex justify-between items-center pb-3 border-b border-slate-100">
-        <h3 className={HEADER_CLS}><Crop className="w-4 h-4 text-indigo-600" />裁边修整</h3>
-      </div>
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-bold text-slate-700">裁边修整</span>
+    <div className={`flex flex-col ${SECTION_GAP}`}>
+      <div>
+        <SectionTitle icon={<Crop className="w-4 h-4" />}>裁边修整</SectionTitle>
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-[13px] font-bold text-slate-700">裁边修整</span>
           <div className="flex gap-2">
-            <button onClick={() => autoDetectTrim(gridWidth, gridHeight)} className="px-2 py-1.5 text-xs font-bold rounded-lg bg-amber-50 text-amber-600 border border-amber-200 hover:bg-amber-100 transition-colors cursor-pointer">自动裁剪</button>
-            <button onClick={() => applyTrim(gridWidth, gridHeight)} className={`px-2 py-1.5 text-xs font-bold rounded-lg transition-colors cursor-pointer ${topTrim+bottomTrim+leftTrim+rightTrim === 0 ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-indigo-50 text-indigo-600 border border-indigo-200 hover:bg-indigo-100'}`} disabled={topTrim+bottomTrim+leftTrim+rightTrim === 0}>应用</button>
+            <button onClick={() => autoDetectTrim(gridWidth, gridHeight)} className="h-8 px-2.5 text-[13px] font-bold rounded-lg bg-amber-50 text-amber-600 border border-amber-200 hover:bg-amber-100 transition-colors cursor-pointer">自动裁剪</button>
+            <button onClick={() => applyTrim(gridWidth, gridHeight)} className={`h-8 px-2.5 text-[13px] font-bold rounded-lg transition-colors cursor-pointer ${topTrim+bottomTrim+leftTrim+rightTrim === 0 ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-indigo-50 text-indigo-600 border border-indigo-200 hover:bg-indigo-100'}`} disabled={topTrim+bottomTrim+leftTrim+rightTrim === 0}>应用</button>
           </div>
         </div>
-        <p className="text-xs text-slate-400 leading-normal">拖动滑块预览裁切效果，点击「应用」确认。</p>
+        <p className="text-[13px] text-slate-500 leading-normal mb-3">拖动滑块预览裁切效果，点击「应用」确认。</p>
         {([
           ['上', topTrim, setTopTrim, Math.floor(gridHeight/2)] as const,
           ['下', bottomTrim, setBottomTrim, Math.floor(gridHeight/2)] as const,
           ['左', leftTrim, setLeftTrim, Math.floor(gridWidth/2)] as const,
           ['右', rightTrim, setRightTrim, Math.floor(gridWidth/2)] as const,
         ]).map(([label, val, set, max]) => (
-          <div key={label} className="flex items-center gap-2.5">
-            <span className="text-xs font-mono font-bold text-slate-500 w-5">{label}</span>
+          <div key={label} className="flex items-center gap-2.5 mb-2">
+            <span className="text-[13px] font-mono font-bold text-slate-500 w-5">{label}</span>
             <input type="range" min="0" max={max} value={val} onChange={e => set(parseInt(e.target.value))} className="flex-1 h-2.5 accent-[#E8570A] bg-slate-200 rounded-lg cursor-pointer" />
-            <span className="text-xs font-mono font-bold text-slate-500 w-5 text-right">{val}</span>
+            <span className="text-[13px] font-mono font-bold text-slate-500 w-5 text-right">{val}</span>
           </div>
         ))}
       </div>
@@ -200,20 +219,18 @@ export function AiSection({ onTriggerEnhance }: { onTriggerEnhance: () => void }
   useEffect(() => { checkEnhanceConfigured().then(setHasApiKey); }, []);
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex justify-between items-center pb-2 border-b border-slate-100">
-        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5"><Wand2 className="w-3.5 h-3.5 text-indigo-500" />AI 图像增强</h4>
-      </div>
+    <div className={`flex flex-col ${SECTION_GAP}`}>
+      <SectionTitle icon={<Wand2 className="w-4 h-4" />}>AI 图像增强</SectionTitle>
       {!hasApiKey && (
-        <p className="text-xs text-amber-600 leading-normal flex items-start gap-1.5">
-          <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+        <p className="text-[13px] text-amber-600 leading-normal flex items-start gap-1.5">
+          <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
           <span>服务器未配置 Pollinations API Key。请在 Vercel 项目设置的 Environment Variables 中添加 <code className="font-mono bg-amber-50 px-1 rounded">POLLINATIONS_API_KEY</code>。</span>
         </p>
       )}
       {hasApiKey && (
         <>
-          <div className="flex flex-col gap-1.5 pt-1">
-            <span className="text-xs font-bold text-slate-500">简化强度</span>
+          <div className="flex flex-col gap-2">
+            <span className="text-[13px] font-bold text-slate-500">简化强度</span>
             <div className="grid grid-cols-3 gap-1.5">
               {([
                 ['light', '轻度', '保留细节'],
@@ -223,16 +240,16 @@ export function AiSection({ onTriggerEnhance }: { onTriggerEnhance: () => void }
                 <button
                   key={val}
                   onClick={() => setAiEnhanceOptions({ enhanceStrength: val })}
-                  className={`flex flex-col items-center py-2 text-xs font-bold rounded-lg border transition-all cursor-pointer ${aiEnhanceOptions.enhanceStrength === val ? 'bg-indigo-50 text-indigo-600 border-indigo-500 shadow-xs' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
+                  className={`flex flex-col items-center py-2 text-[13px] font-bold rounded-lg border transition-all cursor-pointer ${aiEnhanceOptions.enhanceStrength === val ? 'bg-indigo-50 text-indigo-600 border-indigo-400' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
                 >
                   <span>{label}</span>
-                  <span className="text-[10px] font-normal text-slate-400 mt-0.5">{desc}</span>
+                  <span className="text-[11px] font-normal text-slate-500 mt-0.5">{desc}</span>
                 </button>
               ))}
             </div>
           </div>
-          <div className="flex flex-col gap-2 pt-1">
-            <span className="text-xs font-bold text-slate-500">增强效果选项</span>
+          <div className="flex flex-col gap-2">
+            <span className="text-[13px] font-bold text-slate-500">增强效果选项</span>
             {([
               ['flatColors', '扁平化颜色', '去除渐变，转为均匀色块'],
               ['cartoonStyle', '卡通风格', '简化细节，矢量画风'],
@@ -242,52 +259,52 @@ export function AiSection({ onTriggerEnhance }: { onTriggerEnhance: () => void }
                   type="checkbox"
                   checked={aiEnhanceOptions[key]}
                   onChange={() => setAiEnhanceOptions({ [key]: !aiEnhanceOptions[key] })}
-                  className="mt-0.5 w-4 h-4 accent-indigo-600 cursor-pointer"
+                  className="mt-0.5 w-4 h-4 accent-indigo-500 cursor-pointer"
                 />
                 <div className="flex flex-col">
-                  <span className="text-xs font-bold text-slate-700">{label}</span>
-                  <span className="text-[11px] text-slate-400 leading-normal">{desc}</span>
+                  <span className="text-[13px] font-bold text-slate-700">{label}</span>
+                  <span className="text-[13px] text-slate-500 leading-normal">{desc}</span>
                 </div>
               </label>
             ))}
           </div>
-          <div className="flex flex-col gap-1.5 pt-2 border-t border-slate-100">
-            <span className="text-xs font-bold text-slate-500">自定义 prompt（可选）</span>
+          <div className="flex flex-col gap-1.5">
+            <span className="text-[13px] font-bold text-slate-500">自定义 prompt（可选）</span>
             <textarea
               value={aiEnhanceOptions.customPrompt}
               onChange={e => setAiEnhanceOptions({ customPrompt: e.target.value })}
               placeholder="追加到默认 prompt 末尾，例如：anime style, vibrant colors"
               rows={2}
-              className="w-full p-2.5 border border-slate-200 text-xs rounded-lg bg-white focus:outline-indigo-500 resize-none font-mono"
+              className="w-full p-2.5 border border-slate-200 text-[13px] rounded-lg bg-white focus:outline-indigo-400 resize-none font-mono"
             />
           </div>
-          <div className="flex items-center gap-2 pt-1">
+          <div className="flex items-center gap-2">
             <button
               onClick={onTriggerEnhance}
               disabled={isAiEnhancing}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${isAiEnhancing ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm'}`}
+              className={`flex-1 flex items-center justify-center gap-1.5 h-10 text-[13px] font-bold rounded-xl transition-all cursor-pointer ${isAiEnhancing ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-indigo-500 text-white hover:bg-indigo-600'}`}
             >
-              {isAiEnhancing ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />增强中…</> : <><Wand2 className="w-3.5 h-3.5" />{aiEnhancedImage ? '重新增强' : 'AI 增强'}</>}
+              {isAiEnhancing ? <><Loader2 className="w-4 h-4 animate-spin" />增强中…</> : <><Wand2 className="w-4 h-4" />{aiEnhancedImage ? '重新增强' : 'AI 增强'}</>}
             </button>
             {aiEnhancedImage && !isAiEnhancing && (
               <button
                 onClick={() => setAiEnhancedImage(null)}
                 title="清除增强结果，使用原图"
-                className="flex items-center justify-center gap-1.5 py-2.5 px-3 text-xs font-bold rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all cursor-pointer"
+                className="flex items-center justify-center gap-1.5 h-10 px-3 text-[13px] font-bold rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all cursor-pointer"
               >
-                <X className="w-3.5 h-3.5" />清除
+                <X className="w-4 h-4" />清除
               </button>
             )}
           </div>
           {!isAiEnhancing && aiEnhanceError && (
-            <div className="flex items-start gap-2 text-xs text-rose-600 font-bold">
-              <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+            <div className="flex items-start gap-2 text-[13px] text-rose-600 font-bold">
+              <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
               <span className="leading-normal">{aiEnhanceError}</span>
             </div>
           )}
           {aiEnhancedImage && !isAiEnhancing && (
-            <div className="flex items-center gap-2 text-xs text-emerald-600 font-bold">
-              <CheckCircle2 className="w-3.5 h-3.5" />
+            <div className="flex items-center gap-2 text-[13px] text-emerald-600 font-bold">
+              <CheckCircle2 className="w-4 h-4" />
               <span>增强完成</span>
             </div>
           )}
@@ -306,25 +323,30 @@ export function ViewSection() {
   const setShowRulers = useWorkspaceStore(s => s.setShowRulers);
 
   return (
-    <div className="flex flex-col gap-4">
-      <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5 pb-2 border-b border-slate-100"><Layers className="w-3.5 h-3.5 text-indigo-500" />视图网格交互</h4>
+    <div className={`flex flex-col ${SECTION_GAP}`}>
+      <SectionTitle icon={<Layers className="w-4 h-4" />}>视图网格交互</SectionTitle>
       <div>
-        <div className="flex justify-between items-center text-xs text-slate-500 mb-1"><span className="font-semibold">格子缩放像素</span><span className="font-mono font-bold text-indigo-600">{scale}px</span></div>
+        <div className="flex justify-between items-center mb-1.5">
+          <span className="text-[13px] font-bold text-slate-600">格子缩放像素</span>
+          <span className="font-mono font-bold text-indigo-500 text-[13px]">{scale}px</span>
+        </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => setScale(Math.max(8, scale - 2))} className="p-2 rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-250 transition-colors cursor-pointer"><ZoomOut className="w-3.5 h-3.5" /></button>
-          <input type="range" min="8" max="32" step="1" value={scale} onChange={e => setScale(parseInt(e.target.value))} className="flex-1 accent-indigo-600 h-2.5 bg-slate-200 rounded-lg cursor-pointer" />
-          <button onClick={() => setScale(Math.min(32, scale + 2))} className="p-2 rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-250 transition-colors cursor-pointer"><ZoomIn className="w-3.5 h-3.5" /></button>
+          <button onClick={() => setScale(Math.max(8, scale - 2))} className="p-2 rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200 transition-colors cursor-pointer"><ZoomOut className="w-4 h-4" /></button>
+          <input type="range" min="8" max="32" step="1" value={scale} onChange={e => setScale(parseInt(e.target.value))} className="flex-1 accent-indigo-500 h-2.5 bg-slate-200 rounded-lg cursor-pointer" />
+          <button onClick={() => setScale(Math.min(32, scale + 2))} className="p-2 rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200 transition-colors cursor-pointer"><ZoomIn className="w-4 h-4" /></button>
         </div>
       </div>
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center justify-between"><span className="text-xs text-slate-700 font-semibold flex items-center gap-1"><Grid3X3 className="w-3.5 h-3.5 text-slate-400" /> 预览与导出显示行号列号</span>
-          <button onClick={() => setShowRulers(!showRulers)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${showRulers ? 'bg-indigo-600' : 'bg-slate-200'}`}><span className={`inline-block h-4.5 w-4.5 transform rounded-full bg-white transition-transform ${showRulers ? 'translate-x-5.5' : 'translate-x-0.5'}`} /></button>
+      <div className="flex flex-col gap-3 pt-2">
+        <div className="flex items-center justify-between">
+          <span className="text-[13px] text-slate-700 font-bold flex items-center gap-1.5"><Grid3X3 className="w-4 h-4 text-slate-400" /> 显示行号列号</span>
+          <Toggle on={showRulers} onClick={() => setShowRulers(!showRulers)} />
         </div>
-        <div className="flex items-center justify-between"><span className="text-xs text-slate-700 font-semibold flex items-center gap-1"><Hash className="w-3.5 h-3.5 text-slate-400" /> 图纸格子覆盖色号标识</span>
-          <button onClick={() => setShowNumbers(!showNumbers)} disabled={scale < 16 && !showNumbers} title={scale < 16 ? '请拉大网格显示尺寸以开启色号' : ''} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${showNumbers ? 'bg-indigo-600' : 'bg-slate-200'} ${scale < 16 && !showNumbers ? 'opacity-50 cursor-not-allowed' : ''}`}><span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${showNumbers ? 'translate-x-4.5' : 'translate-x-1'}`} /></button>
+        <div className="flex items-center justify-between">
+          <span className="text-[13px] text-slate-700 font-bold flex items-center gap-1.5"><Hash className="w-4 h-4 text-slate-400" /> 格子色号标识</span>
+          <button onClick={() => setShowNumbers(!showNumbers)} disabled={scale < 16 && !showNumbers} title={scale < 16 ? '请拉大网格尺寸以开启色号' : ''} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${showNumbers ? 'bg-indigo-500' : 'bg-slate-300'} ${scale < 16 && !showNumbers ? 'opacity-40 cursor-not-allowed' : ''}`}><span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${showNumbers ? 'translate-x-6' : 'translate-x-1'}`} /></button>
         </div>
       </div>
-      {scale < 16 && showNumbers && <p className="text-xs text-amber-600 leading-tight">提示: 网格渲染尺寸较小 (当前 {scale}px)，图纸中可能会无法看清标记，建议调拉高上方网格尺寸。</p>}
+      {scale < 16 && showNumbers && <p className="text-[13px] text-amber-600 leading-tight">提示: 网格尺寸较小 (当前 {scale}px)，色号可能无法看清。</p>}
     </div>
   );
 }

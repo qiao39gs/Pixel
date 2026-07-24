@@ -18,24 +18,24 @@ export default function PalettePanel({ currentPalette }: Props) {
   if (!editMode || !showPalettePanel) return null;
 
   return (
-    <div className="absolute top-14 left-1/2 -translate-x-1/2 z-30 w-[92vw] max-w-[680px] max-h-[60vh] flex flex-col glass-panel rounded-2xl overflow-hidden animate-panel-pop">
+    <div className="absolute top-16 left-1/2 -translate-x-1/2 z-30 w-[92vw] max-w-[680px] max-h-[60vh] flex flex-col glass-panel rounded-2xl overflow-hidden animate-panel-pop">
       <div className="flex-1 overflow-y-auto p-3 scrollbar-dark">
         {COLOR_GROUPS.map(group => {
           const groupBeads = currentPalette.filter(b => b.series === group.series);
           if (groupBeads.length === 0) return null;
           return (
             <div key={group.series} className="mb-3 last:mb-0">
-              <div className="text-xs font-bold text-slate-500 mb-1.5">{group.name}</div>
+              <div className="text-[13px] font-bold text-slate-500 mb-1.5">{group.name}</div>
               <div className="flex flex-wrap gap-1">
                 {groupBeads.map(b => (
                   <button
                     key={b.code}
                     onClick={() => { setBrushBead(b); setIsEraser(false); }}
-                    className="w-9 h-9 rounded-md border transition-all cursor-pointer relative group/bead"
+                    className="w-9 h-9 rounded-lg border transition-all cursor-pointer relative group/bead hover:scale-125 hover:z-10"
                     style={{
                       backgroundColor: b.hex,
-                      borderColor: brushBead?.code === b.code ? '#E8570A' : 'rgba(0,0,0,0.08)',
-                      boxShadow: brushBead?.code === b.code ? '0 0 0 2px #E8570A' : 'none',
+                      borderColor: brushBead?.code === b.code ? '#6366F1' : 'rgba(0,0,0,0.08)',
+                      boxShadow: brushBead?.code === b.code ? '0 0 0 2px #6366F1' : 'none',
                     }}
                     title={b.code + ' ' + b.name}
                   >

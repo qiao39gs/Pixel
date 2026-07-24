@@ -257,20 +257,20 @@ export default function StatsPanel() {
         </div>
       )}
 
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center pb-3.5 border-b border-slate-100 mb-5 gap-3">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center pb-3 mb-5 gap-3 border-b border-slate-200/60">
         <div className="flex flex-col">
-          <h3 className="font-sans font-semibold text-[#1D1D1F] text-sm flex items-center gap-2 leading-none"><Grid3X3 className="w-4 h-4 text-indigo-500" />MARD 标准色卡</h3>
-          <span className="text-xs text-slate-400 font-semibold mt-1 font-mono uppercase tracking-wider">
+          <h3 className="font-sans font-bold text-slate-800 text-sm flex items-center gap-2 leading-none"><Grid3X3 className="w-4 h-4 text-slate-400" />MARD 标准色卡</h3>
+          <span className="text-[13px] text-slate-500 font-semibold mt-1 font-mono uppercase tracking-wider">
             材料总用量: <strong className="text-slate-800">{transformedPixels.filter(p => p.matchedBead.code !== 'EMPTY').length} 颗</strong>
           </span>
         </div>
-        <div className="text-xs text-slate-400 font-semibold md:text-right">
+        <div className="text-[13px] text-slate-500 font-semibold md:text-right">
           {editMode ? (<>
             <span className="hidden md:inline">点击色块设为画笔 · 左键画布填充</span>
             <span className="md:hidden">点按色块设为画笔 · 点按画布填充</span>
           </>) : (<>
-            <span className="hidden md:inline">点击色块聚焦高亮 · 拖拽色块至另一色块快速换色</span>
-            <span className="md:hidden">点按色块聚焦高亮 · 长按拖拽至另一色块快速换色</span>
+            <span className="hidden md:inline">点击色块聚焦 · 拖拽至另一色块换色</span>
+            <span className="md:hidden">点按色块聚焦 · 长按拖拽换色</span>
           </>)}
         </div>
       </div>
@@ -278,61 +278,64 @@ export default function StatsPanel() {
         const seriesStats = stats.filter(s => s.bead.series === group.series);
         if (seriesStats.length === 0) return null;
         return (
-          <div key={group.series} className="mb-5">
-            <div className="flex items-center justify-between mb-2.5 px-1"><span className="text-xs font-bold text-slate-500 uppercase tracking-wider">{group.name}</span><span className="text-xs text-slate-400 font-mono">{seriesStats.reduce((sum, s) => sum + s.count, 0)} 颗 · {seriesStats.length} 色</span></div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-              {seriesStats.map(statItem => {
-                const isSelected = selectedBeadHighlight === statItem.bead.code;
-                return (
-                  <div key={statItem.bead.code}
-                    data-color-code={statItem.bead.code}
-                    draggable
-                    onDragStart={(e) => { e.dataTransfer.setData('text/plain', statItem.bead.code); e.dataTransfer.effectAllowed = 'move'; setDragSource(statItem.bead.code); }}
-                    onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDragOver(statItem.bead.code); }}
-                    onDragLeave={() => setDragOver(null)}
-                    onDragEnd={() => { setDragSource(null); setDragOver(null); }}
-                    onDrop={(e) => { e.preventDefault(); const src = e.dataTransfer.getData('text/plain'); if (src && src !== statItem.bead.code) swapColor(src, statItem.bead); setDragSource(null); setDragOver(null); }}
-                    onTouchStart={onItemTouchStart(statItem.bead.code)}
-                    onTouchMove={onItemTouchMove}
-                    onTouchEnd={onItemTouchEnd}
-                    className={`flex items-center justify-between p-3 rounded-2xl border transition-all cursor-pointer select-none ${dragSource === statItem.bead.code ? 'ring-2 ring-amber-400 opacity-70' : dragOver === statItem.bead.code ? 'border-dashed border-indigo-400 bg-indigo-50/30 scale-[1.02]' : isSelected ? 'border-indigo-600 bg-indigo-50/20 shadow-xs' : 'border-slate-100 hover:bg-slate-50 bg-white'}`}>
-                    <div className="flex items-center gap-3">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); if (suppressClickRef.current) { suppressClickRef.current = false; return; } editMode ? setBrushBead(statItem.bead) : setSelectedBeadHighlight(isSelected ? null : statItem.bead.code); }}
-                        className="w-10 h-10 rounded-full shadow-inner border border-black/[0.04] flex items-center justify-center font-mono font-bold text-xs transition-transform hover:scale-110 cursor-pointer flex-shrink-0"
-                        style={{ backgroundColor: statItem.bead.hex, color: ['#FFFFFF','#F5F5F5','#FFE0B2'].includes(statItem.bead.hex) ? '#334155' : '#FFFFFF' }}
-                        title={editMode ? '设为画笔' : (isSelected ? '取消高亮' : '聚焦高亮')}
-                      >
-                        {statItem.bead.code}
-                      </button>
-                      <div className="flex flex-col">
-                        <span className="font-bold text-slate-900 text-xs leading-none">{statItem.bead.name}</span>
-                        <span className="text-xs text-slate-400 mt-0.5 font-mono">#{statItem.bead.code}</span>
-                        {similarityMap && dragSource !== statItem.bead.code && (() => {
-                          const sim = similarityMap.get(statItem.bead.code);
-                          if (sim === undefined) return null;
-                          const colorCls = sim >= 90 ? 'text-emerald-600' : sim >= 70 ? 'text-amber-600' : 'text-slate-400';
-                          return <span className={`text-[10px] font-mono font-bold mt-0.5 ${colorCls}`}>{sim}% 相似</span>;
-                        })()}
-                        {dragSource === statItem.bead.code && (
-                          <span className="text-[10px] font-mono font-bold mt-0.5 text-amber-500">拖拽中</span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="text-right">
-                        <div className="font-sans font-bold text-slate-800 text-sm tabular-nums">{statItem.count} <span className="text-xs font-normal text-slate-400">颗</span></div>
-                      </div>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); if (suppressClickRef.current) { suppressClickRef.current = false; return; } setSwapSource(statItem.bead.code); }}
-                        className="px-2 py-1 text-xs font-bold rounded-lg bg-slate-100 text-slate-500 hover:bg-indigo-50 hover:text-indigo-600 transition-colors cursor-pointer flex-shrink-0"
-                      >换色</button>
+<div key={group.series} className="mb-6">
+          <div className="flex items-center justify-between mb-3 px-1">
+            <span className="text-[13px] font-bold text-slate-600 uppercase tracking-wider">{group.name}</span>
+            <span className="text-[13px] text-slate-500 font-mono">{seriesStats.reduce((sum, s) => sum + s.count, 0)} 颗 · {seriesStats.length} 色</span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+            {seriesStats.map(statItem => {
+              const isSelected = selectedBeadHighlight === statItem.bead.code;
+              return (
+                <div key={statItem.bead.code}
+                  data-color-code={statItem.bead.code}
+                  draggable
+                  onDragStart={(e) => { e.dataTransfer.setData('text/plain', statItem.bead.code); e.dataTransfer.effectAllowed = 'move'; setDragSource(statItem.bead.code); }}
+                  onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDragOver(statItem.bead.code); }}
+                  onDragLeave={() => setDragOver(null)}
+                  onDragEnd={() => { setDragSource(null); setDragOver(null); }}
+                  onDrop={(e) => { e.preventDefault(); const src = e.dataTransfer.getData('text/plain'); if (src && src !== statItem.bead.code) swapColor(src, statItem.bead); setDragSource(null); setDragOver(null); }}
+                  onTouchStart={onItemTouchStart(statItem.bead.code)}
+                  onTouchMove={onItemTouchMove}
+                  onTouchEnd={onItemTouchEnd}
+                  className={`flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer select-none ${dragSource === statItem.bead.code ? 'ring-2 ring-amber-400 opacity-70' : dragOver === statItem.bead.code ? 'border-dashed border-indigo-400 bg-indigo-50/30 scale-[1.02]' : isSelected ? 'border-indigo-400 bg-indigo-50/30' : 'border-slate-200/60 hover:bg-slate-50 bg-white'}`}>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); if (suppressClickRef.current) { suppressClickRef.current = false; return; } editMode ? setBrushBead(statItem.bead) : setSelectedBeadHighlight(isSelected ? null : statItem.bead.code); }}
+                    className="w-10 h-10 rounded-full shadow-inner border border-black/[0.06] flex items-center justify-center font-mono font-bold text-[11px] transition-transform hover:scale-110 cursor-pointer flex-shrink-0"
+                    style={{ backgroundColor: statItem.bead.hex, color: ['#FFFFFF','#F5F5F5','#FFE0B2'].includes(statItem.bead.hex) ? '#334155' : '#FFFFFF' }}
+                    title={editMode ? '设为画笔' : (isSelected ? '取消高亮' : '聚焦高亮')}
+                  >
+                    {statItem.bead.code}
+                  </button>
+                  <div className="flex-1 min-w-0 flex flex-col">
+                    <span className="font-bold text-slate-800 text-[13px] leading-tight truncate">{statItem.bead.name}</span>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-[13px] text-slate-500 font-mono">#{statItem.bead.code}</span>
+                      <span className="text-[13px] text-slate-400 font-mono">·</span>
+                      <span className="text-[13px] font-mono font-bold text-slate-600 tabular-nums">{statItem.count} 颗</span>
+                      {similarityMap && dragSource !== statItem.bead.code && (() => {
+                        const sim = similarityMap.get(statItem.bead.code);
+                        if (sim === undefined) return null;
+                        const colorCls = sim >= 90 ? 'text-emerald-600' : sim >= 70 ? 'text-amber-600' : 'text-slate-400';
+                        return <span className={`text-[11px] font-mono font-bold ${colorCls}`}>{sim}%</span>;
+                      })()}
+                      {dragSource === statItem.bead.code && (
+                        <span className="text-[11px] font-mono font-bold text-amber-500">拖拽中</span>
+                      )}
                     </div>
                   </div>
-                );
-              })}
-            </div>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); if (suppressClickRef.current) { suppressClickRef.current = false; return; } setSwapSource(statItem.bead.code); }}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 transition-colors cursor-pointer flex-shrink-0"
+                    title="换色"
+                  >
+                    <ArrowLeftRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              );
+            })}
           </div>
+        </div>
         );
       })}
     </div>

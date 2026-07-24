@@ -115,19 +115,27 @@ function renderGridLayer(
 
   const gw = ew * scale, gh = eh * scale;
 
-  ctx.strokeStyle = '#cbd5e1'; ctx.lineWidth = 0.5;
-  for (let x = 1; x < ew; x++) { ctx.beginPath(); ctx.moveTo(x * scale, 0); ctx.lineTo(x * scale, gh); ctx.stroke(); }
-  for (let y = 1; y < eh; y++) { ctx.beginPath(); ctx.moveTo(0, y * scale); ctx.lineTo(gw, y * scale); ctx.stroke(); }
+  // 弱化普通网格线 — 仅在 scale >= 10 时绘制
+  if (scale >= 10) {
+    ctx.strokeStyle = '#E2E8F0'; ctx.lineWidth = 0.5;
+    for (let x = 1; x < ew; x++) { ctx.beginPath(); ctx.moveTo(x * scale, 0); ctx.lineTo(x * scale, gh); ctx.stroke(); }
+    for (let y = 1; y < eh; y++) { ctx.beginPath(); ctx.moveTo(0, y * scale); ctx.lineTo(gw, y * scale); ctx.stroke(); }
+  } else {
+    // 极低缩放：仅绘制外框
+    ctx.strokeStyle = '#E2E8F0'; ctx.lineWidth = 0.5;
+    ctx.strokeRect(0, 0, gw, gh);
+  }
 
+  // 5/10 参考线 — 降低对比度
   for (let x = 1; x < ew; x++) {
-    if (x % 10 === 0) { ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 1.5; ctx.setLineDash([]); }
-    else if (x % 5 === 0) { ctx.strokeStyle = '#f87171'; ctx.lineWidth = 1.0; ctx.setLineDash([4, 4]); }
+    if (x % 10 === 0) { ctx.strokeStyle = '#FCA5A5'; ctx.lineWidth = 1.0; ctx.setLineDash([]); }
+    else if (x % 5 === 0) { ctx.strokeStyle = '#FECACA'; ctx.lineWidth = 0.8; ctx.setLineDash([4, 4]); }
     else continue;
     ctx.beginPath(); ctx.moveTo(x * scale, 0); ctx.lineTo(x * scale, gh); ctx.stroke(); ctx.setLineDash([]);
   }
   for (let y = 1; y < eh; y++) {
-    if (y % 10 === 0) { ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 1.5; ctx.setLineDash([]); }
-    else if (y % 5 === 0) { ctx.strokeStyle = '#f87171'; ctx.lineWidth = 1.0; ctx.setLineDash([4, 4]); }
+    if (y % 10 === 0) { ctx.strokeStyle = '#FCA5A5'; ctx.lineWidth = 1.0; ctx.setLineDash([]); }
+    else if (y % 5 === 0) { ctx.strokeStyle = '#FECACA'; ctx.lineWidth = 0.8; ctx.setLineDash([4, 4]); }
     else continue;
     ctx.beginPath(); ctx.moveTo(0, y * scale); ctx.lineTo(gw, y * scale); ctx.stroke(); ctx.setLineDash([]);
   }
@@ -270,11 +278,23 @@ export function useCanvasRenderer({ canvasRef, transformedPixels, gridWidth, gri
     ctx.save();
     ctx.translate(rulerSize, rulerSize);
 
+    const ew_eff = gridWidth - rightTrim - leftTrim;
+    const eh_eff = overlayRef.current.gridHeight - bottomTrim - topTrim;
+    const gw_eff = ew_eff * scale;
+    const gh_eff = eh_eff * scale;
+
     const inBounds = (sx: number, sy: number) => sx >= leftTrim && sx < gridWidth - rightTrim && sy >= topTrim && sy < (overlayRef.current.gridHeight) - bottomTrim;
 
     if (editMode && selectedCell && inBounds(selectedCell.x, selectedCell.y)) {
+      const sx = (selectedCell.x - leftTrim) * scale;
+      const sy = (selectedCell.y - topTrim) * scale;
+      // 行列辅助线 — 淡蓝十字
+      ctx.strokeStyle = 'rgba(99, 102, 241, 0.18)'; ctx.lineWidth = 1; ctx.setLineDash([]);
+      ctx.beginPath(); ctx.moveTo(sx + scale / 2, 0); ctx.lineTo(sx + scale / 2, gh_eff); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, sy + scale / 2); ctx.lineTo(gw_eff, sy + scale / 2); ctx.stroke();
+      // 选中框
       ctx.strokeStyle = '#FBBF24'; ctx.lineWidth = 2; ctx.setLineDash([3, 2]);
-      ctx.strokeRect((selectedCell.x - leftTrim) * scale + 1, (selectedCell.y - topTrim) * scale + 1, scale - 2, scale - 2);
+      ctx.strokeRect(sx + 1, sy + 1, scale - 2, scale - 2);
       ctx.setLineDash([]);
     }
     if (editMode && wandMode && wandSelection.size > 0) {

@@ -14,7 +14,6 @@ export default function MobileToolbar({ currentPalette }: Props) {
   const dragMode = useWorkspaceStore(s => s.dragMode);
   const setDragMode = useWorkspaceStore(s => s.setDragMode);
   const setBrushBead = useWorkspaceStore(s => s.setBrushBead);
-  const setSelectedCell = useWorkspaceStore(s => s.setSelectedCell);
   const setIsEraser = useWorkspaceStore(s => s.setIsEraser);
   const setWandMode = useWorkspaceStore(s => s.setWandMode);
   const setWandSelection = useWorkspaceStore(s => s.setWandSelection);
@@ -34,9 +33,9 @@ export default function MobileToolbar({ currentPalette }: Props) {
   };
 
   const toolBtn = (active: boolean, onClick: () => void, title: string, Icon: React.ComponentType<{ className?: string }>, label: string, activeCls = 'bg-indigo-500 text-white') => (
-    <button onClick={onClick} title={title} className={`flex items-center gap-1.5 px-2.5 py-2 rounded-xl transition-all cursor-pointer ${active ? activeCls : 'text-slate-200 hover:bg-white/15'}`}>
+    <button onClick={onClick} title={title} className={`flex items-center gap-1.5 px-2.5 h-9 rounded-lg transition-all cursor-pointer ${active ? activeCls : 'text-slate-200 hover:bg-white/15'}`}>
       <Icon className="w-4 h-4" />
-      <span className="text-xs font-bold">{label}</span>
+      <span className="text-[13px] font-bold">{label}</span>
     </button>
   );
 

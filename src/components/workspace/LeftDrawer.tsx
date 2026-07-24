@@ -21,22 +21,22 @@ export default function LeftDrawer({ onTriggerEnhance }: { onTriggerEnhance: () 
   if (!leftOpen) return null;
 
   return (
-    <div className="absolute left-3 top-14 bottom-3 z-30 flex flex-col w-[88vw] max-w-[380px] glass-panel rounded-3xl overflow-hidden animate-drawer-left">
-      <header className="flex items-center justify-between px-3 py-2.5 border-b border-black/[0.06] shrink-0">
-        <div className="flex items-center gap-1.5 text-slate-700">
-          <Sliders className="w-4 h-4 text-indigo-500" />
-          <span className="font-sans font-semibold text-sm">参数面板</span>
+    <div className="absolute left-3 top-16 bottom-3 z-30 flex flex-col w-[88vw] max-w-[360px] glass-panel rounded-2xl overflow-hidden animate-drawer-left">
+      <header className="flex items-center justify-between px-4 py-3 border-b border-slate-200/60 shrink-0">
+        <div className="flex items-center gap-2 text-slate-800">
+          <Sliders className="w-4 h-4 text-slate-400" />
+          <span className="font-sans font-bold text-sm">参数面板</span>
         </div>
-        <button onClick={toggleLeftDrawer} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors cursor-pointer">
-          <X className="w-4 h-4" />
+        <button onClick={toggleLeftDrawer} className="p-2 -m-2 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors cursor-pointer" title="关闭">
+            <X className="w-4 h-4" />
         </button>
       </header>
-      <div className="flex gap-1 px-3 py-2 border-b border-black/[0.04] shrink-0 overflow-x-auto scrollbar-dark">
+      <div className="flex gap-1 px-3 py-2.5 border-b border-slate-200/40 shrink-0 overflow-x-auto scrollbar-dark">
         {TABS.map(t => (
           <button
             key={t.id}
             onClick={() => setLeftDrawerTab(t.id)}
-            className={`px-2.5 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer whitespace-nowrap ${leftDrawerTab === t.id ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-100'}`}
+            className={`h-8 px-3 text-[13px] font-bold rounded-lg transition-all cursor-pointer whitespace-nowrap ${leftDrawerTab === t.id ? 'bg-indigo-500 text-white' : 'text-slate-500 hover:bg-slate-100'}`}
           >{t.label}</button>
         ))}
       </div>
