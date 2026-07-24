@@ -14,6 +14,7 @@ interface Params {
   showNumbers: boolean;
   showRulers: boolean;
   selectedBeadHighlight: string | null;
+  hoverBeadHighlight: string | null;
   editMode: boolean;
   selectedCell: { x: number; y: number } | null;
   wandMode: boolean;
@@ -161,6 +162,7 @@ function renderTextLayer(
   showNumbers: boolean,
   showRulers: boolean,
   highlight: string | null,
+  hoverHighlight: string | null,
 ): void {
   ctx.clearRect(0, 0, cw, ch);
   ctx.save();
@@ -169,18 +171,26 @@ function renderTextLayer(
   const ew = gridWidth - leftTrim - rightTrim;
   const eh = gridHeight - topTrim - bottomTrim;
 
-  if (showNumbers && scale >= 12) {
+  // 分级显示：highlight/hover 色号始终显示；普通色号 scale >= 13 显示（约 90%）
+  const alwaysShowCode = highlight ?? hoverHighlight;
+  if (showNumbers) {
     const fontSize = Math.max(8, Math.floor(scale / 2.5));
-    pixels.forEach(p => {
-      if (p.matchedBead.code === 'EMPTY') return;
-      if (highlight !== null && p.matchedBead.code !== highlight) return;
-      if (p.x < leftTrim || p.x >= gridWidth - rightTrim || p.y < topTrim || p.y >= gridHeight - bottomTrim) return;
-      const rgb = hexToRgb(p.matchedBead.hex);
-      ctx.fillStyle = luminance(rgb) > 140 ? '#0F172A' : '#FFFFFF';
-      ctx.font = `bold ${fontSize}px monospace`;
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(p.matchedBead.code, (p.x - xOff) * scale + scale / 2, (p.y - yOff) * scale + scale / 2 + 0.5);
-    });
+    const showNormal = scale >= 13;
+    if (showNormal || alwaysShowCode) {
+      pixels.forEach(p => {
+        if (p.matchedBead.code === 'EMPTY') return;
+        if (p.x < leftTrim || p.x >= gridWidth - rightTrim || p.y < topTrim || p.y >= gridHeight - bottomTrim) return;
+        const code = p.matchedBead.code;
+        // 高亮模式下仅画高亮色；否则普通缩放显示所有，或仅画 hover 色
+        if (highlight !== null && code !== highlight) return;
+        if (highlight === null && !showNormal && code !== hoverHighlight) return;
+        const rgb = hexToRgb(p.matchedBead.hex);
+        ctx.fillStyle = luminance(rgb) > 140 ? '#0F172A' : '#FFFFFF';
+        ctx.font = `bold ${fontSize}px monospace`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(code, (p.x - xOff) * scale + scale / 2, (p.y - yOff) * scale + scale / 2 + 0.5);
+      });
+    }
   }
 
   if (showRulers) {
@@ -241,7 +251,7 @@ function renderPixelDirty(
   ctx.restore();
 }
 
-export function useCanvasRenderer({ canvasRef, transformedPixels, gridWidth, gridHeight, scale, showNumbers, showRulers, selectedBeadHighlight, editMode, selectedCell, wandMode, wandSelection }: Params) {
+export function useCanvasRenderer({ canvasRef, transformedPixels, gridWidth, gridHeight, scale, showNumbers, showRulers, selectedBeadHighlight, hoverBeadHighlight, editMode, selectedCell, wandMode, wandSelection }: Params) {
   const bgLayerRef = useRef<HTMLCanvasElement | null>(null);
   const pixelLayerRef = useRef<HTMLCanvasElement | null>(null);
   const gridLayerRef = useRef<HTMLCanvasElement | null>(null);
@@ -313,6 +323,7 @@ export function useCanvasRenderer({ canvasRef, transformedPixels, gridWidth, gri
     scale: 0, gridWidth: 0, gridHeight: 0,
     showNumbers: false, showRulers: false,
     selectedBeadHighlight: null as string | null,
+    hoverBeadHighlight: null as string | null,
     leftTrim: 0, rightTrim: 0, topTrim: 0, bottomTrim: 0,
   });
   const prevPixelsRef = useRef(transformedPixels);
@@ -337,12 +348,13 @@ export function useCanvasRenderer({ canvasRef, transformedPixels, gridWidth, gri
     const rulersChanged = showRulers !== prev.showRulers;
     const trimChanged = leftTrim !== prev.leftTrim || rightTrim !== prev.rightTrim || topTrim !== prev.topTrim || bottomTrim !== prev.bottomTrim;
     const hlChanged = selectedBeadHighlight !== prev.selectedBeadHighlight;
+    const hoverChanged = hoverBeadHighlight !== prev.hoverBeadHighlight;
     const showNumbersChanged = showNumbers !== prev.showNumbers;
 
     const needsBg = scaleChanged || dimsChanged || rulersChanged || trimChanged;
     const needsPixels = pixelsChanged || scaleChanged || dimsChanged || trimChanged || hlChanged;
     const needsGrid = scaleChanged || dimsChanged || rulersChanged || trimChanged;
-    const needsText = scaleChanged || dimsChanged || trimChanged || hlChanged || showNumbersChanged || rulersChanged || (pixelsChanged && showNumbers);
+    const needsText = scaleChanged || dimsChanged || trimChanged || hlChanged || hoverChanged || showNumbersChanged || rulersChanged || (pixelsChanged && showNumbers);
 
     if (needsBg) renderBgLayer(allocCanvas(bgLayerRef, cw, ch), cw, ch, ew, eh, scale, rulerSize);
     if (needsPixels) {
@@ -359,13 +371,13 @@ export function useCanvasRenderer({ canvasRef, transformedPixels, gridWidth, gri
       }
     }
     if (needsGrid) renderGridLayer(allocCanvas(gridLayerRef, cw, ch), cw, ch, ew, eh, scale, rulerSize);
-    if (needsText) renderTextLayer(allocCanvas(textLayerRef, cw, ch), cw, ch, scale, rulerSize, xOff, yOff, transformedPixels, leftTrim, rightTrim, topTrim, bottomTrim, gridWidth, gridHeight, showNumbers, showRulers, selectedBeadHighlight);
+    if (needsText) renderTextLayer(allocCanvas(textLayerRef, cw, ch), cw, ch, scale, rulerSize, xOff, yOff, transformedPixels, leftTrim, rightTrim, topTrim, bottomTrim, gridWidth, gridHeight, showNumbers, showRulers, selectedBeadHighlight, hoverBeadHighlight);
 
     composite();
 
-    prevRef.current = { scale, gridWidth, gridHeight, showNumbers, showRulers, selectedBeadHighlight, leftTrim, rightTrim, topTrim, bottomTrim };
+    prevRef.current = { scale, gridWidth, gridHeight, showNumbers, showRulers, selectedBeadHighlight, hoverBeadHighlight, leftTrim, rightTrim, topTrim, bottomTrim };
     prevPixelsRef.current = transformedPixels;
-  }, [transformedPixels, scale, gridWidth, gridHeight, showNumbers, showRulers, selectedBeadHighlight, topTrim, bottomTrim, leftTrim, rightTrim, composite]);
+  }, [transformedPixels, scale, gridWidth, gridHeight, showNumbers, showRulers, selectedBeadHighlight, hoverBeadHighlight, topTrim, bottomTrim, leftTrim, rightTrim, composite]);
 
   useEffect(() => {
     composite();

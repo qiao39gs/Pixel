@@ -12,6 +12,7 @@ export default function StatsPanel() {
   const setBrushBead = useWorkspaceStore(s => s.setBrushBead);
   const selectedBeadHighlight = useWorkspaceStore(s => s.selectedBeadHighlight);
   const setSelectedBeadHighlight = useWorkspaceStore(s => s.setSelectedBeadHighlight);
+  const setHoverBeadHighlight = useWorkspaceStore(s => s.setHoverBeadHighlight);
   const transformedPixels = useWorkspaceStore(s => s.transformedPixels);
   const swapColor = useWorkspaceStore(s => s.swapColor);
 
@@ -298,7 +299,9 @@ export default function StatsPanel() {
                   onTouchStart={onItemTouchStart(statItem.bead.code)}
                   onTouchMove={onItemTouchMove}
                   onTouchEnd={onItemTouchEnd}
-                  className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all cursor-pointer select-none ${dragSource === statItem.bead.code ? 'ring-2 ring-amber-400 opacity-70' : dragOver === statItem.bead.code ? 'border-dashed border-indigo-400 bg-indigo-50/30 scale-[1.02]' : isSelected ? 'border-indigo-400 bg-indigo-50/30' : 'border-slate-200/60 hover:bg-slate-50 bg-white'}`}>
+                  onMouseEnter={() => { if (!editMode) setHoverBeadHighlight(statItem.bead.code); }}
+                  onMouseLeave={() => { if (!editMode) setHoverBeadHighlight(null); }}
+                  className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all cursor-pointer select-none relative overflow-hidden ${dragSource === statItem.bead.code ? 'ring-2 ring-amber-400 opacity-70' : dragOver === statItem.bead.code ? 'border-dashed border-indigo-400 bg-indigo-50/30 scale-[1.02]' : isSelected ? 'border-indigo-400 bg-indigo-50/30 shadow-[inset_3px_0_0_0_#6366F1]' : 'border-slate-200/60 hover:bg-slate-50 bg-white'}`}>
                   <button
                     onClick={(e) => { e.stopPropagation(); if (suppressClickRef.current) { suppressClickRef.current = false; return; } editMode ? setBrushBead(statItem.bead) : setSelectedBeadHighlight(isSelected ? null : statItem.bead.code); }}
                     className="w-10 h-10 rounded-full shadow-inner border border-black/[0.06] flex items-center justify-center font-mono font-bold text-[11px] transition-transform hover:scale-110 cursor-pointer flex-shrink-0"

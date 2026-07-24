@@ -31,6 +31,7 @@ interface WorkspaceStore {
   showNumbers: boolean;
   showRulers: boolean;
   selectedBeadHighlight: string | null;
+  hoverBeadHighlight: string | null;
   isPanning: boolean;
   panOffset: { x: number; y: number };
   panStart: { x: number; y: number };
@@ -79,6 +80,7 @@ interface WorkspaceStore {
   setShowNumbers: (v: boolean) => void;
   setShowRulers: (v: boolean) => void;
   setSelectedBeadHighlight: (v: string | null) => void;
+  setHoverBeadHighlight: (v: string | null) => void;
   setIsPanning: (v: boolean) => void;
   setPanOffset: (v: { x: number; y: number }) => void;
   setPanStart: (v: { x: number; y: number }) => void;
@@ -152,6 +154,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   showNumbers: true,
   showRulers: true,
   selectedBeadHighlight: null,
+  hoverBeadHighlight: null,
   isPanning: false,
   panOffset: { x: 0, y: 0 },
   panStart: { x: 0, y: 0 },
@@ -200,6 +203,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   setShowNumbers: (v) => set({ showNumbers: v }),
   setShowRulers: (v) => set({ showRulers: v }),
   setSelectedBeadHighlight: (v) => set({ selectedBeadHighlight: v }),
+  setHoverBeadHighlight: (v) => set({ hoverBeadHighlight: v }),
   setIsPanning: (v) => set({ isPanning: v }),
   setPanOffset: (v) => set({ panOffset: v }),
   setPanStart: (v) => set({ panStart: v }),

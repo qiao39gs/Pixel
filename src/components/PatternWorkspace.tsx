@@ -39,6 +39,7 @@ export default function PatternWorkspace({ croppedImageDataUrl, onReset, aspectR
   const showNumbers = useWorkspaceStore(s => s.showNumbers);
   const showRulers = useWorkspaceStore(s => s.showRulers);
   const selectedBeadHighlight = useWorkspaceStore(s => s.selectedBeadHighlight);
+  const hoverBeadHighlight = useWorkspaceStore(s => s.hoverBeadHighlight);
   const editMode = useWorkspaceStore(s => s.editMode);
   const selectedCell = useWorkspaceStore(s => s.selectedCell);
   const wandMode = useWorkspaceStore(s => s.wandMode);
@@ -72,7 +73,7 @@ export default function PatternWorkspace({ croppedImageDataUrl, onReset, aspectR
 
   useImageProcessing({ croppedImageDataUrl: effectiveImage, removeBackground, colorLimit, distanceAlgorithm, kMedoidsOptimize, currentPalette, gridWidth, gridHeight, brightness, contrast, saturation });
 
-  useCanvasRenderer({ canvasRef, transformedPixels, gridWidth: gridWidthActual, gridHeight: gridHeightActual, scale, showNumbers, showRulers, selectedBeadHighlight, editMode, selectedCell, wandMode, wandSelection });
+  useCanvasRenderer({ canvasRef, transformedPixels, gridWidth: gridWidthActual, gridHeight: gridHeightActual, scale, showNumbers, showRulers, selectedBeadHighlight, hoverBeadHighlight, editMode, selectedCell, wandMode, wandSelection });
 
   // 键盘快捷键（Excalidraw 风格）
   useEffect(() => {

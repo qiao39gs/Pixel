@@ -21,7 +21,7 @@ export default function LeftDrawer({ onTriggerEnhance }: { onTriggerEnhance: () 
   if (!leftOpen) return null;
 
   return (
-    <div className="absolute left-3 top-16 bottom-3 z-30 flex flex-col w-[88vw] max-w-[360px] glass-panel rounded-2xl overflow-hidden animate-drawer-left">
+    <div className="absolute left-3 top-16 bottom-3 z-30 flex flex-col w-[88vw] max-w-[340px] glass-panel rounded-2xl overflow-hidden animate-drawer-left">
       <header className="flex items-center justify-between px-4 py-3 border-b border-slate-200/60 shrink-0">
         <div className="flex items-center gap-2 text-slate-800">
           <Sliders className="w-4 h-4 text-slate-400" />

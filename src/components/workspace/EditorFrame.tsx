@@ -6,7 +6,6 @@ import LeftDrawer from './LeftDrawer';
 import RightStatsPanel from './RightStatsPanel';
 import ProjectDrawer from './ProjectDrawer';
 import PalettePanel from './PalettePanel';
-import ZoomControls from './ZoomControls';
 import MobileToolbar from './MobileToolbar';
 import Toasts from './Toasts';
 
@@ -38,7 +37,6 @@ export default function EditorFrame(props: Props) {
       />
       <LeftDrawer onTriggerEnhance={props.onTriggerEnhance} />
       <RightStatsPanel />
-      <ZoomControls />
       <Toasts />
       <MobileToolbar currentPalette={props.currentPalette} />
       <ProjectDrawer
