@@ -261,12 +261,12 @@ export default function StatsPanel() {
       )}
 
       <div className="flex items-center justify-between pb-3 mb-5 border-b border-slate-200/60">
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-0.5">
           <h3 className="font-sans font-bold text-slate-800 text-sm flex items-center gap-2 leading-none"><Grid3X3 className="w-4 h-4 text-slate-400" />MARD 标准色卡</h3>
-          <div className="flex items-baseline gap-2">
-            <span className="text-[12px] text-slate-500 font-medium">材料总用量</span>
-            <strong className="text-[16px] text-slate-800 font-mono font-bold tabular-nums">{transformedPixels.filter(p => p.matchedBead.code !== 'EMPTY').length}</strong>
-            <span className="text-[12px] text-slate-500">颗</span>
+          <div className="flex items-baseline gap-1.5">
+            <span className="text-[12px] text-slate-500">总计</span>
+            <strong className="text-[15px] text-slate-800 font-mono font-bold tabular-nums">{transformedPixels.filter(p => p.matchedBead.code !== 'EMPTY').length.toLocaleString()}</strong>
+            <span className="text-[12px] text-slate-500">颗 · {stats.length} 色</span>
           </div>
         </div>
         <div className="group relative shrink-0">
@@ -281,19 +281,26 @@ export default function StatsPanel() {
       {COLOR_GROUPS.map(group => {
         const seriesStats = stats.filter(s => s.bead.series === group.series);
         if (seriesStats.length === 0) return null;
+        const seriesCount = seriesStats.reduce((sum, s) => sum + s.count, 0);
         return (
 <div key={group.series} className="mb-6">
-          <div className="flex items-center justify-between h-9 mb-2 px-1 cursor-pointer select-none hover:bg-slate-50/60 rounded-md transition-colors" onClick={() => toggleGroupCollapse(group.series)}>
-            <div className="flex items-center gap-1.5">
-              <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${collapsedGroups.has(group.series) ? '-rotate-90' : ''}`} />
-              <span className="text-[13px] font-bold text-slate-600 uppercase tracking-wider">{group.name}</span>
+          <div className="flex items-center h-8 mb-1.5 cursor-pointer select-none hover:bg-slate-50/60 rounded-md transition-colors -mx-1 px-1" onClick={() => toggleGroupCollapse(group.series)}>
+            <div className="flex items-center gap-1.5 flex-1 min-w-0">
+              <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform shrink-0 ${collapsedGroups.has(group.series) ? '-rotate-90' : ''}`} />
+              <span className="text-[13px] font-bold text-slate-600 truncate">{group.name}</span>
             </div>
-            <span className="text-[13px] text-slate-500 font-mono tabular-nums"><strong className="text-slate-600 tabular-nums">{seriesStats.reduce((sum, s) => sum + s.count, 0)}</strong> 颗 · {seriesStats.length} 色</span>
+            <div className="flex items-baseline gap-1 shrink-0">
+              <strong className="text-[13px] text-slate-700 font-mono tabular-nums font-semibold">{seriesCount.toLocaleString()}</strong>
+              <span className="text-[11px] text-slate-400">颗</span>
+              <span className="text-[12px] text-slate-400 mx-0.5">·</span>
+              <span className="text-[12px] text-slate-400">{seriesStats.length} 色</span>
+            </div>
           </div>
           {!collapsedGroups.has(group.series) && (
-          <div className="grid grid-cols-1 gap-2">
-            {seriesStats.map(statItem => {
+          <div className="flex flex-col">
+            {seriesStats.map((statItem, idx) => {
               const isSelected = selectedBeadHighlight === statItem.bead.code;
+              const luma = luminance(hexToRgb(statItem.bead.hex));
               return (
                 <div key={statItem.bead.code}
                   data-color-code={statItem.bead.code}
@@ -308,40 +315,38 @@ export default function StatsPanel() {
                   onTouchEnd={onItemTouchEnd}
                   onMouseEnter={() => { if (!editMode) setHoverBeadHighlight(statItem.bead.code); }}
                   onMouseLeave={() => { if (!editMode) setHoverBeadHighlight(null); }}
-                  className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all cursor-pointer select-none relative overflow-hidden ${dragSource === statItem.bead.code ? 'ring-2 ring-amber-400 opacity-70' : dragOver === statItem.bead.code ? 'border-dashed border-indigo-400 bg-indigo-50/30 scale-[1.02]' : isSelected ? 'border-indigo-400 bg-indigo-50/30 shadow-[inset_3px_0_0_0_#6366F1]' : 'border-slate-200/60 hover:bg-slate-50 bg-white'}`}>
+                  className={`group flex items-center gap-2.5 px-2.5 py-2 transition-all cursor-pointer select-none relative ${idx !== 0 ? 'border-t border-slate-100' : ''} ${dragSource === statItem.bead.code ? 'bg-amber-50/40' : dragOver === statItem.bead.code ? 'bg-indigo-50/40 ring-1 ring-indigo-300' : isSelected ? 'bg-indigo-50/30 before:content-[""] before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:bg-indigo-500' : 'hover:bg-slate-50/70'}`}>
                   <button
                     onClick={(e) => { e.stopPropagation(); if (suppressClickRef.current) { suppressClickRef.current = false; return; } editMode ? setBrushBead(statItem.bead) : setSelectedBeadHighlight(isSelected ? null : statItem.bead.code); }}
-                    className="w-10 h-10 rounded-full shadow-inner border border-black/[0.06] flex items-center justify-center font-mono font-bold text-[11px] transition-transform hover:scale-110 cursor-pointer flex-shrink-0"
-                    style={{ backgroundColor: statItem.bead.hex, color: ['#FFFFFF','#F5F5F5','#FFE0B2'].includes(statItem.bead.hex) ? '#334155' : '#FFFFFF' }}
+                    className="w-9 h-9 rounded-full border border-black/[0.08] flex items-center justify-center font-mono font-medium text-[10px] flex-shrink-0"
+                    style={{ backgroundColor: statItem.bead.hex, color: luma > 140 ? '#475569' : '#FFFFFF' }}
                     title={editMode ? '设为画笔' : (isSelected ? '取消高亮' : '聚焦高亮')}
                   >
                     {statItem.bead.code}
                   </button>
-                  <div className="flex-1 min-w-0 flex flex-col justify-center">
-                    <span className="font-bold text-slate-800 text-[13px] leading-tight truncate" title={statItem.bead.name}>{statItem.bead.name}</span>
-                    <div className="flex items-center gap-1.5 mt-0.5">
-                      <span className="text-[12px] text-slate-500 font-mono">#{statItem.bead.code}</span>
-                      {similarityMap && dragSource !== statItem.bead.code && (() => {
-                        const sim = similarityMap.get(statItem.bead.code);
-                        if (sim === undefined) return null;
-                        const colorCls = sim >= 90 ? 'text-emerald-600' : sim >= 70 ? 'text-amber-600' : 'text-slate-400';
-                        return <span className={`text-[11px] font-mono font-bold ${colorCls}`} title="相似度">{sim}%</span>;
-                      })()}
-                      {dragSource === statItem.bead.code && (
-                        <span className="text-[11px] font-mono font-bold text-amber-500">拖拽中</span>
-                      )}
-                    </div>
+                  <div className="flex-1 min-w-0 flex flex-col justify-center leading-tight">
+                    <span className="font-semibold text-slate-800 text-[13px] truncate" title={statItem.bead.name}>{statItem.bead.name}</span>
+                    <span className="text-[11px] text-slate-400 font-mono">#{statItem.bead.code}</span>
                   </div>
-                  <div className="flex flex-col items-end justify-center shrink-0 w-14 pr-1">
-                    <span className="text-[15px] font-mono font-bold text-slate-700 tabular-nums leading-none whitespace-nowrap">{statItem.count}</span>
-                    <span className="text-[11px] text-slate-400 mt-0.5">颗</span>
+                  {similarityMap && dragSource !== statItem.bead.code && (() => {
+                    const sim = similarityMap.get(statItem.bead.code);
+                    if (sim === undefined) return null;
+                    const colorCls = sim >= 90 ? 'text-emerald-600' : sim >= 70 ? 'text-amber-600' : 'text-slate-400';
+                    return <span className={`text-[11px] font-mono font-bold ${colorCls} shrink-0`} title="相似度">{sim}%</span>;
+                  })()}
+                  {dragSource === statItem.bead.code && (
+                    <span className="text-[11px] font-mono font-bold text-amber-500 shrink-0">拖拽中</span>
+                  )}
+                  <div className="flex items-baseline gap-0.5 shrink-0">
+                    <strong className="text-[14px] font-mono font-semibold text-slate-700 tabular-nums">{statItem.count}</strong>
+                    <span className="text-[11px] text-slate-400">颗</span>
                   </div>
                   <button
                     onClick={(e) => { e.stopPropagation(); if (suppressClickRef.current) { suppressClickRef.current = false; return; } setSwapSource(statItem.bead.code); }}
-                    className="p-2 -mr-1 rounded-lg text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 transition-all cursor-pointer flex-shrink-0 opacity-0 group-hover:opacity-100"
+                    className="p-1.5 -mr-1 rounded-md text-slate-400 hover:text-indigo-500 hover:bg-indigo-50/50 transition-all cursor-pointer flex-shrink-0 opacity-0 group-hover:opacity-100"
                     title="换色"
                   >
-                    <ArrowLeftRight className="w-4 h-4" />
+                    <ArrowLeftRight className="w-3.5 h-3.5" />
                   </button>
 </div>
               );
