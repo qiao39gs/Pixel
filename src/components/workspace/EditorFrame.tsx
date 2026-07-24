@@ -8,6 +8,7 @@ import ProjectDrawer from './ProjectDrawer';
 import PalettePanel from './PalettePanel';
 import ZoomControls from './ZoomControls';
 import MobileToolbar from './MobileToolbar';
+import Toasts from './Toasts';
 
 type Palette = Array<BeadPaletteItem & { rgb: { r: number; g: number; b: number }; lab: any }>;
 
@@ -38,6 +39,7 @@ export default function EditorFrame(props: Props) {
       <LeftDrawer onTriggerEnhance={props.onTriggerEnhance} />
       <RightStatsPanel />
       <ZoomControls />
+      <Toasts />
       <MobileToolbar currentPalette={props.currentPalette} />
       <ProjectDrawer
         onReset={props.onReset}

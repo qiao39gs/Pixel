@@ -169,14 +169,15 @@ function renderTextLayer(
   const ew = gridWidth - leftTrim - rightTrim;
   const eh = gridHeight - topTrim - bottomTrim;
 
-  if (showNumbers && scale >= 16) {
+  if (showNumbers && scale >= 12) {
+    const fontSize = Math.max(8, Math.floor(scale / 2.5));
     pixels.forEach(p => {
       if (p.matchedBead.code === 'EMPTY') return;
       if (highlight !== null && p.matchedBead.code !== highlight) return;
       if (p.x < leftTrim || p.x >= gridWidth - rightTrim || p.y < topTrim || p.y >= gridHeight - bottomTrim) return;
       const rgb = hexToRgb(p.matchedBead.hex);
       ctx.fillStyle = luminance(rgb) > 140 ? '#0F172A' : '#FFFFFF';
-      ctx.font = `bold ${Math.floor(scale / 2.5)}px monospace`;
+      ctx.font = `bold ${fontSize}px monospace`;
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText(p.matchedBead.code, (p.x - xOff) * scale + scale / 2, (p.y - yOff) * scale + scale / 2 + 0.5);
     });

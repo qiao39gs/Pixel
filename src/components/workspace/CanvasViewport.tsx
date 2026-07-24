@@ -116,7 +116,7 @@ export default function CanvasViewport({ canvasRef, containerRef }: Props) {
   useEffect(() => { if (!editMode) setDragMode(false); }, [editMode, setDragMode]);
 
   return (
-    <div className="absolute inset-0 bg-[#09090B] flex flex-col overflow-hidden">
+    <div className="absolute inset-0 bg-[#09090B] flex flex-col overflow-hidden pt-12">
       <div
         ref={containerRef}
         className="flex-1 w-full overflow-hidden flex items-center justify-center relative bg-[#09090B] p-4 touch-none select-none"

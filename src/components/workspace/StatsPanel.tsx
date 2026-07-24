@@ -283,7 +283,7 @@ export default function StatsPanel() {
             <span className="text-[13px] font-bold text-slate-600 uppercase tracking-wider">{group.name}</span>
             <span className="text-[13px] text-slate-500 font-mono">{seriesStats.reduce((sum, s) => sum + s.count, 0)} 颗 · {seriesStats.length} 色</span>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+          <div className="grid grid-cols-1 gap-2">
             {seriesStats.map(statItem => {
               const isSelected = selectedBeadHighlight === statItem.bead.code;
               return (
@@ -298,7 +298,7 @@ export default function StatsPanel() {
                   onTouchStart={onItemTouchStart(statItem.bead.code)}
                   onTouchMove={onItemTouchMove}
                   onTouchEnd={onItemTouchEnd}
-                  className={`flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer select-none ${dragSource === statItem.bead.code ? 'ring-2 ring-amber-400 opacity-70' : dragOver === statItem.bead.code ? 'border-dashed border-indigo-400 bg-indigo-50/30 scale-[1.02]' : isSelected ? 'border-indigo-400 bg-indigo-50/30' : 'border-slate-200/60 hover:bg-slate-50 bg-white'}`}>
+                  className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all cursor-pointer select-none ${dragSource === statItem.bead.code ? 'ring-2 ring-amber-400 opacity-70' : dragOver === statItem.bead.code ? 'border-dashed border-indigo-400 bg-indigo-50/30 scale-[1.02]' : isSelected ? 'border-indigo-400 bg-indigo-50/30' : 'border-slate-200/60 hover:bg-slate-50 bg-white'}`}>
                   <button
                     onClick={(e) => { e.stopPropagation(); if (suppressClickRef.current) { suppressClickRef.current = false; return; } editMode ? setBrushBead(statItem.bead) : setSelectedBeadHighlight(isSelected ? null : statItem.bead.code); }}
                     className="w-10 h-10 rounded-full shadow-inner border border-black/[0.06] flex items-center justify-center font-mono font-bold text-[11px] transition-transform hover:scale-110 cursor-pointer flex-shrink-0"
@@ -307,29 +307,31 @@ export default function StatsPanel() {
                   >
                     {statItem.bead.code}
                   </button>
-                  <div className="flex-1 min-w-0 flex flex-col">
-                    <span className="font-bold text-slate-800 text-[13px] leading-tight truncate">{statItem.bead.name}</span>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-[13px] text-slate-500 font-mono">#{statItem.bead.code}</span>
-                      <span className="text-[13px] text-slate-400 font-mono">·</span>
-                      <span className="text-[13px] font-mono font-bold text-slate-600 tabular-nums">{statItem.count} 颗</span>
+                  <div className="flex-1 min-w-0 flex flex-col justify-center">
+                    <span className="font-bold text-slate-800 text-[13px] leading-tight truncate" title={statItem.bead.name}>{statItem.bead.name}</span>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <span className="text-[12px] text-slate-500 font-mono">#{statItem.bead.code}</span>
                       {similarityMap && dragSource !== statItem.bead.code && (() => {
                         const sim = similarityMap.get(statItem.bead.code);
                         if (sim === undefined) return null;
                         const colorCls = sim >= 90 ? 'text-emerald-600' : sim >= 70 ? 'text-amber-600' : 'text-slate-400';
-                        return <span className={`text-[11px] font-mono font-bold ${colorCls}`}>{sim}%</span>;
+                        return <span className={`text-[11px] font-mono font-bold ${colorCls}`} title="相似度">{sim}%</span>;
                       })()}
                       {dragSource === statItem.bead.code && (
                         <span className="text-[11px] font-mono font-bold text-amber-500">拖拽中</span>
                       )}
                     </div>
                   </div>
+                  <div className="flex flex-col items-end justify-center shrink-0 w-14 pr-1">
+                    <span className="text-[15px] font-mono font-bold text-slate-700 tabular-nums leading-none whitespace-nowrap">{statItem.count}</span>
+                    <span className="text-[11px] text-slate-400 mt-0.5">颗</span>
+                  </div>
                   <button
                     onClick={(e) => { e.stopPropagation(); if (suppressClickRef.current) { suppressClickRef.current = false; return; } setSwapSource(statItem.bead.code); }}
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 transition-colors cursor-pointer flex-shrink-0"
+                    className="p-2 -mr-1 rounded-lg text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 transition-all cursor-pointer flex-shrink-0 opacity-0 group-hover:opacity-100"
                     title="换色"
                   >
-                    <ArrowLeftRight className="w-3.5 h-3.5" />
+                    <ArrowLeftRight className="w-4 h-4" />
                   </button>
                 </div>
               );

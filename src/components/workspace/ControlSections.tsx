@@ -343,10 +343,10 @@ export function ViewSection() {
         </div>
         <div className="flex items-center justify-between">
           <span className="text-[13px] text-slate-700 font-bold flex items-center gap-1.5"><Hash className="w-4 h-4 text-slate-400" /> 格子色号标识</span>
-          <button onClick={() => setShowNumbers(!showNumbers)} disabled={scale < 16 && !showNumbers} title={scale < 16 ? '请拉大网格尺寸以开启色号' : ''} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${showNumbers ? 'bg-indigo-500' : 'bg-slate-300'} ${scale < 16 && !showNumbers ? 'opacity-40 cursor-not-allowed' : ''}`}><span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${showNumbers ? 'translate-x-6' : 'translate-x-1'}`} /></button>
+          <button onClick={() => setShowNumbers(!showNumbers)} disabled={scale < 12 && !showNumbers} title={scale < 12 ? '请拉大网格尺寸以开启色号' : ''} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${showNumbers ? 'bg-indigo-500' : 'bg-slate-300'} ${scale < 12 && !showNumbers ? 'opacity-40 cursor-not-allowed' : ''}`}><span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${showNumbers ? 'translate-x-6' : 'translate-x-1'}`} /></button>
         </div>
       </div>
-      {scale < 16 && showNumbers && <p className="text-[13px] text-amber-600 leading-tight">提示: 网格尺寸较小 (当前 {scale}px)，色号可能无法看清。</p>}
+      {scale < 12 && <p className="text-[13px] text-slate-500 leading-tight">当前缩放较小 ({scale}px)，开启色号后字号会自动缩小。</p>}
     </div>
   );
 }

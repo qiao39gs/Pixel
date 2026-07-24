@@ -21,7 +21,7 @@ export default function RightStatsPanel() {
           <X className="w-4 h-4" />
         </button>
       </header>
-      <div className="flex-1 overflow-y-auto p-5 scrollbar-dark">
+      <div className="flex-1 overflow-y-auto p-5 pb-8 scrollbar-dark">
         <StatsPanel />
       </div>
     </div>

@@ -101,6 +101,8 @@ interface WorkspaceStore {
   toggleProjectPanel: () => void;
   setDragMode: (v: boolean) => void;
   toggleLeftDrawer: () => void;
+  toasts: { id: number; msg: string }[];
+  pushToast: (msg: string) => void;
   toggleRightPanel: () => void;
   setPipelineMode: (v: PipelineMode) => void;
 
@@ -174,6 +176,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   mobileToolbarOpen: false,
   projectPanelOpen: false,
   dragMode: false,
+  toasts: [],
   pipelineMode: 'process' as PipelineMode,
   currentProjectId: null,
   undoStack: editor.undoStack,
@@ -221,6 +224,11 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   setProjectPanelOpen: (v) => set({ projectPanelOpen: v }),
   toggleProjectPanel: () => set((s) => ({ projectPanelOpen: !s.projectPanelOpen })),
   setDragMode: (v) => set({ dragMode: v }),
+  pushToast: (msg) => {
+    const id = Date.now() + Math.random();
+    set((s) => ({ toasts: [...s.toasts, { id, msg }] }));
+    setTimeout(() => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })), 2200);
+  },
   toggleLeftDrawer: () => set((s) => {
     const leftOpen = s.panelOpen === 'left' || s.panelOpen === 'both';
     if (leftOpen) return { panelOpen: s.panelOpen === 'both' ? 'right' : 'none' };
@@ -255,17 +263,20 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     if (editor.undoStack.length === 0) return;
     editor.undo();
     set({ ...snapshotEditor(), wandSelection: new Set(), selectedCell: null });
+    get().pushToast('已撤销');
   },
 
   redo: () => {
     if (editor.redoStack.length === 0) return;
     editor.redo();
     set({ ...snapshotEditor(), wandSelection: new Set(), selectedCell: null });
+    get().pushToast('已重做');
   },
 
   denoise: (gridWidth, gridHeight, palette) => {
     const changed = editor.denoise(gridWidth, gridHeight, palette);
-    if (changed > 0) set(snapshotEditor());
+    if (changed > 0) { set(snapshotEditor()); get().pushToast(`已去杂色 ${changed} 格`); }
+    else get().pushToast('无杂色可清理');
   },
 
   swapColor: (sourceCode, targetBead) => {
@@ -288,6 +299,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
       gridHeightActual: result.height,
       topTrim: 0, bottomTrim: 0, leftTrim: 0, rightTrim: 0,
     });
+    get().pushToast('已应用裁剪');
   },
 
   loadProject: (pixels, gridWidth, gridHeight, stats, settings, hasOriginalImage, projectId) => {
