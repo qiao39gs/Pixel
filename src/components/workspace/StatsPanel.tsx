@@ -13,7 +13,6 @@ export default function StatsPanel() {
   const selectedBeadHighlight = useWorkspaceStore(s => s.selectedBeadHighlight);
   const setSelectedBeadHighlight = useWorkspaceStore(s => s.setSelectedBeadHighlight);
   const transformedPixels = useWorkspaceStore(s => s.transformedPixels);
-  const mobileTab = useWorkspaceStore(s => s.mobileTab);
   const swapColor = useWorkspaceStore(s => s.swapColor);
 
   const [swapSource, setSwapSource] = useState<string | null>(null);
@@ -148,7 +147,7 @@ export default function StatsPanel() {
   };
 
   return (
-    <div className={`bg-white rounded-3xl border border-black/[0.04] p-6 shadow-sm ${mobileTab !== 'stats' ? 'hidden lg:block' : ''}`}>
+    <div className="flex flex-col">
       {/* Swap palette popup */}
       {swapSource && (
         <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/30 backdrop-blur-xs" onClick={() => setSwapSource(null)}>

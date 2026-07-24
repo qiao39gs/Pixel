@@ -62,16 +62,18 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#FAFAF7] text-[#18181B] flex flex-col font-sans selection:bg-orange-100 selection:text-orange-900">
 
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-[#FAFAF7]/90 backdrop-blur-md border-b border-black/[0.07] px-4 py-3.5">
-        <div className="max-w-[1600px] mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <span className="font-display font-bold text-[15px] tracking-tight text-[#18181B]">像素拼豆</span>
-            <span className="hidden sm:inline text-xs font-mono text-zinc-400 border border-zinc-200 px-1.5 py-0.5 rounded-md">v1.0.4</span>
+      {/* Header — 仅在上传入口阶段显示，进入编辑器后让 EditorFrame 满屏 */}
+      {!croppedImage && (
+        <header className="sticky top-0 z-50 bg-[#FAFAF7]/90 backdrop-blur-md border-b border-black/[0.07] px-4 py-3.5">
+          <div className="max-w-[1600px] mx-auto flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <span className="font-display font-bold text-[15px] tracking-tight text-[#18181B]">像素拼豆</span>
+              <span className="hidden sm:inline text-xs font-mono text-zinc-400 border border-zinc-200 px-1.5 py-0.5 rounded-md">v1.0.4</span>
+            </div>
+            <a href="https://github.com/qiao39gs/Pixel" target="_blank" rel="noopener noreferrer" className="text-xs text-zinc-400 font-mono hover:text-[#E8570A] transition-colors">GitHub</a>
           </div>
-          <a href="https://github.com/qiao39gs/Pixel" target="_blank" rel="noopener noreferrer" className="text-xs text-zinc-400 font-mono hover:text-[#E8570A] transition-colors">GitHub</a>
-        </div>
-      </header>
+        </header>
+      )}
 
       {/* Main */}
       <main className="flex-1 w-full mx-auto px-4 py-6 md:py-8 flex flex-col gap-8">
@@ -106,16 +108,14 @@ export default function App() {
             />
           </div>
         ) : (
-          <div className="w-full max-w-[1600px] mx-auto animate-fade-in">
-            <PatternWorkspace
-              croppedImageDataUrl={croppedImage}
-              onReset={handleReset}
-              aspectRatio={aspectRatio}
-              onGeneratePng={handleGeneratePng}
-              onGeneratePdf={handleGeneratePdf}
-              onRestoreImage={handleRestoreImage}
-            />
-          </div>
+          <PatternWorkspace
+            croppedImageDataUrl={croppedImage}
+            onReset={handleReset}
+            aspectRatio={aspectRatio}
+            onGeneratePng={handleGeneratePng}
+            onGeneratePdf={handleGeneratePdf}
+            onRestoreImage={handleRestoreImage}
+          />
         )}
 
       </main>

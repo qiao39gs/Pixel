@@ -1,5 +1,4 @@
 import React, { useMemo, useRef, useEffect } from 'react';
-import { Sliders, Grid3X3, Layers, FolderOpen } from 'lucide-react';
 import { TransformedPixel, IngredientStat } from '../types';
 import { BEAD_PALETTE } from '../data/palette';
 import { hexToRgb, rgbToLab } from '../colorUtils';
@@ -8,10 +7,7 @@ import { useImageProcessing } from '../hooks/useImageProcessing';
 import { useImageEnhancement } from '../hooks/useImageEnhancement';
 import { useCanvasRenderer } from '../hooks/useCanvasRenderer';
 import { useWorkspaceStore } from '../store/workspaceStore';
-import ControlPanel from './workspace/ControlPanel';
-import CanvasViewport from './workspace/CanvasViewport';
-import StatsPanel from './workspace/StatsPanel';
-import ProjectPanel from './workspace/ProjectPanel';
+import EditorFrame from './workspace/EditorFrame';
 
 interface PatternWorkspaceProps {
   croppedImageDataUrl: string;
@@ -36,7 +32,6 @@ export default function PatternWorkspace({ croppedImageDataUrl, onReset, aspectR
   const distanceAlgorithm = useWorkspaceStore(s => s.distanceAlgorithm);
   const kMedoidsOptimize = useWorkspaceStore(s => s.kMedoidsOptimize);
   const removeBackground = useWorkspaceStore(s => s.removeBackground);
-
   const transformedPixels = useWorkspaceStore(s => s.transformedPixels);
   const gridWidthActual = useWorkspaceStore(s => s.gridWidthActual);
   const gridHeightActual = useWorkspaceStore(s => s.gridHeightActual);
@@ -48,11 +43,20 @@ export default function PatternWorkspace({ croppedImageDataUrl, onReset, aspectR
   const selectedCell = useWorkspaceStore(s => s.selectedCell);
   const wandMode = useWorkspaceStore(s => s.wandMode);
   const wandSelection = useWorkspaceStore(s => s.wandSelection);
-
+  const isEraser = useWorkspaceStore(s => s.isEraser);
+  const brushBead = useWorkspaceStore(s => s.brushBead);
+  const showPalettePanel = useWorkspaceStore(s => s.showPalettePanel);
   const undo = useWorkspaceStore(s => s.undo);
   const redo = useWorkspaceStore(s => s.redo);
-  const setScale = useWorkspaceStore(s => s.setScale);
-  const mobileTab = useWorkspaceStore(s => s.mobileTab);
+
+  const setEditMode = useWorkspaceStore(s => s.setEditMode);
+  const setBrushBead = useWorkspaceStore(s => s.setBrushBead);
+  const setIsEraser = useWorkspaceStore(s => s.setIsEraser);
+  const setShowPalettePanel = useWorkspaceStore(s => s.setShowPalettePanel);
+  const setWandMode = useWorkspaceStore(s => s.setWandMode);
+  const setWandSelection = useWorkspaceStore(s => s.setWandSelection);
+  const setSelectedCell = useWorkspaceStore(s => s.setSelectedCell);
+  const setDragMode = useWorkspaceStore(s => s.setDragMode);
 
   const { gridWidth, gridHeight } = useMemo(() => {
     const h = (w: number) => aspectRatio === 'auto' ? Math.max(1, Math.round(w / localAspectRatio)) : Math.round(w * (ASPECT_RATIOS[aspectRatio] ?? 1));
@@ -70,67 +74,67 @@ export default function PatternWorkspace({ croppedImageDataUrl, onReset, aspectR
 
   useCanvasRenderer({ canvasRef, transformedPixels, gridWidth: gridWidthActual, gridHeight: gridHeightActual, scale, showNumbers, showRulers, selectedBeadHighlight, editMode, selectedCell, wandMode, wandSelection });
 
-  // Auto-fit canvas scale to viewport on grid change
+  // 键盘快捷键（Excalidraw 风格）
   useEffect(() => {
-    const rulerSize = showRulers ? 32 : 0;
-    const maxW = Math.min(window.innerWidth - 24, 700);
-    const fit = Math.max(4, Math.floor((maxW - rulerSize) / gridWidthActual));
-    setScale(Math.min(14, fit));
-  }, [gridWidthActual, showRulers, setScale]);
-
-  useEffect(() => {
+    const isTyping = (el: EventTarget | null) => {
+      const tag = (el as HTMLElement | null)?.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA';
+    };
     const onKey = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+      if (isTyping(e.target)) return;
+      // 撤销/重做（对编辑模式无要求）
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z')) {
         e.preventDefault();
-        if (e.shiftKey) { redo(); } else { undo(); }
+        if (e.shiftKey) redo(); else undo();
+        return;
       }
-      if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || e.key === 'Y')) {
         e.preventDefault();
         redo();
+        return;
       }
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const k = e.key.toLowerCase();
+      if (k === 'v') { e.preventDefault(); setEditMode(!editMode); setBrushBead(null); setSelectedCell(null); setIsEraser(false); setWandMode(false); setWandSelection(new Set()); return; }
+      if (k === 'b' && editMode) { e.preventDefault(); setShowPalettePanel(!showPalettePanel); return; }
+      if (k === 'e' && editMode) { e.preventDefault(); setIsEraser(!isEraser); setBrushBead(null); return; }
+      if (k === 'w' && editMode) { e.preventDefault(); setWandMode(!wandMode); setWandSelection(new Set()); return; }
+      if (k === 'escape') { if (editMode) setEditMode(false); return; }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [undo, redo]);
+  }, [editMode, showPalettePanel, isEraser, wandMode, brushBead, undo, redo, setEditMode, setBrushBead, setSelectedCell, setIsEraser, setShowPalettePanel, setWandMode, setWandSelection]);
+
+  // Space 临时平移（按住 Space 切换拖拽模式）
+  useEffect(() => {
+    const isTyping = (el: EventTarget | null) => {
+      const tag = (el as HTMLElement | null)?.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA';
+    };
+    const onDown = (e: KeyboardEvent) => {
+      if (isTyping(e.target)) return;
+      if (e.code === 'Space') { setDragMode(true); e.preventDefault(); }
+    };
+    const onUp = (e: KeyboardEvent) => {
+      if (e.code === 'Space') setDragMode(false);
+    };
+    window.addEventListener('keydown', onDown);
+    window.addEventListener('keyup', onUp);
+    return () => { window.removeEventListener('keydown', onDown); window.removeEventListener('keyup', onUp); };
+  }, [setDragMode]);
 
   return (
-    <div className="w-full flex flex-col">
-      {/* Tab bar — reads from store directly now via CanvasViewport */}
-      <TabBar />
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start mt-4">
-        <div className={`lg:col-span-3 ${mobileTab !== 'controls' ? 'hidden lg:block' : ''}`}><ControlPanel onReset={onReset} onTriggerEnhance={triggerEnhance} /></div>
-        <div className={`w-full lg:col-span-6 flex flex-col gap-6 ${mobileTab !== 'canvas' && mobileTab !== 'stats' ? 'hidden lg:flex' : ''}`}>
-          <CanvasViewport canvasRef={canvasRef} containerRef={containerRef} gridWidth={gridWidthActual} gridHeight={gridHeightActual} currentPalette={currentPalette} onGeneratePng={onGeneratePng} onGeneratePdf={onGeneratePdf} />
-          <StatsPanel />
-        </div>
-        <div className={`lg:col-span-3 ${mobileTab !== 'project' ? 'hidden lg:block' : ''}`}><ProjectPanel onReset={onReset} croppedImageDataUrl={croppedImageDataUrl} aspectRatio={aspectRatio} onRestoreImage={onRestoreImage} /></div>
-      </div>
-    </div>
-  );
-}
-
-function TabBar() {
-  const mobileTab = useWorkspaceStore(s => s.mobileTab);
-  const setMobileTab = useWorkspaceStore(s => s.setMobileTab);
-  return (
-    <div className="lg:hidden sticky top-12 z-40 -mx-4 px-4 -mt-6 pt-6 pb-1 bg-[#FAFAF7] border-b border-zinc-200 flex">
-      {([
-        { id: 'controls' as const, label: '参数', Icon: Sliders },
-        { id: 'canvas' as const,   label: '画布', Icon: Grid3X3 },
-        { id: 'stats' as const,    label: '色卡', Icon: Layers },
-        { id: 'project' as const,  label: '项目', Icon: FolderOpen },
-      ]).map(({ id, label, Icon }) => (
-        <button
-          key={id}
-          onClick={() => setMobileTab(id)}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-medium transition-colors border-b-2 ${
-            mobileTab === id ? 'text-[#E8570A] border-[#E8570A]' : 'text-zinc-400 border-transparent hover:text-zinc-600'
-          }`}
-        >
-          <Icon className="w-3.5 h-3.5" />
-          {label}
-        </button>
-      ))}
-    </div>
+    <EditorFrame
+      canvasRef={canvasRef}
+      containerRef={containerRef}
+      currentPalette={currentPalette}
+      onGeneratePng={onGeneratePng}
+      onGeneratePdf={onGeneratePdf}
+      onReset={onReset}
+      onTriggerEnhance={triggerEnhance}
+      croppedImageDataUrl={croppedImageDataUrl}
+      aspectRatio={aspectRatio}
+      onRestoreImage={onRestoreImage}
+    />
   );
 }

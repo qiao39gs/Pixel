@@ -50,7 +50,11 @@ interface WorkspaceStore {
   bottomTrim: number;
   leftTrim: number;
   rightTrim: number;
-  mobileTab: 'controls' | 'canvas' | 'stats' | 'project';
+  panelOpen: 'left' | 'right' | 'both' | 'none';
+  leftDrawerTab: 'spec' | 'adjust' | 'ai' | 'trim' | 'view';
+  mobileToolbarOpen: boolean;
+  projectPanelOpen: boolean;
+  dragMode: boolean;
   pipelineMode: PipelineMode;
   currentProjectId: string | null;
   undoStack: { pixels: TransformedPixel[]; stats: IngredientStat[] }[];
@@ -90,7 +94,14 @@ interface WorkspaceStore {
   setIsProcessing: (v: boolean) => void;
   setGridWidthActual: (v: number) => void;
   setGridHeightActual: (v: number) => void;
-  setMobileTab: (v: WorkspaceStore['mobileTab']) => void;
+  setPanelOpen: (v: WorkspaceStore['panelOpen']) => void;
+  setLeftDrawerTab: (v: WorkspaceStore['leftDrawerTab']) => void;
+  setMobileToolbarOpen: (v: boolean) => void;
+  setProjectPanelOpen: (v: boolean) => void;
+  toggleProjectPanel: () => void;
+  setDragMode: (v: boolean) => void;
+  toggleLeftDrawer: () => void;
+  toggleRightPanel: () => void;
   setPipelineMode: (v: PipelineMode) => void;
 
   // Complex actions
@@ -158,7 +169,11 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   bottomTrim: 0,
   leftTrim: 0,
   rightTrim: 0,
-  mobileTab: 'canvas' as const,
+  panelOpen: 'right' as const,
+  leftDrawerTab: 'spec' as const,
+  mobileToolbarOpen: false,
+  projectPanelOpen: false,
+  dragMode: false,
   pipelineMode: 'process' as PipelineMode,
   currentProjectId: null,
   undoStack: editor.undoStack,
@@ -200,7 +215,22 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   setBottomTrim: (v) => set({ bottomTrim: v }),
   setLeftTrim: (v) => set({ leftTrim: v }),
   setRightTrim: (v) => set({ rightTrim: v }),
-  setMobileTab: (v) => set({ mobileTab: v }),
+  setPanelOpen: (v) => set({ panelOpen: v }),
+  setLeftDrawerTab: (v) => set({ leftDrawerTab: v }),
+  setMobileToolbarOpen: (v) => set({ mobileToolbarOpen: v }),
+  setProjectPanelOpen: (v) => set({ projectPanelOpen: v }),
+  toggleProjectPanel: () => set((s) => ({ projectPanelOpen: !s.projectPanelOpen })),
+  setDragMode: (v) => set({ dragMode: v }),
+  toggleLeftDrawer: () => set((s) => {
+    const leftOpen = s.panelOpen === 'left' || s.panelOpen === 'both';
+    if (leftOpen) return { panelOpen: s.panelOpen === 'both' ? 'right' : 'none' };
+    return { panelOpen: s.panelOpen === 'right' ? 'both' : 'left' };
+  }),
+  toggleRightPanel: () => set((s) => {
+    const rightOpen = s.panelOpen === 'right' || s.panelOpen === 'both';
+    if (rightOpen) return { panelOpen: s.panelOpen === 'both' ? 'left' : 'none' };
+    return { panelOpen: s.panelOpen === 'left' ? 'both' : 'right' };
+  }),
   setPipelineMode: (v) => set({ pipelineMode: v }),
 
   pushUndo: () => {
