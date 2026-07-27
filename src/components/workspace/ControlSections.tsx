@@ -15,7 +15,7 @@ function AdjustSlider({ label, value, onRelease }: { label: string; value: numbe
         onChange={e => { const v = parseInt(e.target.value); setLocal(v); pending.current = v; }}
         onMouseUp={() => { if (pending.current !== value) onRelease(pending.current); }}
         onTouchEnd={() => { if (pending.current !== value) onRelease(pending.current); }}
-        className="flex-1 h-2.5 accent-[#E8570A] bg-slate-200 rounded-lg cursor-pointer"
+        className="flex-1 h-2.5 accent-[#E8570A] bg-stone-200 rounded-lg cursor-pointer"
       />
       <span className="text-[13px] font-mono font-bold text-slate-500 w-9">{local}</span>
     </div>
@@ -35,7 +35,7 @@ function SectionTitle({ icon, children }: { icon: React.ReactNode; children: Rea
 // ── 状态化 toggle——我统一样式 ──
 function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
   return (
-    <button onClick={onClick} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer shrink-0 ${on ? 'bg-indigo-500' : 'bg-slate-300'}`}>
+    <button onClick={onClick} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer shrink-0 ${on ? 'bg-[#E8570A]' : 'bg-stone-300'}`}>
       <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${on ? 'translate-x-6' : 'translate-x-1'}`} />
     </button>
   );
@@ -62,11 +62,11 @@ export function SpecSection() {
 
   const presetBtn = (val: typeof panelPreset, label: string) => (
     <button onClick={() => setPanelPreset(val)}
-      className={`h-10 px-3 text-[13px] font-bold rounded-lg text-center border cursor-pointer transition-all ${panelPreset === val ? 'bg-indigo-50 text-indigo-600 border-indigo-400' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>{label}</button>
+      className={`h-10 px-3 text-[13px] font-bold rounded-lg text-center border cursor-pointer transition-all ${panelPreset === val ? 'bg-orange-50 text-[#C84708] border-orange-300 shadow-sm' : 'bg-white text-stone-600 border-stone-200 hover:bg-stone-50'}`}>{label}</button>
   );
   const algoBtn = (val: typeof distanceAlgorithm, label: string, title: string) => (
     <button onClick={() => setDistanceAlgorithm(val)} title={title}
-      className={`h-9 px-2 text-[13px] font-bold rounded-lg text-center transition-all cursor-pointer ${distanceAlgorithm === val ? 'bg-white text-indigo-600 border border-indigo-200 font-extrabold' : 'text-slate-500 hover:text-slate-700'}`}>{label}</button>
+      className={`h-9 px-2 text-[13px] font-bold rounded-lg text-center transition-all cursor-pointer ${distanceAlgorithm === val ? 'bg-white text-[#C84708] border border-orange-200 font-extrabold shadow-sm' : 'text-stone-500 hover:text-stone-700'}`}>{label}</button>
   );
 
   return (
@@ -100,13 +100,13 @@ export function SpecSection() {
       <div className="flex flex-col gap-2.5 pt-1">
         <div className="flex justify-between items-center">
           <span className="text-[13px] font-bold text-slate-700">限制色号数量 (色彩量化)</span>
-          <span className="font-mono px-2 py-0.5 bg-indigo-50 text-indigo-600 border border-indigo-200 rounded-md font-bold text-[13px]">{kMedoidsOptimize ? colorLimitLocal : colorLimit} 色</span>
+          <span className="font-mono px-2 py-0.5 bg-orange-50 text-[#C84708] border border-orange-200 rounded-md font-bold text-[13px]">{kMedoidsOptimize ? colorLimitLocal : colorLimit} 色</span>
         </div>
         <input type="range" min="2" max="24"
           {...(kMedoidsOptimize
             ? { value: colorLimitLocal, onChange: (e: React.ChangeEvent<HTMLInputElement>) => { const v = parseInt(e.target.value); setColorLimitLocal(v); colorLimitPending.current = v; }, onMouseUp: () => { if (colorLimitPending.current !== colorLimit) setColorLimit(colorLimitPending.current); }, onTouchEnd: () => { if (colorLimitPending.current !== colorLimit) setColorLimit(colorLimitPending.current); } }
             : { value: colorLimit, onChange: (e: React.ChangeEvent<HTMLInputElement>) => setColorLimit(parseInt(e.target.value)) })}
-          className="w-full h-3 accent-indigo-500 bg-slate-200 rounded-lg cursor-pointer" />
+          className="w-full h-3 accent-[#E8570A] bg-stone-200 rounded-lg cursor-pointer" />
         <p className="text-[13px] text-slate-500 leading-normal">限制最终颜色数量，少则制作更简单。</p>
       </div>
 
@@ -240,7 +240,7 @@ export function AiSection({ onTriggerEnhance }: { onTriggerEnhance: () => void }
                 <button
                   key={val}
                   onClick={() => setAiEnhanceOptions({ enhanceStrength: val })}
-                  className={`flex flex-col items-center py-2 text-[13px] font-bold rounded-lg border transition-all cursor-pointer ${aiEnhanceOptions.enhanceStrength === val ? 'bg-indigo-50 text-indigo-600 border-indigo-400' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
+                   className={`flex flex-col items-center py-2 text-[13px] font-bold rounded-lg border transition-all cursor-pointer ${aiEnhanceOptions.enhanceStrength === val ? 'bg-orange-50 text-[#C84708] border-orange-300' : 'bg-white text-stone-600 border-stone-200 hover:bg-stone-50'}`}
                 >
                   <span>{label}</span>
                   <span className="text-[11px] font-normal text-slate-500 mt-0.5">{desc}</span>
@@ -282,7 +282,7 @@ export function AiSection({ onTriggerEnhance }: { onTriggerEnhance: () => void }
             <button
               onClick={onTriggerEnhance}
               disabled={isAiEnhancing}
-              className={`flex-1 flex items-center justify-center gap-1.5 h-10 text-[13px] font-bold rounded-xl transition-all cursor-pointer ${isAiEnhancing ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-indigo-500 text-white hover:bg-indigo-600'}`}
+              className={`flex-1 flex items-center justify-center gap-1.5 h-10 text-[13px] font-bold rounded-xl transition-all cursor-pointer ${isAiEnhancing ? 'bg-stone-100 text-stone-400 cursor-not-allowed' : 'bg-[#E8570A] text-white hover:bg-[#CF4707]'}`}
             >
               {isAiEnhancing ? <><Loader2 className="w-4 h-4 animate-spin" />增强中…</> : <><Wand2 className="w-4 h-4" />{aiEnhancedImage ? '重新增强' : 'AI 增强'}</>}
             </button>
@@ -328,11 +328,11 @@ export function ViewSection() {
       <div>
         <div className="flex justify-between items-center mb-1.5">
           <span className="text-[13px] font-bold text-slate-600">格子缩放像素</span>
-          <span className="font-mono font-bold text-indigo-500 text-[13px]">{scale}px</span>
+          <span className="font-mono font-bold text-[#E8570A] text-[13px]">{scale}px</span>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => setScale(Math.max(8, scale - 2))} className="p-2 rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200 transition-colors cursor-pointer"><ZoomOut className="w-4 h-4" /></button>
-          <input type="range" min="8" max="32" step="1" value={scale} onChange={e => setScale(parseInt(e.target.value))} className="flex-1 accent-indigo-500 h-2.5 bg-slate-200 rounded-lg cursor-pointer" />
+          <input type="range" min="8" max="32" step="1" value={scale} onChange={e => setScale(parseInt(e.target.value))} className="flex-1 accent-[#E8570A] h-2.5 bg-stone-200 rounded-lg cursor-pointer" />
           <button onClick={() => setScale(Math.min(32, scale + 2))} className="p-2 rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200 transition-colors cursor-pointer"><ZoomIn className="w-4 h-4" /></button>
         </div>
       </div>
@@ -343,7 +343,7 @@ export function ViewSection() {
         </div>
         <div className="flex items-center justify-between">
           <span className="text-[13px] text-slate-700 font-bold flex items-center gap-1.5"><Hash className="w-4 h-4 text-slate-400" /> 格子色号标识</span>
-          <button onClick={() => setShowNumbers(!showNumbers)} disabled={scale < 12 && !showNumbers} title={scale < 12 ? '请拉大网格尺寸以开启色号' : ''} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${showNumbers ? 'bg-indigo-500' : 'bg-slate-300'} ${scale < 12 && !showNumbers ? 'opacity-40 cursor-not-allowed' : ''}`}><span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${showNumbers ? 'translate-x-6' : 'translate-x-1'}`} /></button>
+          <button onClick={() => setShowNumbers(!showNumbers)} disabled={scale < 12 && !showNumbers} title={scale < 12 ? '请拉大网格尺寸以开启色号' : ''} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${showNumbers ? 'bg-[#E8570A]' : 'bg-stone-300'} ${scale < 12 && !showNumbers ? 'opacity-40 cursor-not-allowed' : ''}`}><span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${showNumbers ? 'translate-x-6' : 'translate-x-1'}`} /></button>
         </div>
       </div>
       {scale < 17 && <p className="text-[13px] text-slate-500 leading-tight">当前缩放较小 ({scale}px)，色号仅在选中/悬停时显示；放大到 120% 以上可全部显示。</p>}

@@ -135,46 +135,46 @@ export default function ProjectPanel({ onReset, croppedImageDataUrl, aspectRatio
   const hasCurrentPixels = transformedPixels.length > 0;
 
   return (
-    <div className="bg-white rounded-3xl border border-black/[0.04] p-6 shadow-sm">
+    <div className="bg-transparent">
       {/* Header */}
-      <div className="flex items-center gap-2 mb-1">
-        <FolderKanban className="w-4 h-4 text-[#E8570A]" />
-        <span className="text-sm font-bold text-zinc-700">项目</span>
-        <span className="text-xs text-zinc-400">{projects.length} 个</span>
+      <div className="flex items-center justify-between mb-4">
+        <span className="text-xs text-stone-500">保存、加载及导入/导出 JSON 项目</span>
+        <span className="px-2 py-1 rounded-full bg-stone-100 text-[11px] font-mono text-stone-500">{projects.length} 个</span>
       </div>
-      <span className="block text-xs text-zinc-400 mt-1 mb-5">保存、加载及导入/导出 JSON 项目文件</span>
 
       {/* Toolbar */}
       <div className="flex flex-col gap-2 mb-5">
+        <div className="grid grid-cols-2 gap-2">
         <button
           onClick={handleNewProject}
-          className="px-3 py-2.5 text-xs font-bold rounded-xl bg-[#E8570A] hover:bg-[#D0440A] text-white transition-colors cursor-pointer flex items-center justify-center gap-1.5 w-full"
+          className="px-3 py-2.5 text-xs font-bold rounded-xl bg-[#E8570A] hover:bg-[#CF4707] text-white transition-colors cursor-pointer flex items-center justify-center gap-1.5 w-full"
         >
           <Plus className="w-3.5 h-3.5" />新建项目
         </button>
         {hasCurrentPixels && (
           <button
             onClick={() => currentProjectId ? handleSave() : setShowSaveInput(!showSaveInput)}
-            className="px-3 py-2.5 text-xs font-bold rounded-xl bg-zinc-100 text-zinc-600 hover:bg-zinc-200 transition-colors cursor-pointer flex items-center justify-center gap-1.5 w-full"
+            className="px-3 py-2.5 text-xs font-bold rounded-xl bg-stone-100 text-stone-600 hover:bg-stone-200 transition-colors cursor-pointer flex items-center justify-center gap-1.5 w-full"
           >
             <FileDown className="w-3.5 h-3.5" />{currentProjectId ? '更新当前' : '保存当前'}
           </button>
         )}
         <button
           onClick={() => fileInputRef.current?.click()}
-          className="px-3 py-2.5 text-xs font-bold rounded-xl bg-zinc-100 text-zinc-600 hover:bg-zinc-200 transition-colors cursor-pointer flex items-center justify-center gap-1.5 w-full"
+          className="px-3 py-2.5 text-xs font-bold rounded-xl bg-stone-100 text-stone-600 hover:bg-stone-200 transition-colors cursor-pointer flex items-center justify-center gap-1.5 w-full"
         >
           <FileUp className="w-3.5 h-3.5" />导入 JSON
         </button>
         {hasCurrentPixels && (
           <button
             onClick={handleExport}
-            className="px-3 py-2.5 text-xs font-bold rounded-xl bg-zinc-100 text-zinc-600 hover:bg-zinc-200 transition-colors cursor-pointer flex items-center justify-center gap-1.5 w-full"
+            className="px-3 py-2.5 text-xs font-bold rounded-xl bg-stone-100 text-stone-600 hover:bg-stone-200 transition-colors cursor-pointer flex items-center justify-center gap-1.5 w-full"
           >
             <Download className="w-3.5 h-3.5" />导出 JSON
           </button>
         )}
         <input ref={fileInputRef} type="file" accept=".json" onChange={handleImport} className="hidden" />
+        </div>
       </div>
 
       {/* Save name input */}

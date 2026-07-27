@@ -106,6 +106,18 @@ export default function CanvasViewport({ canvasRef, containerRef }: Props) {
   // 自动适配：grid 变化时重新填满视口
   useEffect(() => { resetView(); }, [resetView]);
 
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    let frame = 0;
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(resetView);
+    });
+    observer.observe(el);
+    return () => { cancelAnimationFrame(frame); observer.disconnect(); };
+  }, [containerRef, resetView]);
+
   // 监听来自 ZoomControls 的"还原视图"事件
   useEffect(() => {
     const handler = () => resetView();
@@ -117,10 +129,10 @@ export default function CanvasViewport({ canvasRef, containerRef }: Props) {
   useEffect(() => { if (!editMode) setDragMode(false); }, [editMode, setDragMode]);
 
   return (
-    <div className="absolute inset-0 bg-[#09090B] flex flex-col overflow-hidden pt-12">
+    <div className="h-full w-full bg-[#0B0B0C] flex flex-col overflow-hidden rounded-[20px] border border-white/[0.06] shadow-[0_24px_80px_rgba(0,0,0,0.28)]">
       <div
         ref={containerRef}
-        className="flex-1 w-full overflow-hidden flex items-center justify-center relative bg-[#09090B] p-4 touch-none select-none"
+        className="flex-1 w-full overflow-hidden flex items-center justify-center relative editor-canvas-surface p-4 touch-none select-none"
         style={{ cursor: (editMode && !dragMode) ? 'crosshair' : 'grab' }}
         onMouseDown={(e) => interaction.onMouseDown(e)}
         onMouseMove={(e) => interaction.onMouseMove(e)}
@@ -132,8 +144,8 @@ export default function CanvasViewport({ canvasRef, containerRef }: Props) {
         onContextMenu={(e) => e.preventDefault()}
       >
         {isProcessing && (
-          <div className="absolute inset-0 bg-[#09090B]/80 backdrop-blur-xs flex flex-col items-center justify-center gap-3 z-30 select-none">
-            <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+          <div className="absolute inset-0 bg-[#0B0B0C]/80 backdrop-blur-xs flex flex-col items-center justify-center gap-3 z-30 select-none">
+            <div className="w-8 h-8 border-2 border-[#E8570A] border-t-transparent rounded-full animate-spin" />
             <span className="text-xs font-bold text-slate-300">图纸高精转换与色卡量化中...</span>
           </div>
         )}

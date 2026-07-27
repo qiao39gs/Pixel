@@ -24,25 +24,28 @@ export default function MobileToolbar({ currentPalette }: Props) {
   const denoise = useWorkspaceStore(s => s.denoise);
   const gridWidth = useWorkspaceStore(s => s.gridWidthActual);
   const gridHeight = useWorkspaceStore(s => s.gridHeightActual);
+  const undoStack = useWorkspaceStore(s => s.undoStack);
+  const redoStack = useWorkspaceStore(s => s.redoStack);
+  const panelOpen = useWorkspaceStore(s => s.panelOpen);
 
-  if (!editMode) return null;
+  if (!editMode || panelOpen !== 'none') return null;
 
   const toggleDragMode = () => {
     if (!dragMode) { setBrushBead(null); setIsEraser(false); setWandMode(false); setWandSelection(new Set()); setDragMode(true); }
     else { setDragMode(false); }
   };
 
-  const toolBtn = (active: boolean, onClick: () => void, title: string, Icon: React.ComponentType<{ className?: string }>, label: string, activeCls = 'bg-indigo-500 text-white') => (
-    <button onClick={onClick} title={title} className={`flex items-center gap-1.5 px-2.5 h-9 rounded-lg transition-all cursor-pointer ${active ? activeCls : 'text-slate-200 hover:bg-white/15'}`}>
+  const toolBtn = (active: boolean, onClick: () => void, title: string, Icon: React.ComponentType<{ className?: string }>, label: string, activeCls = 'bg-[#E8570A] text-white', disabled = false) => (
+    <button onClick={onClick} title={title} aria-label={title} disabled={disabled} className={`flex flex-col items-center justify-center gap-0.5 min-w-12 h-11 px-2 rounded-xl transition-all ${active ? activeCls : 'text-stone-200 hover:bg-white/10'} ${disabled ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}`}>
       <Icon className="w-4 h-4" />
-      <span className="text-[13px] font-bold">{label}</span>
+      <span className="text-[10px] font-bold leading-none">{label}</span>
     </button>
   );
 
   return (
-    <div className="sm:hidden absolute bottom-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-0.5 px-2 py-1.5 glass-toolbar rounded-2xl animate-toolbar-pop max-w-[calc(100vw-1.5rem)] overflow-x-auto scrollbar-dark">
-      {toolBtn(false, undo, '撤销', Undo2, '撤销', '')}
-      {toolBtn(false, redo, '重做', Redo2, '重做', '')}
+    <div className="sm:hidden absolute bottom-[max(6px,env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 z-30 flex items-center gap-0.5 px-1.5 py-1.5 glass-toolbar rounded-2xl animate-toolbar-pop max-w-[calc(100vw-12px)] overflow-x-auto scrollbar-dark">
+      {toolBtn(false, undo, '撤销', Undo2, '撤销', '', undoStack.length === 0)}
+      {toolBtn(false, redo, '重做', Redo2, '重做', '', redoStack.length === 0)}
       <span className="w-px h-5 bg-white/10 mx-0.5" />
       {toolBtn(dragMode, toggleDragMode, '拖拽模式', Move, '拖拽', 'bg-amber-500 text-white')}
       {toolBtn(isEraser, () => { setIsEraser(!isEraser); setBrushBead(null); setDragMode(false); }, '橡皮擦', Eraser, '橡皮', 'bg-red-500 text-white')}

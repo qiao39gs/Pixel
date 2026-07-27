@@ -21,11 +21,11 @@ export default function LeftDrawer({ onTriggerEnhance }: { onTriggerEnhance: () 
   if (!leftOpen) return null;
 
   return (
-    <div className="absolute left-3 top-16 bottom-3 z-30 flex flex-col w-[88vw] max-w-[340px] glass-panel rounded-2xl overflow-hidden animate-drawer-left">
+    <aside className="editor-side-panel editor-left-panel glass-panel animate-drawer-left">
       <header className="flex items-center justify-between px-4 py-3 border-b border-slate-200/60 shrink-0">
-        <div className="flex items-center gap-2 text-slate-800">
-          <Sliders className="w-4 h-4 text-slate-400" />
-          <span className="font-sans font-bold text-sm">参数面板</span>
+        <div className="flex items-center gap-2 text-stone-800">
+          <span className="flex w-8 h-8 items-center justify-center rounded-xl bg-orange-50 text-[#E8570A]"><Sliders className="w-4 h-4" /></span>
+          <div><span className="block font-sans font-bold text-sm leading-tight">图纸参数</span><span className="block text-[11px] text-stone-500 mt-0.5">规格、颜色与视图</span></div>
         </div>
         <button onClick={toggleLeftDrawer} className="p-2 -m-2 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors cursor-pointer" title="关闭">
             <X className="w-4 h-4" />
@@ -36,17 +36,17 @@ export default function LeftDrawer({ onTriggerEnhance }: { onTriggerEnhance: () 
           <button
             key={t.id}
             onClick={() => setLeftDrawerTab(t.id)}
-            className={`h-8 px-3 text-[13px] font-bold rounded-lg transition-all cursor-pointer whitespace-nowrap ${leftDrawerTab === t.id ? 'bg-indigo-500 text-white' : 'text-slate-500 hover:bg-slate-100'}`}
+            className={`h-8 px-3 text-[13px] font-bold rounded-lg transition-all cursor-pointer whitespace-nowrap ${leftDrawerTab === t.id ? 'bg-[#E8570A] text-white shadow-sm' : 'text-stone-500 hover:bg-stone-100'}`}
           >{t.label}</button>
         ))}
       </div>
-      <div className="flex-1 overflow-y-auto p-5 scrollbar-dark">
+      <div className="flex-1 overflow-y-auto p-4 scrollbar-dark">
         {leftDrawerTab === 'spec' && <SpecSection />}
         {leftDrawerTab === 'adjust' && <AdjustSection />}
         {leftDrawerTab === 'ai' && <AiSection onTriggerEnhance={onTriggerEnhance} />}
         {leftDrawerTab === 'trim' && <TrimSection />}
         {leftDrawerTab === 'view' && <ViewSection />}
       </div>
-    </div>
+    </aside>
   );
 }

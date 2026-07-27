@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
-import { Grid3X3, X, ArrowLeftRight, ChevronDown, HelpCircle } from 'lucide-react';
+import { X, ArrowLeftRight, ChevronDown, HelpCircle } from 'lucide-react';
 import { BeadPaletteItem } from '../../types';
 import { hexToRgb, luminance, rgbToLab, deltaE2000 } from '../../colorUtils';
 import { BEAD_PALETTE, COLOR_GROUPS } from '../../data/palette';
@@ -13,7 +13,6 @@ export default function StatsPanel() {
   const selectedBeadHighlight = useWorkspaceStore(s => s.selectedBeadHighlight);
   const setSelectedBeadHighlight = useWorkspaceStore(s => s.setSelectedBeadHighlight);
   const setHoverBeadHighlight = useWorkspaceStore(s => s.setHoverBeadHighlight);
-  const transformedPixels = useWorkspaceStore(s => s.transformedPixels);
   const swapColor = useWorkspaceStore(s => s.swapColor);
   const collapsedGroups = useWorkspaceStore(s => s.collapsedGroups);
   const toggleGroupCollapse = useWorkspaceStore(s => s.toggleGroupCollapse);
@@ -260,15 +259,8 @@ export default function StatsPanel() {
         </div>
       )}
 
-      <div className="flex items-center justify-between pb-3 mb-5 border-b border-slate-200/60">
-        <div className="flex flex-col gap-0.5">
-          <h3 className="font-sans font-bold text-slate-800 text-sm flex items-center gap-2 leading-none"><Grid3X3 className="w-4 h-4 text-slate-400" />MARD 标准色卡</h3>
-          <div className="flex items-baseline gap-1.5">
-            <span className="text-[12px] text-slate-500">总计</span>
-            <strong className="text-[15px] text-slate-800 font-mono font-bold tabular-nums">{transformedPixels.filter(p => p.matchedBead.code !== 'EMPTY').length.toLocaleString()}</strong>
-            <span className="text-[12px] text-slate-500">颗 · {stats.length} 色</span>
-          </div>
-        </div>
+      <div className="flex items-center justify-between pb-3 mb-3 border-b border-stone-200/70">
+        <span className="text-[12px] text-stone-500">{editMode ? '点击色块设为画笔' : '点击聚焦 · 拖拽换色'}</span>
         <div className="group relative shrink-0">
           <button className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors cursor-pointer" title="操作说明">
             <HelpCircle className="w-4 h-4" />
@@ -283,7 +275,7 @@ export default function StatsPanel() {
         if (seriesStats.length === 0) return null;
         const seriesCount = seriesStats.reduce((sum, s) => sum + s.count, 0);
         return (
-<div key={group.series} className="mb-6">
+<div key={group.series} className="mb-4">
           <div className="flex items-center h-8 mb-1.5 cursor-pointer select-none hover:bg-slate-50/60 rounded-md transition-colors -mx-1 px-1" onClick={() => toggleGroupCollapse(group.series)}>
             <div className="flex items-center gap-1.5 flex-1 min-w-0">
               <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform shrink-0 ${collapsedGroups.has(group.series) ? '-rotate-90' : ''}`} />
@@ -315,7 +307,7 @@ export default function StatsPanel() {
                   onTouchEnd={onItemTouchEnd}
                   onMouseEnter={() => { if (!editMode) setHoverBeadHighlight(statItem.bead.code); }}
                   onMouseLeave={() => { if (!editMode) setHoverBeadHighlight(null); }}
-                  className={`group flex items-center gap-2.5 px-2.5 py-2 transition-all cursor-pointer select-none relative ${idx !== 0 ? 'border-t border-slate-100' : ''} ${dragSource === statItem.bead.code ? 'bg-amber-50/40' : dragOver === statItem.bead.code ? 'bg-indigo-50/40 ring-1 ring-indigo-300' : isSelected ? 'bg-indigo-50/30 before:content-[""] before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:bg-indigo-500' : 'hover:bg-slate-50/70'}`}>
+                  className={`group flex items-center gap-2.5 px-2 py-2 transition-all cursor-pointer select-none relative rounded-lg ${idx !== 0 ? 'border-t border-stone-100' : ''} ${dragSource === statItem.bead.code ? 'bg-orange-50/60' : dragOver === statItem.bead.code ? 'bg-orange-50 ring-1 ring-orange-300' : isSelected ? 'bg-orange-50 before:content-[""] before:absolute before:left-0 before:top-1 before:bottom-1 before:w-[3px] before:rounded-full before:bg-[#E8570A]' : 'hover:bg-stone-100/70'}`}>
                   <button
                     onClick={(e) => { e.stopPropagation(); if (suppressClickRef.current) { suppressClickRef.current = false; return; } editMode ? setBrushBead(statItem.bead) : setSelectedBeadHighlight(isSelected ? null : statItem.bead.code); }}
                     className="w-9 h-9 rounded-full border border-black/[0.08] flex items-center justify-center font-mono font-medium text-[10px] flex-shrink-0"
@@ -343,7 +335,7 @@ export default function StatsPanel() {
                   </div>
                   <button
                     onClick={(e) => { e.stopPropagation(); if (suppressClickRef.current) { suppressClickRef.current = false; return; } setSwapSource(statItem.bead.code); }}
-                    className="p-1.5 -mr-1 rounded-md text-slate-400 hover:text-indigo-500 hover:bg-indigo-50/50 transition-all cursor-pointer flex-shrink-0 opacity-0 group-hover:opacity-100"
+                    className="p-1.5 -mr-1 rounded-md text-stone-400 hover:text-[#E8570A] hover:bg-orange-50 transition-all cursor-pointer flex-shrink-0 opacity-60 sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100"
                     title="换色"
                   >
                     <ArrowLeftRight className="w-3.5 h-3.5" />
