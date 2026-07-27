@@ -57,7 +57,7 @@ export class PointerInteraction {
 
   onMouseDown(e: ReactMouseEvent) {
     const c = this.ctx;
-    if (c.editMode) {
+    if (c.editMode && !c.dragMode) {
       if (e.button === 2) {
         e.preventDefault();
         const cell = c.coordToGrid(e.clientX, e.clientY);
