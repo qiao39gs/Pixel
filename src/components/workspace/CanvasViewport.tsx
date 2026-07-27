@@ -103,20 +103,12 @@ export default function CanvasViewport({ canvasRef, containerRef }: Props) {
     setPanOffset({ x: 0, y: 0 });
   }, [containerRef, showRulers, gridWidth, gridHeight, setScale, setPanOffset]);
 
-  // 自动适配：grid 变化时重新填满视口
-  useEffect(() => { resetView(); }, [resetView]);
-
+  // 新导入的图纸默认以实际大小显示，适应画布仍由右下角按钮触发。
   useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    let frame = 0;
-    const observer = new ResizeObserver(() => {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(resetView);
-    });
-    observer.observe(el);
-    return () => { cancelAnimationFrame(frame); observer.disconnect(); };
-  }, [containerRef, resetView]);
+    if (gridWidth <= 0 || gridHeight <= 0) return;
+    setScale(14);
+    setPanOffset({ x: 0, y: 0 });
+  }, [gridWidth, gridHeight, setScale, setPanOffset]);
 
   // 监听来自 ZoomControls 的"还原视图"事件
   useEffect(() => {
