@@ -125,6 +125,35 @@ body::after {
   outline-offset: 2px;
 }
 
+.tool-hint {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 20;
+  display: flex;
+  max-width: calc(100% - 24px);
+  align-items: center;
+  gap: 8px;
+  border-radius: 12px;
+  padding: 6px 9px 6px 6px;
+  color: #D6D3D1;
+  font-size: 11px;
+  line-height: 1.25;
+  pointer-events: none;
+}
+
+.tool-hint-label {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 5px;
+  border-radius: 8px;
+  background: rgba(232, 87, 10, 0.18);
+  padding: 4px 7px;
+  color: #FDBA74;
+  font-weight: 700;
+}
+
 .editor-canvas-stage {
   position: absolute;
   inset: 64px 12px 12px;
@@ -230,6 +259,15 @@ body::after {
     border-radius: 18px;
   }
   .editor-shell[data-palette-open="true"] .zoom-controls { display: none; }
+  .tool-hint {
+    top: 8px;
+    left: 8px;
+    max-width: calc(100% - 16px);
+    gap: 6px;
+    padding: 5px 8px 5px 5px;
+    font-size: 10px;
+  }
+  .tool-hint-label { padding: 4px 6px; }
 }
 
 @keyframes drawer-slide-in-left {

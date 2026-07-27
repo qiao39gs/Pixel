@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useCallback } from 'react';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { PointerInteraction } from '../../utils/pointerInteraction';
 import ZoomControls from './ZoomControls';
+import ToolHint from './ToolHint';
 
 interface Props {
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
@@ -144,6 +145,7 @@ export default function CanvasViewport({ canvasRef, containerRef }: Props) {
         <div className="relative transition-transform duration-75 origin-center" style={{ transform: `translate(${panOffset.x}px, ${panOffset.y}px)` }}>
           <canvas ref={canvasRef} className="block shadow-2xl rounded-md border border-white/[0.08]" />
         </div>
+        <ToolHint />
         <ZoomControls />
       </div>
     </div>
