@@ -168,6 +168,35 @@ function isSafeDimension(value: unknown): value is number {
   return Number.isInteger(value) && (value as number) >= 1 && (value as number) <= 300;
 }
 
+function normalizeSettings(value: unknown, gridWidth: number): ProjectSettings | null {
+  if (value === undefined || value === null) {
+    return { colorLimit: 12, distanceAlgorithm: 'CIEDE2000', removeBackground: true, brightness: 100, contrast: 100, saturation: 100, panelPreset: 'custom', customWidth: gridWidth, kMedoidsOptimize: false };
+  }
+  if (typeof value !== 'object') return null;
+  const raw = value as Record<string, unknown>;
+  const algorithms = new Set(['CIEDE2000', 'CIE94', 'CIE76', 'WeightedRGB']);
+  const presets = new Set(['52x52', '78x78', '104x104', 'custom']);
+  const inRange = (v: unknown, min: number, max: number) => typeof v === 'number' && Number.isFinite(v) && v >= min && v <= max;
+  if (!inRange(raw.colorLimit, 2, 24)) return null;
+  if (!algorithms.has(String(raw.distanceAlgorithm))) return null;
+  if (typeof raw.removeBackground !== 'boolean') return null;
+  if (!inRange(raw.brightness, 0, 200) || !inRange(raw.contrast, 0, 200) || !inRange(raw.saturation, 0, 200)) return null;
+  if (raw.panelPreset !== undefined && !presets.has(String(raw.panelPreset))) return null;
+  if (raw.customWidth !== undefined && !inRange(raw.customWidth, 5, 150)) return null;
+  if (raw.kMedoidsOptimize !== undefined && typeof raw.kMedoidsOptimize !== 'boolean') return null;
+  return {
+    colorLimit: raw.colorLimit as number,
+    distanceAlgorithm: String(raw.distanceAlgorithm),
+    removeBackground: raw.removeBackground,
+    brightness: raw.brightness as number,
+    contrast: raw.contrast as number,
+    saturation: raw.saturation as number,
+    panelPreset: raw.panelPreset === undefined ? 'custom' : String(raw.panelPreset),
+    customWidth: raw.customWidth === undefined ? gridWidth : raw.customWidth as number,
+    kMedoidsOptimize: raw.kMedoidsOptimize === true,
+  };
+}
+
 async function migrateLegacyProjects(): Promise<void> {
   if (migrationPromise) return migrationPromise;
   migrationPromise = (async () => {
@@ -194,7 +223,7 @@ async function migrateLegacyProjects(): Promise<void> {
           meta: { ...meta, updatedAt: meta.updatedAt || now, updatedAtMs: meta.updatedAtMs || Date.now(), hasOriginalImage: !!originalImageBlob },
           pixelCodes,
           stats: Array.isArray(legacy.stats) ? legacy.stats : recalculateStats(codeToPixels(pixelCodes, meta.gridWidth, meta.gridHeight)),
-          settings: legacy.settings,
+          settings: normalizeSettings(legacy.settings, meta.gridWidth) || { colorLimit: 12, distanceAlgorithm: 'CIEDE2000', removeBackground: true, brightness: 100, contrast: 100, saturation: 100, panelPreset: 'custom', customWidth: meta.gridWidth, kMedoidsOptimize: false },
           originalImageBlob,
           aspectRatio: normalizeAspectRatio(legacy.aspectRatio),
         };
@@ -349,6 +378,8 @@ export function importProjectFromJson(file: File): Promise<{ name: string; pixel
         const data = JSON.parse(reader.result as string);
         if (!isSafeDimension(data.gridWidth) || !isSafeDimension(data.gridHeight)) { resolve(null); return; }
         const expectedLength = data.gridWidth * data.gridHeight;
+        const settings = normalizeSettings(data.settings, data.gridWidth);
+        if (!settings) { resolve(null); return; }
         let pixels: TransformedPixel[];
         if (Array.isArray(data.pixelCodes) && data.pixelCodes.length === expectedLength) pixels = codeToPixels(data.pixelCodes, data.gridWidth, data.gridHeight);
         else if (Array.isArray(data.pixels) && data.pixels.length === expectedLength) pixels = objToPixels(data.pixels, data.gridWidth, data.gridHeight);
@@ -356,7 +387,7 @@ export function importProjectFromJson(file: File): Promise<{ name: string; pixel
         resolve({
           name: data.name || '导入的项目', pixels, gridWidth: data.gridWidth, gridHeight: data.gridHeight,
           stats: recalculateStats(pixels),
-          settings: data.settings || { colorLimit: 12, distanceAlgorithm: 'CIEDE2000', removeBackground: true, brightness: 100, contrast: 100, saturation: 100, panelPreset: 'custom', customWidth: data.gridWidth, kMedoidsOptimize: false },
+          settings,
           originalImage: typeof data.originalImage === 'string' ? data.originalImage : undefined,
           aspectRatio: normalizeAspectRatio(data.aspectRatio),
         });

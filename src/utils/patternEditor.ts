@@ -7,6 +7,8 @@ const UNDO_LIMIT = 50;
 export interface Snapshot {
   pixels: TransformedPixel[];
   stats: IngredientStat[];
+  width: number;
+  height: number;
 }
 
 export interface Bounds {
@@ -25,30 +27,38 @@ export interface CropResult {
 export class PatternEditor {
   private _pixels: TransformedPixel[];
   private _stats: IngredientStat[];
+  private _width: number;
+  private _height: number;
   private _undoStack: Snapshot[] = [];
   private _redoStack: Snapshot[] = [];
   private strokeActive = false;
 
-  constructor(pixels: TransformedPixel[] = [], stats: IngredientStat[] | null = null) {
+  constructor(pixels: TransformedPixel[] = [], stats: IngredientStat[] | null = null, width = 0, height = 0) {
     this._pixels = pixels;
     this._stats = stats ?? recalculateStats(pixels);
+    this._width = width;
+    this._height = height;
   }
 
   get pixels(): TransformedPixel[] { return this._pixels; }
   get stats(): IngredientStat[] { return this._stats; }
+  get width(): number { return this._width; }
+  get height(): number { return this._height; }
   get undoStack(): Snapshot[] { return this._undoStack; }
   get redoStack(): Snapshot[] { return this._redoStack; }
 
-  load(pixels: TransformedPixel[], stats?: IngredientStat[]): void {
+  load(pixels: TransformedPixel[], stats?: IngredientStat[], width = 0, height = 0): void {
     this._pixels = pixels;
     this._stats = stats ?? recalculateStats(pixels);
+    this._width = width;
+    this._height = height;
     this._undoStack = [];
     this._redoStack = [];
     this.strokeActive = false;
   }
 
   private pushSnapshot(): void {
-    const snap: Snapshot = { pixels: [...this._pixels], stats: [...this._stats] };
+    const snap: Snapshot = { pixels: [...this._pixels], stats: [...this._stats], width: this._width, height: this._height };
     this._undoStack.push(snap);
     if (this._undoStack.length > UNDO_LIMIT) this._undoStack.shift();
     this._redoStack = [];
@@ -149,6 +159,8 @@ export class PatternEditor {
     }
     this._pixels = result;
     this._stats = recalculateStats(result);
+    this._width = newWidth;
+    this._height = newHeight;
     return { pixels: result, width: newWidth, height: newHeight };
   }
 
@@ -172,18 +184,22 @@ export class PatternEditor {
   undo(): Snapshot | null {
     if (this._undoStack.length === 0) return null;
     const prev = this._undoStack.pop()!;
-    this._redoStack.push({ pixels: [...this._pixels], stats: [...this._stats] });
+    this._redoStack.push({ pixels: [...this._pixels], stats: [...this._stats], width: this._width, height: this._height });
     this._pixels = prev.pixels;
     this._stats = prev.stats;
+    this._width = prev.width;
+    this._height = prev.height;
     return prev;
   }
 
   redo(): Snapshot | null {
     if (this._redoStack.length === 0) return null;
     const next = this._redoStack.pop()!;
-    this._undoStack.push({ pixels: [...this._pixels], stats: [...this._stats] });
+    this._undoStack.push({ pixels: [...this._pixels], stats: [...this._stats], width: this._width, height: this._height });
     this._pixels = next.pixels;
     this._stats = next.stats;
+    this._width = next.width;
+    this._height = next.height;
     return next;
   }
 }

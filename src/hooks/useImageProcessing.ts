@@ -75,7 +75,7 @@ export function useImageProcessing({
       });
 
       if (!active) return;
-      useWorkspaceStore.getState().setPipelineResult(result.pixels, result.stats);
+      useWorkspaceStore.getState().setPipelineResult(result.pixels, result.stats, result.gridWidth, result.gridHeight);
       setGridWidthActual(result.gridWidth);
       setGridHeightActual(result.gridHeight);
       useWorkspaceStore.getState().setTopTrim(0);

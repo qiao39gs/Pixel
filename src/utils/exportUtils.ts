@@ -5,32 +5,56 @@ import { COLOR_GROUPS } from '../data/palette';
 import { RenderAdapter, createCanvasAdapter, renderGrid, renderGridChunk } from './renderLayout';
 
 function createPdfAdapter(pdf: jsPDF): RenderAdapter {
+  type PdfTextBaseline = 'top' | 'middle' | 'alphabetic' | 'bottom';
+  interface PdfState {
+    offsetX: number;
+    offsetY: number;
+    textAlign: 'left' | 'center' | 'right';
+    textBaseline: PdfTextBaseline;
+  }
+
+  let state: PdfState = { offsetX: 0, offsetY: 0, textAlign: 'left', textBaseline: 'alphabetic' };
+  const stack: PdfState[] = [];
+  const tx = (x: number) => x + state.offsetX;
+  const ty = (y: number) => y + state.offsetY;
+  const parseColor = (style: string) => {
+    if (style.startsWith('#')) return hexToRgb(style);
+    const match = style.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*([\d.]+))?\s*\)/i);
+    if (!match) return { r: 0, g: 0, b: 0 };
+    const alpha = match[4] === undefined ? 1 : Math.max(0, Math.min(1, Number(match[4])));
+    return {
+      r: Math.round(Number(match[1]) * alpha + 255 * (1 - alpha)),
+      g: Math.round(Number(match[2]) * alpha + 255 * (1 - alpha)),
+      b: Math.round(Number(match[3]) * alpha + 255 * (1 - alpha)),
+    };
+  };
+
   return {
-    fillRect: (x, y, w, h) => pdf.rect(x, y, w, h, 'F'),
-    strokeRect: (x, y, w, h) => pdf.rect(x, y, w, h, 'S'),
-    fillCircle: (cx, cy, r) => pdf.circle(cx, cy, r, 'F'),
-    strokeCircle: (cx, cy, r) => pdf.circle(cx, cy, r, 'S'),
-    line: (x1, y1, x2, y2) => pdf.line(x1, y1, x2, y2),
-    fillText: (text, x, y) => pdf.text(text, x, y),
-    setFillStyle: (s) => { const rgb = hexToRgb(s.startsWith('#') ? s : '#000'); pdf.setFillColor(rgb.r, rgb.g, rgb.b); },
-    setStrokeStyle: (s) => { const rgb = hexToRgb(s.startsWith('#') ? s : '#000'); pdf.setDrawColor(rgb.r, rgb.g, rgb.b); },
+    fillRect: (x, y, w, h) => pdf.rect(tx(x), ty(y), w, h, 'F'),
+    strokeRect: (x, y, w, h) => pdf.rect(tx(x), ty(y), w, h, 'S'),
+    fillCircle: (cx, cy, r) => pdf.circle(tx(cx), ty(cy), r, 'F'),
+    strokeCircle: (cx, cy, r) => pdf.circle(tx(cx), ty(cy), r, 'S'),
+    line: (x1, y1, x2, y2) => pdf.line(tx(x1), ty(y1), tx(x2), ty(y2)),
+    fillText: (text, x, y) => pdf.text(text, tx(x), ty(y), { align: state.textAlign, baseline: state.textBaseline }),
+    setFillStyle: (s) => { const rgb = parseColor(s); pdf.setFillColor(rgb.r, rgb.g, rgb.b); },
+    setStrokeStyle: (s) => { const rgb = parseColor(s); pdf.setDrawColor(rgb.r, rgb.g, rgb.b); },
     setLineWidth: (w) => pdf.setLineWidth(w),
-    setLineDash: (dash) => { const js: any = pdf; if (dash && dash.length > 0) js.setLineDash(dash, dash[0] * 2); else js.setLineDash([]); },
+    setLineDash: (dash) => pdf.setLineDashPattern(dash ?? [], 0),
     setFont: (font) => {
       const isBold = font.includes('bold');
       const sizeMatch = font.match(/(\d+(?:\.\d+)?)px/);
       const size = sizeMatch ? parseFloat(sizeMatch[1]) : 10;
       pdf.setFont('helvetica', isBold ? 'bold' : 'normal');
-      pdf.setFontSize(size * 0.3528); // px → mm
+      pdf.setFontSize(size * 0.75); // CSS px → pt
     },
-    setTextAlign: (align) => { (pdf as any).__textAlign = align; },
-    setTextBaseline: () => {},
+    setTextAlign: (align) => { state.textAlign = align; },
+    setTextBaseline: (baseline) => { state.textBaseline = baseline; },
     measureText: (text) => pdf.getTextWidth(text),
     luminanceOf: (hex) => luminance(hexToRgb(hex)),
     contrastColor: (hex, dark = '#0F172A', light = '#FFFFFF') => luminance(hexToRgb(hex)) > 140 ? dark : light,
-    pushState: () => {},
-    popState: () => {},
-    translate: () => {},
+    pushState: () => { stack.push({ ...state }); },
+    popState: () => { const previous = stack.pop(); if (previous) state = previous; },
+    translate: (x, y) => { state.offsetX += x; state.offsetY += y; },
   };
 }
 
