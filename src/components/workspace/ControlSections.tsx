@@ -9,7 +9,7 @@ function AdjustSlider({ label, value, onRelease }: { label: string; value: numbe
   useEffect(() => { if (local === pending.current) { setLocal(value); pending.current = value; } }, [value]);
   return (
     <div className="flex items-center gap-2.5">
-      <span className="text-[13px] font-mono font-bold text-slate-500 w-11 text-right">{label}</span>
+      <span className="w-14 shrink-0 whitespace-nowrap text-right text-[13px] font-bold text-slate-500">{label}</span>
       <input
         type="range" min="0" max="200" value={local}
         onChange={e => { const v = parseInt(e.target.value); setLocal(v); pending.current = v; }}
