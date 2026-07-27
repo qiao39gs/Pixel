@@ -35,6 +35,8 @@ export default function CanvasViewport({ canvasRef, containerRef }: Props) {
   const applyBrush = useWorkspaceStore(s => s.applyBrush);
   const applyWandFill = useWorkspaceStore(s => s.applyWandFill);
   const pushUndo = useWorkspaceStore(s => s.pushUndo);
+  const beginBrushStroke = useWorkspaceStore(s => s.beginBrushStroke);
+  const endBrushStroke = useWorkspaceStore(s => s.endBrushStroke);
   const transformedPixels = useWorkspaceStore(s => s.transformedPixels);
   const leftTrim = useWorkspaceStore(s => s.leftTrim);
   const topTrim = useWorkspaceStore(s => s.topTrim);
@@ -62,7 +64,7 @@ export default function CanvasViewport({ canvasRef, containerRef }: Props) {
     coordToGrid,
     setBrushBead, setIsEraser, setSelectedCell, setWandSelection,
     setIsPanning, setPanStart, setPanOffset, setScale,
-    applyBrush, applyWandFill, pushUndo,
+    applyBrush, applyWandFill, pushUndo, beginBrushStroke, endBrushStroke,
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), []);
 

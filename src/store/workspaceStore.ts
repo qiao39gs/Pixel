@@ -121,6 +121,8 @@ interface WorkspaceStore {
 
   // Complex actions
   pushUndo: () => void;
+  beginBrushStroke: () => void;
+  endBrushStroke: () => void;
   applyBrush: (x: number, y: number, gridWidth: number) => void;
   applyWandFill: (cell: { x: number; y: number }, selection: Set<string>, targetBead: BeadPaletteItem, gridWidth: number) => void;
   undo: () => void;
@@ -275,6 +277,9 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     editor.pushUndo();
     set(snapshotEditor());
   },
+
+  beginBrushStroke: () => editor.beginStroke(),
+  endBrushStroke: () => editor.endStroke(),
 
   applyBrush: (x, y, gridWidth) => {
     const s = get();

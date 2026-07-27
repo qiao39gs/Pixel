@@ -27,6 +27,7 @@ export class PatternEditor {
   private _stats: IngredientStat[];
   private _undoStack: Snapshot[] = [];
   private _redoStack: Snapshot[] = [];
+  private strokeActive = false;
 
   constructor(pixels: TransformedPixel[] = [], stats: IngredientStat[] | null = null) {
     this._pixels = pixels;
@@ -43,6 +44,7 @@ export class PatternEditor {
     this._stats = stats ?? recalculateStats(pixels);
     this._undoStack = [];
     this._redoStack = [];
+    this.strokeActive = false;
   }
 
   private pushSnapshot(): void {
@@ -56,8 +58,18 @@ export class PatternEditor {
     this.pushSnapshot();
   }
 
-  brush(x: number, y: number, gridWidth: number, targetBead: BeadPaletteItem): void {
+  beginStroke(): void {
+    if (this.strokeActive) return;
     this.pushSnapshot();
+    this.strokeActive = true;
+  }
+
+  endStroke(): void {
+    this.strokeActive = false;
+  }
+
+  brush(x: number, y: number, gridWidth: number, targetBead: BeadPaletteItem): void {
+    if (!this.strokeActive) this.pushSnapshot();
     const next = [...this._pixels];
     next[y * gridWidth + x] = { x, y, matchedBead: targetBead };
     this._pixels = next;

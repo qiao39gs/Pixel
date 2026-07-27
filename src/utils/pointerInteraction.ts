@@ -30,6 +30,8 @@ export interface PointerCtx {
   setPanOffset: (p: { x: number; y: number }) => void;
   setScale: (s: number) => void;
   applyBrush: (x: number, y: number, gridWidth: number) => void;
+  beginBrushStroke: () => void;
+  endBrushStroke: () => void;
   applyWandFill: (cell: GridCell, selection: Set<string>, targetBead: BeadPaletteItem, gridWidth: number) => void;
   pushUndo: () => void;
 }
@@ -83,10 +85,13 @@ export class PointerInteraction {
           return;
         }
         if (c.brushBead || c.isEraser) {
-          this.editDrag = true;
-          this.editFilled.clear();
           const cell = c.coordToGrid(e.clientX, e.clientY);
-          if (cell) c.applyBrush(cell.x, cell.y, c.gridWidth);
+          if (cell) {
+            this.editDrag = true;
+            this.editFilled.clear();
+            c.beginBrushStroke();
+            c.applyBrush(cell.x, cell.y, c.gridWidth);
+          }
         } else {
           c.setSelectedCell(c.coordToGrid(e.clientX, e.clientY));
         }
@@ -116,7 +121,7 @@ export class PointerInteraction {
   }
 
   onMouseUp() {
-    if (this.editDrag) { this.editDrag = false; this.editFilled.clear(); return; }
+    if (this.editDrag) { this.ctx.endBrushStroke(); this.editDrag = false; this.editFilled.clear(); return; }
     if (this.state === 'panning') { this.ctx.setIsPanning(false); }
     this.state = 'idle';
   }
@@ -191,6 +196,7 @@ export class PointerInteraction {
     if (c.wandMode || (!c.brushBead && !c.isEraser) || this.longPressPicked) return;
     if (!this.editDrag) {
       this.editDrag = true;
+      c.beginBrushStroke();
       if (this.touchStart) {
         const sc = c.coordToGrid(this.touchStart.x, this.touchStart.y);
         if (sc) {
@@ -220,10 +226,13 @@ export class PointerInteraction {
             c.pushUndo();
             c.applyWandFill(cell, sel, c.isEraser ? EMPTY_BEAD : c.brushBead!, c.gridWidth);
           } else {
+            c.beginBrushStroke();
             c.applyBrush(cell.x, cell.y, c.gridWidth);
+            c.endBrushStroke();
           }
         }
       }
+      if (this.editDrag) c.endBrushStroke();
       this.editDrag = false;
       this.editFilled.clear();
       this.touchStart = null;
@@ -250,5 +259,6 @@ export class PointerInteraction {
 
   destroy() {
     this.clearTimeout();
+    if (this.editDrag) this.ctx.endBrushStroke();
   }
 }

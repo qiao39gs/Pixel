@@ -124,6 +124,30 @@ export default function ImageUploader({ onImageCropped, onImageStateChange, aspe
     }
   }, [imgLoaded, zoom, rotation, pan, aspectRatio, canvasW, canvasH, cropRect, flipH, flipV]);
 
+  const drawTransformedImage = (ctx: CanvasRenderingContext2D, offsetX = 0, offsetY = 0) => {
+    const img = imageRef.current;
+    if (!img) return;
+
+    const imgRatio = img.width / img.height;
+    let drawWidth = canvasW;
+    let drawHeight = canvasW / imgRatio;
+
+    if (aspectRatio === 'auto') {
+      drawWidth = canvasW;
+      drawHeight = canvasH;
+    } else if (imgRatio > 1) {
+      drawHeight = canvasH;
+      drawWidth = canvasH * imgRatio;
+    }
+
+    ctx.save();
+    ctx.translate(canvasW / 2 + pan.x - offsetX, canvasH / 2 + pan.y - offsetY);
+    ctx.rotate((rotation * Math.PI) / 180);
+    ctx.scale(zoom * (flipH ? -1 : 1), zoom * (flipV ? -1 : 1));
+    ctx.drawImage(img, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
+    ctx.restore();
+  };
+
   const drawCropper = () => {
     const canvas = canvasRef.current;
     const img = imageRef.current;
@@ -140,26 +164,7 @@ export default function ImageUploader({ onImageCropped, onImageStateChange, aspe
 
     ctx.clearRect(0, 0, vw, vh);
 
-    // Draw image with transforms
-    ctx.save();
-    ctx.translate(vw / 2 + pan.x, vh / 2 + pan.y);
-    ctx.rotate((rotation * Math.PI) / 180);
-    ctx.scale(zoom * (flipH ? -1 : 1), zoom * (flipV ? -1 : 1));
-
-    const imgRatio = img.width / img.height;
-    let drawWidth = vw;
-    let drawHeight = vw / imgRatio;
-
-    if (aspectRatio === 'auto') {
-      drawWidth = vw;
-      drawHeight = vh;
-    } else if (imgRatio > 1) {
-      drawHeight = vh;
-      drawWidth = vh * imgRatio;
-    }
-
-    ctx.drawImage(img, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
-    ctx.restore();
+    drawTransformedImage(ctx);
 
     // Rule of Thirds grid — clipped to crop rect
     ctx.save();
@@ -244,23 +249,18 @@ export default function ImageUploader({ onImageCropped, onImageStateChange, aspe
     setPan({ x: 0, y: 0 });
   };
 
-  // Extract crop rect region from canvas
+  // 从原图重绘裁剪结果，避免把预览辅助线和遮罩写入源图。
   const handleConfirmCrop = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!imageRef.current) return;
     if (cropRect.w <= 0 || cropRect.h <= 0) return;
 
     const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = cropRect.w;
-    tempCanvas.height = cropRect.h;
+    tempCanvas.width = Math.max(1, Math.round(cropRect.w));
+    tempCanvas.height = Math.max(1, Math.round(cropRect.h));
     const tempCtx = tempCanvas.getContext('2d');
     if (!tempCtx) return;
 
-    tempCtx.drawImage(
-      canvas,
-      cropRect.x, cropRect.y, cropRect.w, cropRect.h,
-      0, 0, cropRect.w, cropRect.h
-    );
+    drawTransformedImage(tempCtx, cropRect.x, cropRect.y);
     const croppedUrl = tempCanvas.toDataURL('image/png');
     onImageCropped(croppedUrl);
   };
