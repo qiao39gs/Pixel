@@ -3,6 +3,7 @@ import { Menu, Pencil, Undo2, Redo2, Eraser, Sparkles, Wand2, Palette, Sliders, 
 import { useState } from 'react';
 import { BeadPaletteItem, TransformedPixel, IngredientStat } from '../../types';
 import { useWorkspaceStore } from '../../store/workspaceStore';
+import { confirmDiscardChanges } from '../../hooks/useProjectSafety';
 
 interface Props {
   currentPalette: Array<BeadPaletteItem & { rgb: { r: number; g: number; b: number }; lab: any }>;
@@ -64,6 +65,12 @@ export default function TopToolbar({ currentPalette, onGeneratePng, onGeneratePd
   const fire = (fn: () => void) => () => { fn(); setExportOpen(false); };
   const toggleLeftPanel = () => window.matchMedia('(max-width: 1023px)').matches ? setPanelOpen(leftOpen ? 'none' : 'left') : toggleLeftDrawer();
   const toggleStatsPanel = () => window.matchMedia('(max-width: 1023px)').matches ? setPanelOpen(rightOpen ? 'none' : 'right') : toggleRightPanel();
+  const resetImage = () => {
+    if (!confirmDiscardChanges('当前项目有未保存的修改。重选图片将放弃这些修改，是否继续？')) return;
+    useWorkspaceStore.getState().clearCurrentProject();
+    onReset();
+    setExportOpen(false);
+  };
 
   return (
     <>
@@ -111,7 +118,7 @@ export default function TopToolbar({ currentPalette, onGeneratePng, onGeneratePd
                 <button onClick={fire(() => onGeneratePng(transformedPixels, gridWidth, gridHeight, stats, { showRulers, showNumbers }))} className="w-full px-3 py-2 text-left text-[13px] font-bold text-stone-100 hover:bg-white/10 cursor-pointer flex items-center gap-2"><LayoutGrid className="w-4 h-4 text-orange-400" />导出图片 (PNG)</button>
                 <button onClick={fire(() => onGeneratePdf(transformedPixels, gridWidth, gridHeight, stats, { showRulers, showNumbers }))} className="w-full px-3 py-2 text-left text-[13px] font-bold text-stone-100 hover:bg-white/10 cursor-pointer flex items-center gap-2"><Award className="w-4 h-4 text-orange-300" />导出 PDF</button>
                 <div className="my-1 mx-2 h-px bg-white/10" />
-                <button onClick={() => { onReset(); setExportOpen(false); }} className="w-full px-3 py-2 text-left text-[13px] font-bold text-slate-100 hover:bg-white/10 cursor-pointer flex items-center gap-2"><RotateCcw className="w-4 h-4 text-amber-400" />重选图片</button>
+                <button onClick={resetImage} className="w-full px-3 py-2 text-left text-[13px] font-bold text-slate-100 hover:bg-white/10 cursor-pointer flex items-center gap-2"><RotateCcw className="w-4 h-4 text-amber-400" />重选图片</button>
               </div>
             </>
           )}

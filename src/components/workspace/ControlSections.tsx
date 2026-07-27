@@ -3,7 +3,7 @@ import { Sliders, Hash, Grid3X3, Layers, Wand2, Loader2, AlertCircle, CheckCircl
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { checkEnhanceConfigured } from '../../services/pollinationsApi';
 
-function AdjustSlider({ label, value, onRelease }: { label: string; value: number; onRelease: (v: number) => void }) {
+function AdjustSlider({ label, value, onRelease }: { label: string; value: number; onRelease: (v: number) => boolean | void }) {
   const pending = useRef(value);
   const [local, setLocal] = useState(value);
   useEffect(() => { if (local === pending.current) { setLocal(value); pending.current = value; } }, [value]);
@@ -13,8 +13,8 @@ function AdjustSlider({ label, value, onRelease }: { label: string; value: numbe
       <input
         type="range" min="0" max="200" value={local}
         onChange={e => { const v = parseInt(e.target.value); setLocal(v); pending.current = v; }}
-        onMouseUp={() => { if (pending.current !== value) onRelease(pending.current); }}
-        onTouchEnd={() => { if (pending.current !== value) onRelease(pending.current); }}
+        onMouseUp={() => { if (pending.current !== value && onRelease(pending.current) === false) { pending.current = value; setLocal(value); } }}
+        onTouchEnd={() => { if (pending.current !== value && onRelease(pending.current) === false) { pending.current = value; setLocal(value); } }}
         className="flex-1 h-2.5 accent-[#E8570A] bg-stone-200 rounded-lg cursor-pointer"
       />
       <span className="text-[13px] font-mono font-bold text-slate-500 w-9">{local}</span>
@@ -104,7 +104,7 @@ export function SpecSection() {
         </div>
         <input type="range" min="2" max="24"
           {...(kMedoidsOptimize
-            ? { value: colorLimitLocal, onChange: (e: React.ChangeEvent<HTMLInputElement>) => { const v = parseInt(e.target.value); setColorLimitLocal(v); colorLimitPending.current = v; }, onMouseUp: () => { if (colorLimitPending.current !== colorLimit) setColorLimit(colorLimitPending.current); }, onTouchEnd: () => { if (colorLimitPending.current !== colorLimit) setColorLimit(colorLimitPending.current); } }
+             ? { value: colorLimitLocal, onChange: (e: React.ChangeEvent<HTMLInputElement>) => { const v = parseInt(e.target.value); setColorLimitLocal(v); colorLimitPending.current = v; }, onMouseUp: () => { if (colorLimitPending.current !== colorLimit && setColorLimit(colorLimitPending.current) === false) { colorLimitPending.current = colorLimit; setColorLimitLocal(colorLimit); } }, onTouchEnd: () => { if (colorLimitPending.current !== colorLimit && setColorLimit(colorLimitPending.current) === false) { colorLimitPending.current = colorLimit; setColorLimitLocal(colorLimit); } } }
             : { value: colorLimit, onChange: (e: React.ChangeEvent<HTMLInputElement>) => setColorLimit(parseInt(e.target.value)) })}
           className="w-full h-3 accent-[#E8570A] bg-stone-200 rounded-lg cursor-pointer" />
         <p className="text-[13px] text-slate-500 leading-normal">限制最终颜色数量，少则制作更简单。</p>
@@ -288,7 +288,7 @@ export function AiSection({ onTriggerEnhance }: { onTriggerEnhance: () => void }
             </button>
             {aiEnhancedImage && !isAiEnhancing && (
               <button
-                onClick={() => setAiEnhancedImage(null)}
+                onClick={() => { if (!useWorkspaceStore.getState().hasManualEdits || window.confirm('清除 AI 增强会重新生成图纸并覆盖当前手工编辑，是否继续？')) setAiEnhancedImage(null); }}
                 title="清除增强结果，使用原图"
                 className="flex items-center justify-center gap-1.5 h-10 px-3 text-[13px] font-bold rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all cursor-pointer"
               >

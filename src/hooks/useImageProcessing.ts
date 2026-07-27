@@ -38,7 +38,7 @@ export function useImageProcessing({
     if (lastImageRef.current !== croppedImageDataUrl) {
       lastImageRef.current = croppedImageDataUrl;
       if (useWorkspaceStore.getState().pipelineMode !== 'skipOnce' && useWorkspaceStore.getState().pipelineMode !== 'skipAndHold') {
-        useWorkspaceStore.setState({ currentProjectId: null });
+        useWorkspaceStore.setState({ currentProjectId: null, currentProjectName: null, saveStatus: 'idle' });
       }
     }
 

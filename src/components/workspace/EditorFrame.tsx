@@ -9,6 +9,8 @@ import PalettePanel from './PalettePanel';
 import MobileToolbar from './MobileToolbar';
 import Toasts from './Toasts';
 import { useWorkspaceStore } from '../../store/workspaceStore';
+import { AspectRatio } from '../../utils/constants';
+import ProjectStatus from './ProjectStatus';
 
 type Palette = Array<BeadPaletteItem & { rgb: { r: number; g: number; b: number }; lab: any }>;
 
@@ -22,7 +24,7 @@ interface Props {
   onTriggerEnhance: () => void;
   croppedImageDataUrl: string;
   aspectRatio: '1:1' | '4:3' | '3:4' | '16:9' | '9:16' | 'auto';
-  onRestoreImage: (image: string, ar: '1:1' | '4:3' | 'auto') => void;
+  onRestoreImage: (image: string, ar: AspectRatio) => void;
 }
 
 export default function EditorFrame(props: Props) {
@@ -68,6 +70,7 @@ export default function EditorFrame(props: Props) {
         onGeneratePdf={props.onGeneratePdf}
         onReset={props.onReset}
       />
+      <ProjectStatus />
       <LeftDrawer onTriggerEnhance={props.onTriggerEnhance} />
       <RightStatsPanel />
       <Toasts />

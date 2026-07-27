@@ -6,8 +6,10 @@ import { ASPECT_RATIOS } from '../utils/constants';
 import { useImageProcessing } from '../hooks/useImageProcessing';
 import { useImageEnhancement } from '../hooks/useImageEnhancement';
 import { useCanvasRenderer } from '../hooks/useCanvasRenderer';
+import { useProjectSafety } from '../hooks/useProjectSafety';
 import { useWorkspaceStore } from '../store/workspaceStore';
 import EditorFrame from './workspace/EditorFrame';
+import { AspectRatio } from '../utils/constants';
 
 interface PatternWorkspaceProps {
   croppedImageDataUrl: string;
@@ -15,7 +17,7 @@ interface PatternWorkspaceProps {
   aspectRatio: '1:1' | '4:3' | '3:4' | '16:9' | '9:16' | 'auto';
   onGeneratePng: (pixels: TransformedPixel[], width: number, height: number, stats: IngredientStat[], options?: { showRulers: boolean; showNumbers: boolean }) => void;
   onGeneratePdf: (pixels: TransformedPixel[], width: number, height: number, stats: IngredientStat[], options?: { showRulers: boolean; showNumbers: boolean }) => void;
-  onRestoreImage: (image: string, aspectRatio: '1:1' | '4:3' | 'auto') => void;
+  onRestoreImage: (image: string, aspectRatio: AspectRatio) => void;
 }
 
 export default function PatternWorkspace({ croppedImageDataUrl, onReset, aspectRatio, onGeneratePng, onGeneratePdf, onRestoreImage }: PatternWorkspaceProps) {
@@ -74,6 +76,7 @@ export default function PatternWorkspace({ croppedImageDataUrl, onReset, aspectR
   useImageProcessing({ croppedImageDataUrl: effectiveImage, removeBackground, colorLimit, distanceAlgorithm, kMedoidsOptimize, currentPalette, gridWidth, gridHeight, brightness, contrast, saturation });
 
   useCanvasRenderer({ canvasRef, transformedPixels, gridWidth: gridWidthActual, gridHeight: gridHeightActual, scale, showNumbers, showRulers, selectedBeadHighlight, hoverBeadHighlight, editMode, selectedCell, wandMode, wandSelection });
+  useProjectSafety(croppedImageDataUrl, aspectRatio);
 
   // 键盘快捷键（Excalidraw 风格）
   useEffect(() => {

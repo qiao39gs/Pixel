@@ -2,12 +2,13 @@ import React from 'react';
 import { X, FolderKanban } from 'lucide-react';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import ProjectPanel from './ProjectPanel';
+import { AspectRatio } from '../../utils/constants';
 
 interface Props {
   onReset: () => void;
   croppedImageDataUrl: string;
   aspectRatio: '1:1' | '4:3' | '3:4' | '16:9' | '9:16' | 'auto';
-  onRestoreImage: (image: string, ar: '1:1' | '4:3' | 'auto') => void;
+  onRestoreImage: (image: string, ar: AspectRatio) => void;
 }
 
 export default function ProjectDrawer({ onReset, croppedImageDataUrl, aspectRatio, onRestoreImage }: Props) {

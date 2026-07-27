@@ -58,6 +58,11 @@ interface WorkspaceStore {
   dragMode: boolean;
   pipelineMode: PipelineMode;
   currentProjectId: string | null;
+  currentProjectName: string | null;
+  isDirty: boolean;
+  saveStatus: 'idle' | 'saving' | 'saved' | 'error';
+  lastSavedAt: string | null;
+  hasManualEdits: boolean;
   undoStack: { pixels: TransformedPixel[]; stats: IngredientStat[] }[];
   redoStack: { pixels: TransformedPixel[]; stats: IngredientStat[] }[];
 
@@ -66,16 +71,16 @@ interface WorkspaceStore {
   setAiEnhanceError: (v: string | null) => void;
   setAiEnhancedImage: (v: string | null) => void;
   setAiEnhanceOptions: (v: Partial<AiEnhanceOptions>) => void;
-  setPanelPreset: (v: WorkspaceStore['panelPreset']) => void;
-  setCustomWidth: (v: number) => void;
+  setPanelPreset: (v: WorkspaceStore['panelPreset']) => boolean;
+  setCustomWidth: (v: number) => boolean;
   setLocalAspectRatio: (v: number) => void;
-  setColorLimit: (v: number) => void;
-  setBrightness: (v: number) => void;
-  setContrast: (v: number) => void;
-  setSaturation: (v: number) => void;
-  setDistanceAlgorithm: (v: WorkspaceStore['distanceAlgorithm']) => void;
-  setKMedoidsOptimize: (v: boolean) => void;
-  setRemoveBackground: (v: boolean) => void;
+  setColorLimit: (v: number) => boolean;
+  setBrightness: (v: number) => boolean;
+  setContrast: (v: number) => boolean;
+  setSaturation: (v: number) => boolean;
+  setDistanceAlgorithm: (v: WorkspaceStore['distanceAlgorithm']) => boolean;
+  setKMedoidsOptimize: (v: boolean) => boolean;
+  setRemoveBackground: (v: boolean) => boolean;
   setScale: (v: number) => void;
   setShowNumbers: (v: boolean) => void;
   setShowRulers: (v: boolean) => void;
@@ -109,6 +114,10 @@ interface WorkspaceStore {
   pushToast: (msg: string) => void;
   toggleRightPanel: () => void;
   setPipelineMode: (v: PipelineMode) => void;
+  markDirty: () => void;
+  markSaved: (id: string, name: string) => void;
+  setSaveStatus: (v: WorkspaceStore['saveStatus']) => void;
+  clearCurrentProject: () => void;
 
   // Complex actions
   pushUndo: () => void;
@@ -118,7 +127,7 @@ interface WorkspaceStore {
   redo: () => void;
   denoise: (gridWidth: number, gridHeight: number, palette: BeadPaletteItem[]) => void;
   swapColor: (sourceCode: string, targetBead: BeadPaletteItem) => void;
-  loadProject: (pixels: TransformedPixel[], gridWidth: number, gridHeight: number, stats: IngredientStat[], settings: { colorLimit: number; distanceAlgorithm: string; removeBackground: boolean; brightness: number; contrast: number; saturation: number; panelPreset?: string; customWidth?: number; kMedoidsOptimize?: boolean }, hasOriginalImage?: boolean, projectId?: string) => void;
+  loadProject: (pixels: TransformedPixel[], gridWidth: number, gridHeight: number, stats: IngredientStat[], settings: { colorLimit: number; distanceAlgorithm: string; removeBackground: boolean; brightness: number; contrast: number; saturation: number; panelPreset?: string; customWidth?: number; kMedoidsOptimize?: boolean }, hasOriginalImage?: boolean, projectId?: string, projectName?: string) => void;
   autoDetectTrim: (gridWidth: number, gridHeight: number) => void;
   setTopTrim: (v: number) => void;
   setBottomTrim: (v: number) => void;
@@ -185,6 +194,11 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   toasts: [],
   pipelineMode: 'process' as PipelineMode,
   currentProjectId: null,
+  currentProjectName: null,
+  isDirty: false,
+  saveStatus: 'idle',
+  lastSavedAt: null,
+  hasManualEdits: false,
   undoStack: editor.undoStack,
   redoStack: editor.redoStack,
 
@@ -192,16 +206,16 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   setAiEnhanceError: (v) => set({ aiEnhanceError: v }),
   setAiEnhancedImage: (v) => set({ aiEnhancedImage: v }),
   setAiEnhanceOptions: (v) => set({ aiEnhanceOptions: { ...get().aiEnhanceOptions, ...v } }),
-  setPanelPreset: (v) => set({ panelPreset: v }),
-  setCustomWidth: (v) => set({ customWidth: v }),
+  setPanelPreset: (v) => { if (get().hasManualEdits && !window.confirm('修改图纸规格将重新生成图纸并覆盖当前手工编辑，是否继续？')) return false; set({ panelPreset: v, isDirty: true, saveStatus: 'idle' }); return true; },
+  setCustomWidth: (v) => { if (get().hasManualEdits && !window.confirm('修改图纸规格将重新生成图纸并覆盖当前手工编辑，是否继续？')) return false; set({ customWidth: v, isDirty: true, saveStatus: 'idle' }); return true; },
   setLocalAspectRatio: (v) => set({ localAspectRatio: v }),
-  setColorLimit: (v) => set({ colorLimit: v }),
-  setBrightness: (v) => set({ brightness: v }),
-  setContrast: (v) => set({ contrast: v }),
-  setSaturation: (v) => set({ saturation: v }),
-  setDistanceAlgorithm: (v) => set({ distanceAlgorithm: v }),
-  setKMedoidsOptimize: (v) => set({ kMedoidsOptimize: v }),
-  setRemoveBackground: (v) => set({ removeBackground: v }),
+  setColorLimit: (v) => { if (get().hasManualEdits && !window.confirm('修改颜色数量将重新生成图纸并覆盖当前手工编辑，是否继续？')) return false; set({ colorLimit: v, isDirty: true, saveStatus: 'idle' }); return true; },
+  setBrightness: (v) => { if (get().hasManualEdits && !window.confirm('调整图像将重新生成图纸并覆盖当前手工编辑，是否继续？')) return false; set({ brightness: v, isDirty: true, saveStatus: 'idle' }); return true; },
+  setContrast: (v) => { if (get().hasManualEdits && !window.confirm('调整图像将重新生成图纸并覆盖当前手工编辑，是否继续？')) return false; set({ contrast: v, isDirty: true, saveStatus: 'idle' }); return true; },
+  setSaturation: (v) => { if (get().hasManualEdits && !window.confirm('调整图像将重新生成图纸并覆盖当前手工编辑，是否继续？')) return false; set({ saturation: v, isDirty: true, saveStatus: 'idle' }); return true; },
+  setDistanceAlgorithm: (v) => { if (get().hasManualEdits && !window.confirm('修改颜色匹配方式将重新生成图纸并覆盖当前手工编辑，是否继续？')) return false; set({ distanceAlgorithm: v, isDirty: true, saveStatus: 'idle' }); return true; },
+  setKMedoidsOptimize: (v) => { if (get().hasManualEdits && !window.confirm('修改选色方式将重新生成图纸并覆盖当前手工编辑，是否继续？')) return false; set({ kMedoidsOptimize: v, isDirty: true, saveStatus: 'idle' }); return true; },
+  setRemoveBackground: (v) => { if (get().hasManualEdits && !window.confirm('修改背景过滤将重新生成图纸并覆盖当前手工编辑，是否继续？')) return false; set({ removeBackground: v, isDirty: true, saveStatus: 'idle' }); return true; },
   setScale: (v) => set({ scale: v }),
   setShowNumbers: (v) => set({ showNumbers: v }),
   setShowRulers: (v) => set({ showRulers: v }),
@@ -217,7 +231,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   setWandMode: (v) => set({ wandMode: v }),
   setWandSelection: (v) => set({ wandSelection: v }),
   setShowPalettePanel: (v) => set({ showPalettePanel: v }),
-  setPipelineResult: (pixels, stats) => { editor.load(pixels, stats); set(snapshotEditor()); },
+  setPipelineResult: (pixels, stats) => { editor.load(pixels, stats); set({ ...snapshotEditor(), isDirty: pixels.length > 0, saveStatus: 'idle', hasManualEdits: false }); },
   setIsProcessing: (v) => set({ isProcessing: v }),
   setGridWidthActual: (v) => set({ gridWidthActual: v }),
   setGridHeightActual: (v) => set({ gridHeightActual: v }),
@@ -252,6 +266,10 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     return { panelOpen: s.panelOpen === 'left' ? 'both' : 'right' };
   }),
   setPipelineMode: (v) => set({ pipelineMode: v }),
+  markDirty: () => set({ isDirty: true, saveStatus: 'idle' }),
+  markSaved: (id, name) => set({ currentProjectId: id, currentProjectName: name, isDirty: false, saveStatus: 'saved', lastSavedAt: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }) }),
+  setSaveStatus: (v) => set({ saveStatus: v }),
+  clearCurrentProject: () => set({ currentProjectId: null, currentProjectName: null, isDirty: false, saveStatus: 'idle', lastSavedAt: null, hasManualEdits: false }),
 
   pushUndo: () => {
     editor.pushUndo();
@@ -263,37 +281,37 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     const targetBead = s.isEraser ? EMPTY_BEAD : s.brushBead;
     if (!targetBead) return;
     editor.brush(x, y, gridWidth, targetBead);
-    set({ ...snapshotEditor(), selectedCell: { x, y } });
+    set({ ...snapshotEditor(), selectedCell: { x, y }, isDirty: true, saveStatus: 'idle', hasManualEdits: true });
   },
 
   applyWandFill: (cell, selection, targetBead, gridWidth) => {
     editor.wandFill(selection, targetBead, gridWidth);
-    set({ ...snapshotEditor(), wandSelection: new Set(), selectedCell: cell });
+    set({ ...snapshotEditor(), wandSelection: new Set(), selectedCell: cell, isDirty: true, saveStatus: 'idle', hasManualEdits: true });
   },
 
   undo: () => {
     if (editor.undoStack.length === 0) return;
     editor.undo();
-    set({ ...snapshotEditor(), wandSelection: new Set(), selectedCell: null });
+    set({ ...snapshotEditor(), wandSelection: new Set(), selectedCell: null, isDirty: true, saveStatus: 'idle', hasManualEdits: true });
     get().pushToast('已撤销');
   },
 
   redo: () => {
     if (editor.redoStack.length === 0) return;
     editor.redo();
-    set({ ...snapshotEditor(), wandSelection: new Set(), selectedCell: null });
+    set({ ...snapshotEditor(), wandSelection: new Set(), selectedCell: null, isDirty: true, saveStatus: 'idle', hasManualEdits: true });
     get().pushToast('已重做');
   },
 
   denoise: (gridWidth, gridHeight, palette) => {
     const changed = editor.denoise(gridWidth, gridHeight, palette);
-    if (changed > 0) { set(snapshotEditor()); get().pushToast(`已去杂色 ${changed} 格`); }
+    if (changed > 0) { set({ ...snapshotEditor(), isDirty: true, saveStatus: 'idle', hasManualEdits: true }); get().pushToast(`已去杂色 ${changed} 格`); }
     else get().pushToast('无杂色可清理');
   },
 
   swapColor: (sourceCode, targetBead) => {
     editor.swapColor(sourceCode, targetBead);
-    set(snapshotEditor());
+    set({ ...snapshotEditor(), isDirty: true, saveStatus: 'idle', hasManualEdits: true });
   },
 
   autoDetectTrim: (gridWidth, gridHeight) => {
@@ -310,11 +328,14 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
       gridWidthActual: result.width,
       gridHeightActual: result.height,
       topTrim: 0, bottomTrim: 0, leftTrim: 0, rightTrim: 0,
+      isDirty: true,
+      saveStatus: 'idle',
+      hasManualEdits: true,
     });
     get().pushToast('已应用裁剪');
   },
 
-  loadProject: (pixels, gridWidth, gridHeight, stats, settings, hasOriginalImage, projectId) => {
+  loadProject: (pixels, gridWidth, gridHeight, stats, settings, hasOriginalImage, projectId, projectName) => {
     const preset = (settings.panelPreset as WorkspaceStore['panelPreset']) || 'custom';
     editor.load(pixels, stats);
     set({
@@ -344,6 +365,11 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
       panOffset: { x: 0, y: 0 },
       pipelineMode: hasOriginalImage === true ? 'skipOnce' : 'skipAndHold',
       currentProjectId: projectId ?? null,
+      currentProjectName: projectName ?? null,
+      isDirty: false,
+      saveStatus: 'saved',
+      lastSavedAt: null,
+      hasManualEdits: false,
     });
   },
 }));

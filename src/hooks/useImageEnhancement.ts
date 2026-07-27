@@ -35,6 +35,7 @@ export function useImageEnhancement(croppedImageDataUrl: string | null) {
 
   const triggerEnhance = useCallback(() => {
     if (!croppedImageDataUrl) return;
+    if (useWorkspaceStore.getState().hasManualEdits && !window.confirm('AI 增强会重新生成图纸并覆盖当前手工编辑，是否继续？')) return;
 
     const oKey = optionsKey(aiEnhanceOptions);
     if (cache && cache.sourceImage === croppedImageDataUrl && cache.optionsKey === oKey) {

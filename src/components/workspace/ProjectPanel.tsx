@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { FolderKanban, Upload, Download, Trash2, Plus, FileDown, FileUp, Pencil } from 'lucide-react';
+import { FolderKanban, Download, Trash2, Plus, FileDown, FileUp, Pencil, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import {
   ProjectMeta,
@@ -12,13 +12,16 @@ import {
   exportProjectAsJson,
   importProjectFromJson,
   renameProject,
+  clearDraft,
 } from '../../utils/projectStorage';
+import { confirmDiscardChanges } from '../../hooks/useProjectSafety';
+import { AspectRatio } from '../../utils/constants';
 
 interface Props {
   onReset: () => void;
   croppedImageDataUrl: string;
   aspectRatio: '1:1' | '4:3' | '3:4' | '16:9' | '9:16' | 'auto';
-  onRestoreImage: (image: string, aspectRatio: '1:1' | '4:3' | 'auto') => void;
+  onRestoreImage: (image: string, aspectRatio: AspectRatio) => void;
 }
 
 export default function ProjectPanel({ onReset, croppedImageDataUrl, aspectRatio, onRestoreImage }: Props) {
@@ -28,6 +31,7 @@ export default function ProjectPanel({ onReset, croppedImageDataUrl, aspectRatio
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameName, setRenameName] = useState('');
+  const [busyAction, setBusyAction] = useState<string | null>('list');
 
   const transformedPixels = useWorkspaceStore(s => s.transformedPixels);
   const gridWidth = useWorkspaceStore(s => s.gridWidthActual);
@@ -44,72 +48,116 @@ export default function ProjectPanel({ onReset, croppedImageDataUrl, aspectRatio
   const customWidth = useWorkspaceStore(s => s.customWidth);
   const loadProject = useWorkspaceStore(s => s.loadProject);
   const currentProjectId = useWorkspaceStore(s => s.currentProjectId);
+  const currentProjectName = useWorkspaceStore(s => s.currentProjectName);
+  const isDirty = useWorkspaceStore(s => s.isDirty);
+  const saveStatus = useWorkspaceStore(s => s.saveStatus);
+  const pipelineMode = useWorkspaceStore(s => s.pipelineMode);
+  const lastSavedAt = useWorkspaceStore(s => s.lastSavedAt);
+  const markSaved = useWorkspaceStore(s => s.markSaved);
+  const setSaveStatus = useWorkspaceStore(s => s.setSaveStatus);
+  const clearCurrentProject = useWorkspaceStore(s => s.clearCurrentProject);
+  const pushToast = useWorkspaceStore(s => s.pushToast);
 
   useEffect(() => {
-    setProjects(getAllProjects());
+    refreshProjects();
   }, []);
 
-  const refreshProjects = () => setProjects(getAllProjects());
+  const refreshProjects = async () => {
+    try { setProjects(await getAllProjects()); }
+    catch { pushToast('项目列表读取失败'); }
+    finally { setBusyAction(null); }
+  };
 
   const getSettings = (): ProjectData['settings'] => ({
     colorLimit, distanceAlgorithm, removeBackground, brightness, contrast, saturation, panelPreset, customWidth, kMedoidsOptimize,
   });
+  const sourceImage = pipelineMode === 'skipAndHold' ? undefined : croppedImageDataUrl;
 
-  const handleSave = () => {
-    if (currentProjectId) {
-      updateProject(currentProjectId, transformedPixels, gridWidth, gridHeight, stats, getSettings(), croppedImageDataUrl, aspectRatio);
+  const handleSave = async () => {
+    setBusyAction('save');
+    setSaveStatus('saving');
+    try {
+      if (currentProjectId) {
+        const meta = await updateProject(currentProjectId, transformedPixels, gridWidth, gridHeight, stats, getSettings(), sourceImage, aspectRatio);
+        if (!meta) throw new Error('项目不存在');
+        markSaved(meta.id, meta.name);
+        await clearDraft();
+        pushToast('项目已更新');
+      } else {
+        const name = saveName.trim() || `未命名项目 ${new Date().toLocaleString('zh-CN')}`;
+        const meta = await saveProject(name, transformedPixels, gridWidth, gridHeight, stats, getSettings(), sourceImage, aspectRatio);
+        markSaved(meta.id, meta.name);
+        await clearDraft();
+        pushToast('项目已保存到本机');
+      }
       setShowSaveInput(false);
       setSaveName('');
-      refreshProjects();
-      return;
+      await refreshProjects();
+    } catch {
+      setSaveStatus('error');
+      pushToast('保存失败，请导出 JSON 备份');
+    } finally {
+      setBusyAction(null);
     }
-    const name = saveName.trim() || `未命名项目 ${new Date().toLocaleString('zh-CN')}`;
-    saveProject(name, transformedPixels, gridWidth, gridHeight, stats, getSettings(), croppedImageDataUrl, aspectRatio);
-    setShowSaveInput(false);
-    setSaveName('');
-    refreshProjects();
   };
 
   const handleNewProject = () => {
+    if (!confirmDiscardChanges('当前项目有未保存的修改。新建项目将放弃这些修改，是否继续？')) return;
+    clearCurrentProject();
+    clearDraft().catch(() => {});
     onReset();
   };
 
-  const handleDelete = (id: string) => {
-    deleteProject(id);
-    if (id === currentProjectId) useWorkspaceStore.setState({ currentProjectId: null });
-    refreshProjects();
+  const handleDelete = async (id: string, name: string) => {
+    if (!window.confirm(`确定删除项目“${name}”吗？此操作无法撤销。`)) return;
+    setBusyAction(`delete:${id}`);
+    try {
+      await deleteProject(id);
+      if (id === currentProjectId) useWorkspaceStore.setState({ currentProjectId: null, currentProjectName: null, isDirty: transformedPixels.length > 0, saveStatus: 'idle', lastSavedAt: null });
+      await refreshProjects();
+      pushToast('项目已删除');
+    } catch { pushToast('删除项目失败'); }
+    finally { setBusyAction(null); }
   };
 
-  const safeAspectRatio = (v?: string): '1:1' | '4:3' | 'auto' => {
-    if (v === '1:1' || v === '4:3' || v === 'auto') return v;
-    return 'auto';
-  };
-
-  const handleLoad = (id: string) => {
-    const data = loadProjectData(id);
-    if (data) {
+  const handleLoad = async (id: string) => {
+    if (id === currentProjectId && !isDirty) { pushToast('当前已打开此项目'); return; }
+    if (!confirmDiscardChanges('当前项目有未保存的修改。加载其他项目将放弃这些修改，是否继续？')) return;
+    setBusyAction(`load:${id}`);
+    try {
+      const data = await loadProjectData(id);
+      if (!data) throw new Error('项目不存在');
       const hasImg = !!data.originalImage;
-      loadProject(data.pixels, data.meta.gridWidth, data.meta.gridHeight, data.stats, data.settings, hasImg, id);
-      if (hasImg) onRestoreImage(data.originalImage!, safeAspectRatio(data.aspectRatio));
-    }
+      loadProject(data.pixels, data.meta.gridWidth, data.meta.gridHeight, data.stats, data.settings, hasImg, id, data.meta.name);
+      if (hasImg) onRestoreImage(data.originalImage!, data.aspectRatio ?? 'auto');
+      await clearDraft();
+      pushToast(hasImg ? '项目已加载' : '已加载仅图纸项目，生成参数不可重新计算');
+    } catch { pushToast('项目加载失败'); }
+    finally { setBusyAction(null); }
   };
 
   const handleExport = () => {
-    exportProjectAsJson('像素拼豆项目', transformedPixels, gridWidth, gridHeight, stats, getSettings(), croppedImageDataUrl, aspectRatio);
+    exportProjectAsJson(currentProjectName || '像素拼豆项目', transformedPixels, gridWidth, gridHeight, stats, getSettings(), sourceImage, aspectRatio);
   };
 
-  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    importProjectFromJson(file).then(data => {
+    if (!confirmDiscardChanges('导入项目将替换当前未保存的修改，是否继续？')) { e.target.value = ''; return; }
+    setBusyAction('import');
+    try {
+      const data = await importProjectFromJson(file);
       if (data) {
         const hasImg = !!data.originalImage;
-        loadProject(data.pixels, data.gridWidth, data.gridHeight, data.stats, data.settings, hasImg);
-        if (hasImg) onRestoreImage(data.originalImage!, safeAspectRatio(data.aspectRatio));
+        loadProject(data.pixels, data.gridWidth, data.gridHeight, data.stats, data.settings, hasImg, undefined, data.name);
+        useWorkspaceStore.setState({ isDirty: true, saveStatus: 'idle' });
+        if (hasImg) onRestoreImage(data.originalImage!, data.aspectRatio ?? 'auto');
+        pushToast('项目已导入，请保存到项目库');
       } else {
-        alert('文件格式无效，请检查 JSON 文件内容。');
+        pushToast('文件格式无效或项目数据不完整');
       }
-    });
+    } catch { pushToast('项目导入失败'); }
+    finally { setBusyAction(null); }
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -118,10 +166,12 @@ export default function ProjectPanel({ onReset, croppedImageDataUrl, aspectRatio
     setRenameName(name);
   };
 
-  const handleConfirmRename = () => {
+  const handleConfirmRename = async () => {
     if (renamingId && renameName.trim()) {
-      renameProject(renamingId, renameName.trim());
-      refreshProjects();
+      const meta = await renameProject(renamingId, renameName.trim());
+      if (meta && meta.id === currentProjectId) useWorkspaceStore.setState({ currentProjectName: meta.name });
+      await refreshProjects();
+      pushToast(meta ? '项目已重命名' : '重命名失败');
     }
     setRenamingId(null);
     setRenameName('');
@@ -138,9 +188,19 @@ export default function ProjectPanel({ onReset, croppedImageDataUrl, aspectRatio
     <div className="bg-transparent">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <span className="text-xs text-stone-500">保存、加载及导入/导出 JSON 项目</span>
+        <span className="text-xs text-stone-500">项目存于本机 IndexedDB，建议定期导出 JSON 备份</span>
         <span className="px-2 py-1 rounded-full bg-stone-100 text-[11px] font-mono text-stone-500">{projects.length} 个</span>
       </div>
+
+      {hasCurrentPixels && (
+        <div className="mb-4 flex items-center gap-2 rounded-xl border border-stone-200 bg-white/70 px-3 py-2.5">
+          {saveStatus === 'saving' ? <Loader2 className="w-4 h-4 text-[#E8570A] animate-spin" /> : saveStatus === 'error' ? <AlertCircle className="w-4 h-4 text-red-500" /> : <CheckCircle2 className={`w-4 h-4 ${isDirty ? 'text-amber-500' : 'text-emerald-500'}`} />}
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-xs font-bold text-stone-700">{currentProjectName || '未命名项目'}</div>
+            <div className="text-[11px] text-stone-400">{saveStatus === 'saving' ? '正在保存…' : saveStatus === 'error' ? '保存失败' : isDirty ? '有未保存修改 · Ctrl/⌘ + S' : lastSavedAt ? `${lastSavedAt} 已保存` : currentProjectId ? '已保存' : '尚未保存'}</div>
+          </div>
+        </div>
+      )}
 
       {/* Toolbar */}
       <div className="flex flex-col gap-2 mb-5">
@@ -154,9 +214,10 @@ export default function ProjectPanel({ onReset, croppedImageDataUrl, aspectRatio
         {hasCurrentPixels && (
           <button
             onClick={() => currentProjectId ? handleSave() : setShowSaveInput(!showSaveInput)}
+            disabled={busyAction === 'save' || (!!currentProjectId && !isDirty)}
             className="px-3 py-2.5 text-xs font-bold rounded-xl bg-stone-100 text-stone-600 hover:bg-stone-200 transition-colors cursor-pointer flex items-center justify-center gap-1.5 w-full"
           >
-            <FileDown className="w-3.5 h-3.5" />{currentProjectId ? '更新当前' : '保存当前'}
+            {busyAction === 'save' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileDown className="w-3.5 h-3.5" />}{currentProjectId ? '更新当前' : '保存当前'}
           </button>
         )}
         <button
@@ -195,7 +256,12 @@ export default function ProjectPanel({ onReset, croppedImageDataUrl, aspectRatio
       )}
 
       {/* Project list */}
-      {projects.length === 0 ? (
+      {busyAction === 'list' ? (
+        <div className="flex items-center justify-center py-12 border border-zinc-200 rounded-2xl">
+          <Loader2 className="w-5 h-5 text-stone-400 animate-spin" />
+          <span className="ml-2 text-xs text-stone-400">正在读取项目库…</span>
+        </div>
+      ) : projects.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 border border-dashed border-zinc-200 rounded-2xl">
           <FolderKanban className="w-10 h-10 mb-3 text-zinc-300" />
           <span className="text-sm font-medium text-zinc-400">暂无保存的项目</span>
@@ -207,8 +273,7 @@ export default function ProjectPanel({ onReset, croppedImageDataUrl, aspectRatio
             {projects.map((p, idx) => (
               <div
                 key={p.id}
-                className={`flex items-center gap-4 p-3 hover:bg-zinc-50 transition-colors group ${renamingId === p.id ? '' : 'cursor-pointer'} ${idx !== 0 ? 'border-t border-zinc-100' : ''}`}
-                onClick={() => { if (renamingId !== p.id) handleLoad(p.id); }}
+                className={`flex items-center gap-4 p-3 hover:bg-zinc-50 transition-colors group ${p.id === currentProjectId ? 'bg-orange-50/60' : ''} ${idx !== 0 ? 'border-t border-zinc-100' : ''}`}
               >
                 <div
                   className="w-12 h-12 rounded-lg border border-zinc-200 bg-zinc-100 flex-shrink-0 overflow-hidden"
@@ -237,14 +302,15 @@ export default function ProjectPanel({ onReset, croppedImageDataUrl, aspectRatio
                     <>
                       <div className="text-sm font-bold text-zinc-700 truncate">{p.name}</div>
                       <div className="flex items-center gap-3 mt-0.5">
-                        <span className="text-xs text-zinc-400">{p.createdAt}</span>
+                        <span className="text-xs text-zinc-400">{p.updatedAt || p.createdAt}</span>
                         <span className="text-xs font-mono text-zinc-400">{p.gridWidth}×{p.gridHeight} · {p.colorCount}色</span>
+                        {!p.hasOriginalImage && <span className="text-[10px] text-amber-600">仅图纸</span>}
                       </div>
                     </>
                   )}
                 </div>
                 {renamingId !== p.id && (
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={(e) => { e.stopPropagation(); handleStartRename(p.id, p.name); }}
                       className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-colors cursor-pointer"
@@ -254,12 +320,14 @@ export default function ProjectPanel({ onReset, croppedImageDataUrl, aspectRatio
                     </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); handleLoad(p.id); }}
+                      disabled={busyAction === `load:${p.id}`}
                       className="px-3 py-1.5 text-xs font-bold rounded-lg bg-[#E8570A]/10 text-[#E8570A] hover:bg-[#E8570A]/20 transition-colors cursor-pointer"
                     >
-                      加载
+                      {busyAction === `load:${p.id}` ? '加载中' : p.id === currentProjectId ? '当前' : '加载'}
                     </button>
                     <button
-                      onClick={(e) => { e.stopPropagation(); handleDelete(p.id); }}
+                      onClick={(e) => { e.stopPropagation(); handleDelete(p.id, p.name); }}
+                      aria-label={`删除项目 ${p.name}`}
                       className="p-1.5 rounded-lg text-zinc-400 hover:text-red-500 hover:bg-red-50 transition-colors cursor-pointer"
                     >
                       <Trash2 className="w-4 h-4" />

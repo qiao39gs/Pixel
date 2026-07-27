@@ -3,17 +3,37 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Analytics } from '@vercel/analytics/react';
 import ImageUploader from './components/ImageUploader';
 import PatternWorkspace from './components/PatternWorkspace';
 import { generateHighResPng, generateMultiPagePdf } from './utils/exportUtils';
 import { TransformedPixel, IngredientStat } from './types';
+import { clearDraft, loadDraft } from './utils/projectStorage';
+import { useWorkspaceStore } from './store/workspaceStore';
+import { AspectRatio } from './utils/constants';
 
 export default function App() {
   const [croppedImage, setCroppedImage] = useState<string | null>(null);
-  const [aspectRatio, setAspectRatio] = useState<'1:1' | '4:3' | 'auto'>('auto');
+  const [aspectRatio, setAspectRatio] = useState<AspectRatio>('auto');
   const [uploaderHasImage, setUploaderHasImage] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    loadDraft().then(draft => {
+      if (!active || !draft?.originalImage) return;
+      if (!window.confirm(`发现 ${draft.savedAt} 自动保存的未完成项目，是否恢复？`)) {
+        clearDraft().catch(() => {});
+        return;
+      }
+      const ar = draft.aspectRatio ?? 'auto';
+      useWorkspaceStore.getState().loadProject(draft.pixels, draft.meta.gridWidth, draft.meta.gridHeight, draft.stats, draft.settings, true, draft.currentProjectId ?? undefined, draft.currentProjectName ?? undefined);
+      useWorkspaceStore.setState({ isDirty: true, saveStatus: 'idle' });
+      setAspectRatio(ar);
+      setCroppedImage(draft.originalImage!);
+    }).catch(() => {});
+    return () => { active = false; };
+  }, []);
 
   // Completed Crop phase
   const handleImageCropped = useCallback((imageDataUrl: string) => {
@@ -24,7 +44,7 @@ export default function App() {
     setCroppedImage(null);
   }, []);
 
-  const handleRestoreImage = useCallback((image: string, ar: '1:1' | '4:3' | 'auto') => {
+  const handleRestoreImage = useCallback((image: string, ar: AspectRatio) => {
     setAspectRatio(ar);
     setCroppedImage(image);
   }, []);
