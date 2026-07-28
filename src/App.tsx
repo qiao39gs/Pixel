@@ -100,7 +100,6 @@ export default function App() {
 
         {!croppedImage && !uploaderHasImage && (
           <div className="relative text-center max-w-lg mx-auto pt-6 pb-2 flex flex-col items-center gap-3 animate-fade-in">
-            {/* Pixel grid decoration */}
             <div
               className="absolute inset-x-0 top-0 h-full -z-10 pointer-events-none"
               style={{
@@ -110,10 +109,10 @@ export default function App() {
                 WebkitMaskImage: 'radial-gradient(ellipse 80% 90% at 50% 40%, black 30%, transparent 100%)',
               }}
             />
-            <h2 className="font-display font-bold text-[2.8rem] sm:text-[3.5rem] leading-[1.05] tracking-tight text-[#18181B]">
+            <h1 className="font-display font-bold text-[2.8rem] sm:text-[3.5rem] leading-[1.05] tracking-tight text-[#18181B]">
               图片变<br />
               <span className="text-[#E8570A]">拼豆图纸</span>
-            </h2>
+            </h1>
           </div>
         )}
 

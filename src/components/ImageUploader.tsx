@@ -534,15 +534,15 @@ export default function ImageUploader({ onImageCropped, onImageStateChange, aspe
   };
 
   return (
-    <div className="w-full bg-white border border-black/[0.04] rounded-3xl p-6 shadow-sm overflow-hidden transition-all duration-300">
+    <div className="w-full bg-white border border-black/[0.04] rounded-3xl p-4 sm:p-6 shadow-sm overflow-hidden transition-all duration-300">
       {/* Upload area if no image selected */}
       {!imageSrc ? (
         <div 
-          className={`relative p-8 md:p-14 text-center flex flex-col items-center justify-center transition-all duration-300 ${
+          className={`group relative p-8 md:p-14 text-center flex flex-col items-center justify-center transition-all duration-300 ${
             dragActive 
-              ? 'bg-indigo-505/5 border-2 border-dashed border-indigo-500' 
-              : 'bg-slate-50/50 border-2 border-dashed border-slate-200/80 hover:border-indigo-400'
-          } rounded-2xl m-2 cursor-pointer`}
+              ? 'bg-orange-50 border-2 border-dashed border-[#E8570A]' 
+              : 'bg-stone-50/70 border-2 border-dashed border-stone-200 hover:border-orange-300 hover:bg-orange-50/40'
+          } rounded-2xl cursor-pointer`}
           onDragEnter={handleDrag}
           onDragOver={handleDrag}
           onDragLeave={handleDrag}
@@ -556,14 +556,14 @@ export default function ImageUploader({ onImageCropped, onImageStateChange, aspe
             accept="image/png, image/jpeg" 
             onChange={handleFileInput} 
           />
-          <div className="h-16 w-16 bg-white rounded-2xl flex items-center justify-center shadow-md shadow-gray-200/50 border border-gray-100 text-slate-800 mb-5 hover:scale-110 hover:rotate-6 transition-all duration-300">
-            <Upload className="h-7 w-7 text-indigo-500" />
+          <div className={`h-16 w-16 rounded-2xl flex items-center justify-center border mb-5 transition-all duration-300 group-hover:-translate-y-1 ${dragActive ? 'bg-[#E8570A] border-[#E8570A] text-white' : 'bg-white border-orange-100 text-[#E8570A] shadow-md shadow-orange-100/60'}`}>
+            <Upload className="h-7 w-7" />
           </div>
           <h3 className="font-sans font-semibold text-slate-900 text-lg mb-2">
-            点击上传 或拖拽图片文件到这里
+            {dragActive ? '松开即可载入图片' : '点击上传 或拖拽图片文件到这里'}
           </h3>
-          <p className="text-xs text-slate-500 max-w-sm mb-5 leading-relaxed">
-             支持 JPEG/PNG 动图或日常照片<span className="hidden md:inline">，也可 Ctrl+V 直接粘贴截图</span>。算法将自动对齐拼豆色卡体系，并生成颗粒用量预估。
+          <p className="text-xs text-slate-500 max-w-sm leading-relaxed">
+             支持 JPEG/PNG 图片<span className="hidden md:inline">，也可 Ctrl+V 直接粘贴截图</span>。上传后可调整比例和裁剪范围。
           </p>
         </div>
       ) : (
@@ -573,7 +573,7 @@ export default function ImageUploader({ onImageCropped, onImageStateChange, aspe
             {/* Cropper viewport */}
             <div className="flex-1 flex flex-col items-center justify-center bg-slate-50/80 rounded-2xl p-4 border border-black/[0.02] overflow-hidden">
               <span className="text-xs font-medium text-slate-400 mb-3 self-start flex items-center gap-1.5 flex-wrap">
-                <Move className="w-3.5 h-3.5 text-indigo-500" /> 
+                <Move className="w-3.5 h-3.5 text-[#E8570A]" /> 
                 <span className="hidden md:inline">鼠标拖拽/单指平移 · 鼠标滚轮/双指捏合缩放 · 键盘方向键/快捷键微调 · Ctrl+V 粘贴换图</span>
                 <span className="md:hidden">单指平移 · 双指捏合缩放</span>
               </span>
@@ -618,7 +618,7 @@ export default function ImageUploader({ onImageCropped, onImageStateChange, aspe
                     return (
                       <div
                         key={h.id}
-                        className="absolute w-3 h-3 bg-white border-2 border-indigo-600 rounded-sm shadow-md pointer-events-auto hover:scale-150 hover:border-indigo-500 transition-transform duration-100"
+                        className="absolute w-3 h-3 bg-white border-2 border-[#E8570A] rounded-sm shadow-md pointer-events-auto hover:scale-150 hover:border-orange-400 transition-transform duration-100"
                         style={{
                           left: `${(pos.cx / canvasW) * 100}%`,
                           top: `${(pos.cy / canvasH) * 100}%`,
@@ -645,7 +645,7 @@ export default function ImageUploader({ onImageCropped, onImageStateChange, aspe
                   <button
                     type="button"
                     onClick={fitToFrame}
-                    className="px-2.5 py-1.5 bg-white border border-slate-200 text-xs font-bold rounded-lg text-slate-700 hover:text-indigo-600 hover:border-indigo-100 transition-all cursor-pointer shadow-xs"
+                    className="px-2.5 py-1.5 bg-white border border-slate-200 text-xs font-bold rounded-lg text-slate-700 hover:text-[#E8570A] hover:border-orange-200 transition-all cursor-pointer shadow-xs"
                     title="缩放图像使其完全放入选区内"
                   >
                     完全贴合
@@ -653,7 +653,7 @@ export default function ImageUploader({ onImageCropped, onImageStateChange, aspe
                   <button
                     type="button"
                     onClick={fillFrame}
-                    className="px-2.5 py-1.5 bg-white border border-slate-200 text-xs font-bold rounded-lg text-slate-700 hover:text-indigo-600 hover:border-indigo-100 transition-all cursor-pointer shadow-xs"
+                    className="px-2.5 py-1.5 bg-white border border-slate-200 text-xs font-bold rounded-lg text-slate-700 hover:text-[#E8570A] hover:border-orange-200 transition-all cursor-pointer shadow-xs"
                     title="缩放图像使其完全填满整个选区"
                   >
                     填满画布
@@ -664,7 +664,7 @@ export default function ImageUploader({ onImageCropped, onImageStateChange, aspe
                   <button
                     type="button"
                     onClick={() => setRotation((prev) => (prev + 90) % 360)}
-                    className="px-3 py-1.5 bg-white border border-slate-200 text-xs font-bold rounded-lg text-slate-700 hover:bg-slate-50 hover:text-indigo-600 flex items-center gap-1 shadow-xs transition-all cursor-pointer"
+                    className="px-3 py-1.5 bg-white border border-slate-200 text-xs font-bold rounded-lg text-slate-700 hover:bg-slate-50 hover:text-[#E8570A] flex items-center gap-1 shadow-xs transition-all cursor-pointer"
                   >
                     <RotateCw className="w-3 h-3" /> 旋转 90°
                   </button>
@@ -691,34 +691,34 @@ export default function ImageUploader({ onImageCropped, onImageStateChange, aspe
             <div className="w-full md:w-64 flex flex-col justify-between">
               <div>
                 <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3.5 flex items-center gap-2">
-                  <ImageIcon className="w-4 h-4 text-indigo-500" /> 图纸比例裁切
+                  <ImageIcon className="w-4 h-4 text-[#E8570A]" /> 图纸比例裁切
                 </h4>
                 
                 {/* Ratio selector */}
                 <div className="grid grid-cols-3 gap-2 mb-6">
                   <button type="button" onClick={() => setAspectRatio('1:1')}
                     className={`py-2 px-3 text-xs font-bold rounded-xl border text-center transition-all cursor-pointer ${
-                      aspectRatio === '1:1' ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-500/10' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                      aspectRatio === '1:1' ? 'bg-[#E8570A] text-white border-[#E8570A] shadow-md shadow-orange-500/10' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
                     }`}>1:1</button>
                   <button type="button" onClick={() => setAspectRatio('4:3')}
                     className={`py-2 px-3 text-xs font-bold rounded-xl border text-center transition-all cursor-pointer ${
-                      aspectRatio === '4:3' ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-500/10' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                      aspectRatio === '4:3' ? 'bg-[#E8570A] text-white border-[#E8570A] shadow-md shadow-orange-500/10' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
                     }`}>4:3</button>
                   <button type="button" onClick={() => setAspectRatio('3:4')}
                     className={`py-2 px-3 text-xs font-bold rounded-xl border text-center transition-all cursor-pointer ${
-                      aspectRatio === '3:4' ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-500/10' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                      aspectRatio === '3:4' ? 'bg-[#E8570A] text-white border-[#E8570A] shadow-md shadow-orange-500/10' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
                     }`}>3:4</button>
                   <button type="button" onClick={() => setAspectRatio('16:9')}
                     className={`py-2 px-3 text-xs font-bold rounded-xl border text-center transition-all cursor-pointer ${
-                      aspectRatio === '16:9' ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-500/10' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                      aspectRatio === '16:9' ? 'bg-[#E8570A] text-white border-[#E8570A] shadow-md shadow-orange-500/10' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
                     }`}>16:9</button>
                   <button type="button" onClick={() => setAspectRatio('9:16')}
                     className={`py-2 px-3 text-xs font-bold rounded-xl border text-center transition-all cursor-pointer ${
-                      aspectRatio === '9:16' ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-500/10' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                      aspectRatio === '9:16' ? 'bg-[#E8570A] text-white border-[#E8570A] shadow-md shadow-orange-500/10' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
                     }`}>9:16</button>
                   <button type="button" onClick={() => setAspectRatio('auto')}
                     className={`py-2 px-3 text-xs font-bold rounded-xl border text-center transition-all cursor-pointer ${
-                      aspectRatio === 'auto' ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-500/10' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                      aspectRatio === 'auto' ? 'bg-[#E8570A] text-white border-[#E8570A] shadow-md shadow-orange-500/10' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
                     }`}>原图</button>
                 </div>
  
@@ -726,7 +726,7 @@ export default function ImageUploader({ onImageCropped, onImageStateChange, aspe
                 <div className="mb-6">
                   <div className="flex justify-between items-center text-xs text-slate-500 mb-2">
                     <span className="font-semibold text-slate-700">局部缩放</span>
-                    <span className="font-mono font-bold text-indigo-600">{Math.round(zoom * 100)}%</span>
+                    <span className="font-mono font-bold text-[#E8570A]">{Math.round(zoom * 100)}%</span>
                   </div>
                   <div className="flex items-center gap-2.5">
                     <button
@@ -743,7 +743,7 @@ export default function ImageUploader({ onImageCropped, onImageStateChange, aspe
                       step="0.05"
                       value={zoom}
                       onChange={(e) => setZoom(parseFloat(e.target.value))}
-                      className="flex-1 accent-indigo-600 h-2.5 bg-slate-200 rounded-lg cursor-pointer"
+                      className="flex-1 accent-[#E8570A] h-2.5 bg-slate-200 rounded-lg cursor-pointer"
                     />
                     <button
                       type="button"
@@ -758,14 +758,14 @@ export default function ImageUploader({ onImageCropped, onImageStateChange, aspe
                 {/* Image Transform — rotation slider + flip */}
                 <div className="mb-6">
                   <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
-                    <Crop className="w-3.5 h-3.5 text-indigo-500" /> 图像变换
+                    <Crop className="w-3.5 h-3.5 text-[#E8570A]" /> 图像变换
                   </h4>
                   <div className="flex justify-between items-center text-xs text-slate-500 mb-2">
                     <span className="font-semibold text-slate-700">旋转角度</span>
                     <button
                       type="button"
                       onClick={() => setRotation(0)}
-                      className="font-mono font-bold text-indigo-600 hover:text-indigo-800 transition-colors cursor-pointer"
+                      className="font-mono font-bold text-[#E8570A] hover:text-orange-800 transition-colors cursor-pointer"
                       title="点击重置为 0°"
                     >
                       {rotation}°
@@ -778,14 +778,14 @@ export default function ImageUploader({ onImageCropped, onImageStateChange, aspe
                     step="1"
                     value={rotation}
                     onChange={(e) => setRotation(parseInt(e.target.value))}
-                    className="w-full accent-indigo-600 h-2.5 bg-slate-200 rounded-lg cursor-pointer mb-3"
+                    className="w-full accent-[#E8570A] h-2.5 bg-slate-200 rounded-lg cursor-pointer mb-3"
                   />
                   <div className="flex gap-2">
                     <button
                       type="button"
                       onClick={() => setFlipH((prev) => !prev)}
                       className={`flex-1 py-2 text-xs font-bold rounded-xl border text-center transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                        flipH ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-500/10' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                        flipH ? 'bg-[#E8570A] text-white border-[#E8570A] shadow-md shadow-orange-500/10' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
                       }`}
                     >
                       <FlipHorizontal className="w-3.5 h-3.5" /> 水平
@@ -794,7 +794,7 @@ export default function ImageUploader({ onImageCropped, onImageStateChange, aspe
                       type="button"
                       onClick={() => setFlipV((prev) => !prev)}
                       className={`flex-1 py-2 text-xs font-bold rounded-xl border text-center transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                        flipV ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-500/10' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                        flipV ? 'bg-[#E8570A] text-white border-[#E8570A] shadow-md shadow-orange-500/10' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
                       }`}
                     >
                       <FlipVertical className="w-3.5 h-3.5" /> 垂直
@@ -819,7 +819,7 @@ export default function ImageUploader({ onImageCropped, onImageStateChange, aspe
                 <button
                   type="button"
                   onClick={handleConfirmCrop}
-                  className="w-full py-3.5 px-4 bg-gradient-to-tr from-indigo-600 via-indigo-600 to-violet-600 hover:scale-101 hover:brightness-105 duration-200 text-white font-semibold rounded-xl transition-all shadow-md shadow-indigo-100 flex items-center justify-center gap-1.5 text-sm cursor-pointer"
+                  className="w-full py-3.5 px-4 bg-[#E8570A] hover:bg-[#CF4707] hover:-translate-y-0.5 duration-200 text-white font-semibold rounded-xl transition-all shadow-md shadow-orange-100 flex items-center justify-center gap-1.5 text-sm cursor-pointer"
                 >
                   确定选区，导入工作台
                 </button>
