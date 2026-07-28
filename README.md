@@ -5,6 +5,7 @@
 [![TypeScript 5.8](https://img.shields.io/badge/TypeScript-5.8-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![Vite 6](https://img.shields.io/badge/Vite-6-646CFF?logo=vite&logoColor=white)](https://vite.dev)
 [![Tailwind CSS v4](https://img.shields.io/badge/Tailwind_CSS-v4-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
+[![友链 LINUX DO](https://img.shields.io/badge/LINUX--DO-Community-blue.svg)](https://linux.do/)
 
 将图片转换为可直接制作的拼豆像素图纸。项目支持 MARD 221 色标准色卡匹配、格子级编辑、耗材统计、项目持久化以及 PNG、PDF 导出。
 
