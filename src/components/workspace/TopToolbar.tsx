@@ -136,6 +136,7 @@ export default function TopToolbar({ currentPalette, onGeneratePng, onGeneratePd
         <div className="flex items-center">
           <TButton active={leftOpen} onClick={toggleLeftPanel} title="参数面板" Icon={Sliders} activeCls="bg-white/15 text-white" />
           <TButton active={rightOpen} onClick={toggleStatsPanel} title="色卡面板" Icon={Layers} activeCls="bg-white/15 text-white" />
+          <TButton active={false} onClick={resetImage} title="重选图片" Icon={RotateCcw} />
         </div>
 
         {/* 导出 */}
@@ -151,8 +152,6 @@ export default function TopToolbar({ currentPalette, onGeneratePng, onGeneratePd
                 <button onClick={fire(() => onGeneratePng(transformedPixels, gridWidth, gridHeight, stats, { showRulers, showNumbers }))} className="w-full px-3 py-2 text-left text-[13px] font-bold text-stone-100 hover:bg-white/10 cursor-pointer flex items-center gap-2"><LayoutGrid className="w-4 h-4 text-orange-400" />导出图片 (PNG)</button>
                 <button onClick={fire(() => onGeneratePdf(transformedPixels, gridWidth, gridHeight, stats, { showRulers, showNumbers }))} className="w-full px-3 py-2 text-left text-[13px] font-bold text-stone-100 hover:bg-white/10 cursor-pointer flex items-center gap-2"><Award className="w-4 h-4 text-orange-300" />导出 PDF</button>
                 <button onClick={copyMaterialUsage} className="w-full px-3 py-2 text-left text-[13px] font-bold text-stone-100 hover:bg-white/10 cursor-pointer flex items-center gap-2"><Copy className="w-4 h-4 text-orange-200" />复制耗材用量</button>
-                <div className="my-1 mx-2 h-px bg-white/10" />
-                <button onClick={resetImage} className="w-full px-3 py-2 text-left text-[13px] font-bold text-slate-100 hover:bg-white/10 cursor-pointer flex items-center gap-2"><RotateCcw className="w-4 h-4 text-amber-400" />重选图片</button>
               </div>
             </>
           )}
