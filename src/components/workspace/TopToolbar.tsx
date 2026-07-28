@@ -1,9 +1,10 @@
 import React from 'react';
-import { Menu, Pencil, Undo2, Redo2, Eraser, Sparkles, Wand2, Palette, Sliders, Layers, LayoutGrid, Award, RotateCcw, ChevronDown } from 'lucide-react';
+import { Menu, Pencil, Undo2, Redo2, Eraser, Sparkles, Wand2, Palette, Sliders, Layers, LayoutGrid, Award, Copy, RotateCcw, ChevronDown } from 'lucide-react';
 import { useState } from 'react';
 import { BeadPaletteItem, TransformedPixel, IngredientStat } from '../../types';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { confirmDiscardChanges } from '../../hooks/useProjectSafety';
+import { COLOR_GROUPS } from '../../data/palette';
 
 interface Props {
   currentPalette: Array<BeadPaletteItem & { rgb: { r: number; g: number; b: number }; lab: any }>;
@@ -56,6 +57,7 @@ export default function TopToolbar({ currentPalette, onGeneratePng, onGeneratePd
   const showNumbers = useWorkspaceStore(s => s.showNumbers);
   const undoStack = useWorkspaceStore(s => s.undoStack);
   const redoStack = useWorkspaceStore(s => s.redoStack);
+  const pushToast = useWorkspaceStore(s => s.pushToast);
 
   const [exportOpen, setExportOpen] = useState(false);
   const leftOpen = panelOpen === 'left' || panelOpen === 'both';
@@ -63,6 +65,37 @@ export default function TopToolbar({ currentPalette, onGeneratePng, onGeneratePd
 
   const toggleEdit = () => { setEditMode(!editMode); setBrushBead(null); setSelectedCell(null); setIsEraser(false); setWandMode(false); setWandSelection(new Set()); };
   const fire = (fn: () => void) => () => { fn(); setExportOpen(false); };
+  const copyMaterialUsage = async () => {
+    if (stats.length === 0) {
+      pushToast('暂无耗材用量可复制');
+      return;
+    }
+
+    const groups = new Map<string, IngredientStat[]>();
+    stats.forEach(stat => {
+      const group = groups.get(stat.bead.series) ?? [];
+      group.push(stat);
+      groups.set(stat.bead.series, group);
+    });
+    const seriesOrder = new Map(COLOR_GROUPS.map((group, index) => [group.series, index]));
+    const text = [...groups.entries()]
+      .sort(([a], [b]) => (seriesOrder.get(a) ?? Number.MAX_SAFE_INTEGER) - (seriesOrder.get(b) ?? Number.MAX_SAFE_INTEGER) || a.localeCompare(b, 'zh-CN'))
+      .map(([series, items]) => [
+        series,
+        ...items
+          .sort((a, b) => a.bead.code.localeCompare(b.bead.code, undefined, { numeric: true }))
+          .map(item => `${item.bead.code} ${item.bead.name} ${item.count}颗`),
+      ].join('\n'))
+      .join('\n\n');
+
+    try {
+      await navigator.clipboard.writeText(text);
+      pushToast('耗材用量已复制');
+      setExportOpen(false);
+    } catch {
+      pushToast('复制失败，请检查剪贴板权限');
+    }
+  };
   const toggleLeftPanel = () => window.matchMedia('(max-width: 1023px)').matches ? setPanelOpen(leftOpen ? 'none' : 'left') : toggleLeftDrawer();
   const toggleStatsPanel = () => window.matchMedia('(max-width: 1023px)').matches ? setPanelOpen(rightOpen ? 'none' : 'right') : toggleRightPanel();
   const resetImage = () => {
@@ -117,6 +150,7 @@ export default function TopToolbar({ currentPalette, onGeneratePng, onGeneratePd
               <div className="absolute right-0 top-full mt-1.5 z-50 glass-toolbar rounded-xl py-1.5 min-w-[200px] animate-panel-pop overflow-hidden">
                 <button onClick={fire(() => onGeneratePng(transformedPixels, gridWidth, gridHeight, stats, { showRulers, showNumbers }))} className="w-full px-3 py-2 text-left text-[13px] font-bold text-stone-100 hover:bg-white/10 cursor-pointer flex items-center gap-2"><LayoutGrid className="w-4 h-4 text-orange-400" />导出图片 (PNG)</button>
                 <button onClick={fire(() => onGeneratePdf(transformedPixels, gridWidth, gridHeight, stats, { showRulers, showNumbers }))} className="w-full px-3 py-2 text-left text-[13px] font-bold text-stone-100 hover:bg-white/10 cursor-pointer flex items-center gap-2"><Award className="w-4 h-4 text-orange-300" />导出 PDF</button>
+                <button onClick={copyMaterialUsage} className="w-full px-3 py-2 text-left text-[13px] font-bold text-stone-100 hover:bg-white/10 cursor-pointer flex items-center gap-2"><Copy className="w-4 h-4 text-orange-200" />复制耗材用量</button>
                 <div className="my-1 mx-2 h-px bg-white/10" />
                 <button onClick={resetImage} className="w-full px-3 py-2 text-left text-[13px] font-bold text-slate-100 hover:bg-white/10 cursor-pointer flex items-center gap-2"><RotateCcw className="w-4 h-4 text-amber-400" />重选图片</button>
               </div>
