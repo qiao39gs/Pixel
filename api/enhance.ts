@@ -28,12 +28,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const imageSizeKB = Math.round(image.length * 0.75 / 1024);
-  console.log(`[enhance] 收到请求: image=${imageSizeKB}KB, model=${model || DEFAULT_MODEL}, prompt=${prompt.slice(0, 80)}...`);
 
   try {
     const imageRes = await fetch(image);
     const imageBlob = await imageRes.blob();
-    console.log(`[enhance] 图片转换 blob: ${Math.round(imageBlob.size / 1024)}KB`);
 
     const formData = new FormData();
     formData.append('image', imageBlob, 'source.png');
@@ -45,7 +43,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
-    console.log(`[enhance] 开始调用 Pollinations...`);
     let response: Response;
     try {
       response = await fetch(`${POLLINATIONS_BASE_URL}/v1/images/edits`, {
@@ -57,14 +54,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     } catch (err: unknown) {
       clearTimeout(timeoutId);
       if (err instanceof DOMException && err.name === 'AbortError') {
-        console.error(`[enhance] Pollinations 请求超时 (${REQUEST_TIMEOUT_MS}ms)`);
         return res.status(504).json({ error: 'AI 增强请求超时' });
       }
-      console.error(`[enhance] Pollinations 请求失败:`, err);
       return res.status(502).json({ error: `Pollinations 请求失败：${err instanceof Error ? err.message : String(err)}` });
     }
     clearTimeout(timeoutId);
-    console.log(`[enhance] Pollinations 响应: ${response.status} ${response.headers.get('content-type')}`);
 
     if (!response.ok) {
       let message = `API 错误 (${response.status})`;
