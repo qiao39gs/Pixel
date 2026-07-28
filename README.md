@@ -1,161 +1,142 @@
 # 像素拼豆图纸生成器
 
 [![Version](https://img.shields.io/badge/version-1.0.5-E8570A?logo=semver&logoColor=white)](https://github.com/qiao39gs/Pixel)
-[![License: MIT](https://img.shields.io/badge/license-MIT-18181B?logo=opensourceinitiative&logoColor=white)](https://opensource.org/license/mit)
 [![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)](https://react.dev)
 [![TypeScript 5.8](https://img.shields.io/badge/TypeScript-5.8-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![Vite 6](https://img.shields.io/badge/Vite-6-646CFF?logo=vite&logoColor=white)](https://vite.dev)
 [![Tailwind CSS v4](https://img.shields.io/badge/Tailwind_CSS-v4-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
-[![Zustand 5](https://img.shields.io/badge/Zustand-5-444444?logo=zustand&logoColor=white)](https://github.com/pmndrs/zustand)
-[![友链 linux.do](https://img.shields.io/badge/LINUX--DO-Community-blue.svg?logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB3aWR0aD0iMTIwIiBoZWlnaHQ9IjEyMCIgdmlld0JveD0iMCAwIDEyMCAxMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI%2BPGNsaXBQYXRoIGlkPSJhIj48Y2lyY2xlIGN4PSI2MCIgY3k9IjYwIiByPSI0NyIvPjwvY2xpcFBhdGg%2BPGNpcmNsZSBmaWxsPSIjZjBmMGYwIiBjeD0iNjAiIGN5PSI2MCIgcj0iNTAiLz48cmVjdCBmaWxsPSIjMWMxYzFlIiBjbGlwLXBhdGg9InVybCgjYSkiIHg9IjEwIiB5PSIxMCIgd2lkdGg9IjEwMCIgaGVpZ2h0PSIzMCIvPjxyZWN0IGZpbGw9IiNmMGYwZjAiIGNsaXAtcGF0aD0idXJsKCNhKSIgeD0iMTAiIHk9IjQwIiB3aWR0aD0iMTAwIiBoZWlnaHQ9IjQwIi8%2BPHJlY3QgZmlsbD0iI2ZmYjAwMyIgY2xpcC1wYXRoPSJ1cmwoI2EpIiB4PSIxMCIgeT0iODAiIHdpZHRoPSIxMDAiIGhlaWdodD0iMzAiLz48L3N2Zz4%3D&style=flat)](https://linux.do/)
 
-> Pixel Bead Pattern Generator — v1.0.5
+将图片转换为可直接制作的拼豆像素图纸。项目支持 MARD 221 色标准色卡匹配、格子级编辑、耗材统计、项目持久化以及 PNG、PDF 导出。
 
-纯浏览器端运行，上传图片 → 生成拼豆像素网格图纸。MARD 标准色卡匹配、CIEDE2000 色差体系、手动编辑、IndexedDB 项目持久化、A4 分页 PDF 导出、AI 图像增强。
+## 功能特性
 
----
+### 图像处理
 
-## 功能
+- 上传、拖拽或粘贴 JPEG、PNG 图片。
+- 支持原图、`1:1`、`4:3`、`3:4`、`16:9`、`9:16` 比例裁剪。
+- 支持平移、缩放、旋转、翻转、亮度、对比度和饱和度调整。
+- 提供 CIEDE2000、CIE94、CIE76、Weighted RGB 四种颜色匹配算法。
+- 支持限色、k-medoids 选色优化、背景移除和 AI 图像增强。
 
-- **图片上传裁切** — 1:1 / 4:3 / 3:4 / 16:9 / 9:16 / 自动比例裁切，拖拽旋转缩放
-- **智能色卡匹配** — CIEDE2000 空间色差算法，最近邻像素映射到 MARD 221 色标准色卡，限色后二次重匹配仅使用精选色号
-- **智能选色优化 (k-medoids)** — 可选开关，以量化误差最小为准则从色卡精选色号，替代默认频次选取；渐变/照片类图色彩还原更均衡，复用用户选定的色差算法
-- **亮度/对比度/饱和度调节** — 松手后触发图像重处理，避免频繁渲染
-- **AI 图像增强** — 通过 Pollinations 图生图 API 在源图进入拼豆管线前进行简化/降噪预处理；三档简化强度（轻度/中度/强烈）、扁平化颜色与卡通风格可选、自定义 prompt 追加
-- **裁边修整** — 自动裁剪四边空白 + 四方向滑块手动精调边距
-- **画布滚轮缩放** — 桌面端滚轮以鼠标位置为中心缩放画布，双指捏合移动端缩放
-- **换色面板** — 已有色独立置顶分组、环形占比图、拖拽快速换色、系列快捷导航
-- **格子级手动编辑** — 画笔、橡皮擦、魔棒批量选区（4 连通）、去杂色、撤销（Ctrl+Z）、重做（Ctrl+Shift+Z / Ctrl+Y）
-- **项目保存/加载/画廊** — IndexedDB 持久化，产品级项目安全网（脏状态追踪、Ctrl+S 快捷保存、未保存修改保护、自动草稿恢复），缩略图列表展示，支持重命名、删除、新建
-- **JSON 导入/导出** — 项目文件可导出为 JSON 离线备份，导入严格校验宽高、颜色数和算法参数
-- **移动端适配** — 工作台自适应布局（顶部工具栏、底部编辑坞、侧抽屉面板、色板浮层），编辑模式拖拽平移 + 双指缩放 + 长按取色 + 实时操作提示
-- **高清 PNG 导出** — 暖纸底艺术化排版，耗材按色卡系列分组排列，圆形色卡标注色号与所需数量
-- **A4 分页 PDF 导出** — 大尺寸图纸自动切板 29×29 分页，封面、耗材清单与每页使用说明
-- **编辑器视觉重设计** — 深色专业画布 + 暖白工具面板 + 品牌橙交互焦点，画布真实安全区适配双侧抽屉，ReziseObserver 自动重居中
-- **编辑安全网** — 参数调整覆盖手工编辑前确认、连续画笔笔画事务、裁剪源图防辅助线污染、撤销/重做附带图纸宽高恢复
+### 图纸编辑
 
----
+- 画笔、橡皮擦、魔棒选区、去杂色和批量换色。
+- 支持撤销、重做、自动裁边和手动边距调整。
+- 色卡面板展示颜色占比、相似度和实时耗材数量。
+- 桌面端和移动端均支持画布平移、缩放及快捷编辑。
+
+### 项目与导出
+
+- 使用 IndexedDB 保存项目，支持重命名、删除、JSON 导入与导出。
+- 自动保存用于恢复的本地草稿，并保护未保存的手工编辑。
+- 导出高清 PNG 和 A4 多页 PDF 图纸。
+- 将按系列分组的耗材用量复制为纯文本。
 
 ## 技术栈
 
 | 类别 | 技术 |
-|------|------|
-| 框架 | React 19 + TypeScript |
-| 构建 | Vite 6 |
+| --- | --- |
+| 前端 | React 19、TypeScript 5.8、Vite 6 |
 | 样式 | Tailwind CSS v4 |
-| 状态管理 | Zustand |
+| 状态管理 | Zustand 5 |
 | 图标 | Lucide React |
-| 色差算法 | CIEDE2000 / CIE94 / CIE76 / WeightedRGB |
-| AI 增强 | Pollinations img2img API（Vercel serverless 代理） |
-| 导出 | jsPDF + Canvas API |
-| 持久化 | IndexedDB |
-| 字体 | Syne / DM Sans / JetBrains Mono |
+| 图像与导出 | Canvas API、jsPDF |
+| 数据持久化 | IndexedDB |
+| AI 增强 | Pollinations img2img API、Vercel Functions |
 
----
+## 快速开始
 
-## 项目结构
+### 环境要求
 
-```
-src/
-├── App.tsx                              # 主应用入口：上传/工作区切换 + 草稿恢复
-├── main.tsx
-├── index.css                            # Tailwind + 自定义样式 + 编辑器设计令牌
-├── types.ts                             # BeadPaletteItem, TransformedPixel, IngredientStat
-├── colorUtils.ts                        # 色彩空间转换 & 色差公式
-├── vite-env.d.ts                        # Vite 环境变量类型声明
-├── store/
-│   └── workspaceStore.ts               # Zustand 全局状态 + 脏状态/保存状态/手动编辑标志
-├── hooks/
-│   ├── useImageProcessing.ts           # 图像处理 adapter：加载图片 → 调 quantizeImage → 写回 store
-│   ├── useImageEnhancement.ts          # AI 图像增强，含手动编辑覆盖确认
-│   ├── useCanvasRenderer.ts            # Canvas 离屏渲染
-│   └── useProjectSafety.ts             # 项目安全网：脏状态、自动草稿、Ctrl+S、离开保护
-├── services/
-│   └── pollinationsApi.ts              # Pollinations API 客户端封装 + prompt 构建
-├── components/
-│   ├── ImageUploader.tsx               # 图片上传 & 裁切（预览层与输出层分离）
-│   ├── PatternWorkspace.tsx            # 工作台主组件 + 键盘快捷键
-│   └── workspace/
-│       ├── EditorFrame.tsx              # 全屏编辑器骨架 + 安全区布局
-│       ├── TopToolbar.tsx               # 顶部居中工具栏
-│       ├── CanvasViewport.tsx           # 画布视口 + 指针交互委派 + 笔画事务
-│       ├── ToolHint.tsx                 # 桌面/移动端分端操作提示
-│       ├── LeftDrawer.tsx               # 左侧参数抽屉（规格/调整/AI/裁剪/视图）
-│       ├── ControlSections.tsx          # 左面板内容：滑块、开关、算法、规格
-│       ├── RightStatsPanel.tsx          # 右侧色卡抽屉框架
-│       ├── StatsPanel.tsx               # 色卡耗材统计 + 换色 + 相似度
-│       ├── PalettePanel.tsx             # 完整色卡选择浮层
-│       ├── ProjectDrawer.tsx            # 项目抽屉容器
-│       ├── ProjectPanel.tsx             # 项目列表：IndexedDB 异步 CRUD + 状态反馈
-│       ├── ProjectStatus.tsx            # 左上角项目保存状态指示器
-│       ├── MobileToolbar.tsx            # 移动端底部编辑工具坞
-│       ├── ZoomControls.tsx             # 缩放控件 + 适应画布
-│       └── Toasts.tsx                   # Toast 消息提示
-├── data/
-│   └── palette.ts                       # MARD 221 色标准色卡
-└── utils/
-    ├── quantizeImage.ts                 # 量化管线：采样+色彩调整+匹配+限色+k-medoids
-    ├── patternEditor.ts                 # 图纸编辑器：笔画事务 + 宽高感知快照
-    ├── pointerInteraction.ts            # 画布指针交互状态机
-    ├── renderLayout.ts                  # 导出渲染布局 + RenderAdapter 接口
-    ├── exportUtils.ts                   # PNG & PDF 导出（PDF adapter 完整状态栈）
-    ├── editOperations.ts                # 泛洪填充 + EMPTY_BEAD 常量
-    ├── statsUtils.ts                    # 统计计算
-    ├── kMedoids.ts                      # k-medoids 贪心选色优化
-    ├── projectStorage.ts               # IndexedDB 项目持久化 + 旧 localStorage 迁移 + JSON 导入/导出
-    └── constants.ts                     # ASPECT_RATIOS 等常量
-api/
-└── enhance.ts                           # Vercel serverless 函数：代理 Pollinations img2img API
-```
+- Node.js 20.19+ 或 22.12+
+- npm
 
----
-
-## MARD 色卡系列
-
-| 系列 | 色域 | 数量 |
-|------|------|------|
-| A系列 | 黄/橙/红 | 26 |
-| B系列 | 绿 | 32 |
-| C系列 | 蓝/青 | 29 |
-| D系列 | 紫 | 26 |
-| E系列 | 粉/玫红 | 24 |
-| F系列 | 红/棕红 | 25 |
-| G系列 | 棕/肤色 | 21 |
-| H系列 | 黑白灰 | 23 |
-| M系列 | 混合/大地色 | 15 |
-
----
-
-## 开发
+### 安装与运行
 
 ```bash
 npm install
-npm run dev      # http://localhost:3000（纯前端，AI 增强不可用）
-npm run lint     # tsc --noEmit
-npm run build    # 生产构建
-npm run preview  # 预览构建结果
+npm run dev
 ```
 
-> AI 图像增强依赖 Vercel serverless 函数 (`api/enhance.ts`)，本地开发需使用 `vercel dev` 替代 `npm run dev`。
+开发服务器默认运行在 <http://localhost:3000>。
 
----
+常用命令：
 
-## 环境变量
+| 命令 | 说明 |
+| --- | --- |
+| `npm run dev` | 启动 Vite 开发服务器，不包含本地 AI 代理 |
+| `npm run lint` | 执行 TypeScript 类型检查（`tsc --noEmit`） |
+| `npm run build` | 生成生产构建 |
+| `npm run preview` | 在 3000 端口预览生产构建 |
 
-AI 图像增强功能需要配置 Pollinations API Key：
+项目目前没有自动化测试框架，也没有 ESLint 或 Prettier。`npm run lint` 仅执行类型检查，`npm run build` 不能替代该检查。
 
-| 变量名 | 位置 | 说明 |
-|--------|------|------|
-| `POLLINATIONS_API_KEY` | Vercel 项目设置 → Environment Variables | 从 [enter.pollinations.ai](https://enter.pollinations.ai) 获取，仅服务端可见 |
+## AI 增强配置
 
-配置后需重新部署（推送任意 commit 即可触发）才会生效。
+AI 图像增强通过 `api/enhance.ts` 调用 Pollinations API。API Key 只在服务端读取，不会暴露给浏览器。
 
----
+1. 从 [Pollinations](https://enter.pollinations.ai) 获取 API Key。
+2. 在 Vercel 项目的 Environment Variables 中添加 `POLLINATIONS_API_KEY`。
+3. 重新部署项目。
 
-## 许可证
+本地调试 AI 增强时，需要先安装并登录 [Vercel CLI](https://vercel.com/docs/cli)，关联项目，并通过 Vercel CLI 拉取开发环境变量或参考 `.env.example` 配置本地服务端环境，然后运行：
 
-MIT
+```bash
+vercel dev
+```
 
----
+也可以使用 `npx vercel dev`。仅运行 `npm run dev` 时，其他前端功能可以正常使用，但 AI 增强不可用。不要给 API Key 添加 `VITE_` 前缀，否则可能被打包到客户端。
 
-[GitHub - qiao39gs/Pixel](https://github.com/qiao39gs/Pixel)
+## 使用流程
+
+1. 上传图片并调整裁剪范围。
+2. 进入工作台，设置图纸尺寸、色彩参数和匹配算法。
+3. 使用画笔、橡皮擦、魔棒或换色面板修整图纸。
+4. 保存项目，或导出 PNG、PDF 和耗材用量。
+
+项目和自动恢复草稿只保存在当前浏览器的 IndexedDB 中，不会同步到其他设备。清理站点数据可能导致内容丢失，建议定期导出 JSON 备份。
+
+常用快捷键：
+
+| 快捷键 | 操作 |
+| --- | --- |
+| `Ctrl/Cmd + S` | 保存或更新当前项目；未命名项目会打开项目面板 |
+| `Ctrl/Cmd + Z` | 撤销 |
+| `Ctrl/Cmd + Shift + Z`、`Ctrl/Cmd + Y` | 重做 |
+| `V` | 切换编辑模式 |
+| `B` | 在编辑模式中打开或关闭色板 |
+| `E` | 在编辑模式中切换橡皮擦 |
+| `W` | 在编辑模式中切换魔棒 |
+| `Space` | 按住临时平移画布 |
+| `Escape` | 退出编辑模式 |
+
+## 项目结构
+
+```text
+.
+├── api/
+│   └── enhance.ts                 # Pollinations API 服务端代理
+├── src/
+│   ├── components/                # 上传页、工作台和界面组件
+│   ├── data/palette.ts            # MARD 221 色标准色卡
+│   ├── hooks/                     # 图像处理、渲染、AI 与项目安全 hooks
+│   ├── services/                  # 外部 API 客户端
+│   ├── store/workspaceStore.ts    # Zustand 全局状态
+│   ├── utils/                     # 量化、编辑、交互、存储和导出模块
+│   ├── App.tsx                    # 根组件、页面切换与导出入口
+│   ├── main.tsx                   # ReactDOM 挂载入口
+│   ├── index.css                  # Tailwind 主题和全局样式
+│   └── types.ts                   # 共享类型
+├── AGENTS.md                      # 开发代理指南
+├── package.json
+└── vite.config.ts
+```
+
+更详细的架构约束和开发约定请参阅 [`AGENTS.md`](./AGENTS.md)。
+
+推荐使用最新版 Chrome、Edge、Firefox 或 Safari。复制耗材用量需要浏览器允许页面写入剪贴板。
+
+## 链接
+
+- [GitHub 仓库](https://github.com/qiao39gs/Pixel)
+- [LINUX DO 社区](https://linux.do/)
