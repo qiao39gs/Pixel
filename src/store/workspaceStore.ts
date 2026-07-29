@@ -163,7 +163,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   contrast: 100,
   saturation: 100,
   distanceAlgorithm: 'CIEDE2000',
-  kMedoidsOptimize: false,
+  kMedoidsOptimize: true,
   removeBackground: true,
   scale: 14,
   showNumbers: true,
