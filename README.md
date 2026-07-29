@@ -1,6 +1,6 @@
 # 像素拼豆图纸生成器
 
-[![Version](https://img.shields.io/badge/version-1.0.5-E8570A?logo=semver&logoColor=white)](https://github.com/qiao39gs/Pixel)
+[![Version](https://img.shields.io/badge/version-1.0.6-E8570A?logo=semver&logoColor=white)](https://github.com/qiao39gs/Pixel)
 [![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)](https://react.dev)
 [![TypeScript 5.8](https://img.shields.io/badge/TypeScript-5.8-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![Vite 6](https://img.shields.io/badge/Vite-6-646CFF?logo=vite&logoColor=white)](https://vite.dev)
