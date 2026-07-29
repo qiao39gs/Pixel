@@ -33,7 +33,7 @@ export default function ImageUploader({ onImageCropped, onImageStateChange, aspe
   // Handle uploaded file
   const handleFile = (file: File) => {
     if (!file.type.startsWith('image/')) {
-      alert('仅支持上传图片类型文件（PNG/JPEG）');
+      alert('仅支持上传图片类型文件（PNG/JPEG/WebP）');
       return;
     }
 
@@ -553,7 +553,7 @@ export default function ImageUploader({ onImageCropped, onImageStateChange, aspe
             type="file" 
             id="dropzone-file" 
             className="hidden" 
-            accept="image/png, image/jpeg" 
+            accept="image/png, image/jpeg, image/webp" 
             onChange={handleFileInput} 
           />
           <div className={`h-16 w-16 rounded-2xl flex items-center justify-center border mb-5 transition-all duration-300 group-hover:-translate-y-1 ${dragActive ? 'bg-[#E8570A] border-[#E8570A] text-white' : 'bg-white border-orange-100 text-[#E8570A] shadow-md shadow-orange-100/60'}`}>
@@ -563,7 +563,7 @@ export default function ImageUploader({ onImageCropped, onImageStateChange, aspe
             {dragActive ? '松开即可载入图片' : '点击上传 或拖拽图片文件到这里'}
           </h3>
           <p className="text-xs text-slate-500 max-w-sm leading-relaxed">
-             支持 JPEG/PNG 图片<span className="hidden md:inline">，也可 Ctrl+V 直接粘贴截图</span>。上传后可调整比例和裁剪范围。
+             支持 JPEG/PNG/WebP 图片<span className="hidden md:inline">，也可 Ctrl+V 直接粘贴截图</span>。上传后可调整比例和裁剪范围。
           </p>
         </div>
       ) : (
