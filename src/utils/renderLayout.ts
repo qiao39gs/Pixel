@@ -4,6 +4,8 @@ import { RGB, hexToRgb, luminance } from '../colorUtils';
 export interface RenderAdapter {
   fillRect(x: number, y: number, w: number, h: number): void;
   strokeRect(x: number, y: number, w: number, h: number): void;
+  fillRoundRect(x: number, y: number, w: number, h: number, r: number): void;
+  strokeRoundRect(x: number, y: number, w: number, h: number, r: number): void;
   fillCircle(cx: number, cy: number, r: number): void;
   strokeCircle(cx: number, cy: number, r: number): void;
   line(x1: number, y1: number, x2: number, y2: number): void;
@@ -24,9 +26,21 @@ export interface RenderAdapter {
 }
 
 export function createCanvasAdapter(ctx: CanvasRenderingContext2D): RenderAdapter {
+  const roundRectPath = (x: number, y: number, w: number, h: number, r: number) => {
+    const radius = Math.min(r, w / 2, h / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.arcTo(x + w, y, x + w, y + h, radius);
+    ctx.arcTo(x + w, y + h, x, y + h, radius);
+    ctx.arcTo(x, y + h, x, y, radius);
+    ctx.arcTo(x, y, x + w, y, radius);
+    ctx.closePath();
+  };
   return {
     fillRect: (x, y, w, h) => ctx.fillRect(x, y, w, h),
     strokeRect: (x, y, w, h) => ctx.strokeRect(x, y, w, h),
+    fillRoundRect: (x, y, w, h, r) => { roundRectPath(x, y, w, h, r); ctx.fill(); },
+    strokeRoundRect: (x, y, w, h, r) => { roundRectPath(x, y, w, h, r); ctx.stroke(); },
     fillCircle: (cx, cy, r) => { ctx.beginPath(); ctx.arc(cx, cy, r, 0, 2 * Math.PI); ctx.fill(); },
     strokeCircle: (cx, cy, r) => { ctx.beginPath(); ctx.arc(cx, cy, r, 0, 2 * Math.PI); ctx.stroke(); },
     line: (x1, y1, x2, y2) => { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); },
@@ -57,6 +71,11 @@ export interface GridRenderOptions {
   offsetY: number;
 }
 
+function shouldRenderRulerLabel(index: number, count: number): boolean {
+  const value = index + 1;
+  return index === 0 || index === count - 1 || value % 5 === 0;
+}
+
 export function renderGrid(a: RenderAdapter, pixels: TransformedPixel[], opts: GridRenderOptions): void {
   const { scale, gridWidth, gridHeight, showRulers, showNumbers, offsetX, offsetY } = opts;
   const gw = gridWidth * scale, gh = gridHeight * scale;
@@ -66,23 +85,34 @@ export function renderGrid(a: RenderAdapter, pixels: TransformedPixel[], opts: G
 
   // Rulers
   if (showRulers) {
-    a.setFillStyle('#9B958C');
-    a.setFont('12px "JetBrains Mono", monospace');
+    a.setFont('bold 13px "JetBrains Mono", monospace');
     a.setTextAlign('center');
-    a.setTextBaseline('alphabetic');
-    for (let x = 1; x <= gridWidth; x++) a.fillText(x.toString(), (x - 1) * scale + scale / 2, -14);
+    for (let x = 0; x < gridWidth; x++) {
+      if (!shouldRenderRulerLabel(x, gridWidth)) continue;
+      a.setFillStyle((x + 1) % 10 === 0 ? '#C84708' : '#827C73');
+      a.setTextBaseline('bottom');
+      a.fillText((x + 1).toString(), x * scale + scale / 2, -12);
+      a.setTextBaseline('top');
+      a.fillText((x + 1).toString(), x * scale + scale / 2, gh + 12);
+    }
     a.setTextAlign('right');
     a.setTextBaseline('middle');
-    for (let y = 1; y <= gridHeight; y++) a.fillText(y.toString(), -14, (y - 1) * scale + scale / 2);
+    for (let y = 0; y < gridHeight; y++) {
+      if (!shouldRenderRulerLabel(y, gridHeight)) continue;
+      a.setFillStyle((y + 1) % 10 === 0 ? '#C84708' : '#827C73');
+      a.fillText((y + 1).toString(), -12, y * scale + scale / 2);
+      a.setTextAlign('left');
+      a.fillText((y + 1).toString(), gw + 12, y * scale + scale / 2);
+      a.setTextAlign('right');
+    }
   }
 
   // Pixel blocks
   pixels.forEach(p => {
     const px = p.x * scale, py = p.y * scale;
     if (p.matchedBead.code === 'EMPTY') {
-      a.setStrokeStyle('#E8E3DB');
-      a.setLineWidth(1);
-      a.strokeCircle(px + scale / 2, py + scale / 2, scale / 8);
+      a.setFillStyle('#D8D2C8');
+      a.fillCircle(px + scale / 2, py + scale / 2, Math.max(1.5, scale / 16));
       return;
     }
     a.setFillStyle(p.matchedBead.hex);
@@ -95,7 +125,8 @@ export function renderGrid(a: RenderAdapter, pixels: TransformedPixel[], opts: G
     a.strokeCircle(px + scale / 2, py + scale / 2, scale / 5);
     if (showNumbers) {
       a.setFillStyle(a.contrastColor(p.matchedBead.hex));
-      a.setFont(`bold ${Math.floor(scale / 2.5)}px "JetBrains Mono", monospace`);
+      const fontSize = Math.floor(scale / Math.max(2.5, p.matchedBead.code.length * 0.9));
+      a.setFont(`bold ${fontSize}px "JetBrains Mono", monospace`);
       a.setTextAlign('center');
       a.setTextBaseline('middle');
       a.fillText(p.matchedBead.code, px + scale / 2, py + scale / 2 + 1);
@@ -115,7 +146,7 @@ export function renderGrid(a: RenderAdapter, pixels: TransformedPixel[], opts: G
       a.setStrokeStyle('#E8570A'); a.setLineWidth(2.0); a.setLineDash(null);
       a.line(x * scale, 0, x * scale, gh);
     } else if (x % 5 === 0) {
-      a.setStrokeStyle('rgba(232,87,10,0.4)'); a.setLineWidth(1.0); a.setLineDash([6, 6]);
+      a.setStrokeStyle('rgba(232,87,10,0.24)'); a.setLineWidth(1.0); a.setLineDash([6, 6]);
       a.line(x * scale, 0, x * scale, gh);
     }
   }
@@ -124,15 +155,15 @@ export function renderGrid(a: RenderAdapter, pixels: TransformedPixel[], opts: G
       a.setStrokeStyle('#E8570A'); a.setLineWidth(2.0); a.setLineDash(null);
       a.line(0, y * scale, gw, y * scale);
     } else if (y % 5 === 0) {
-      a.setStrokeStyle('rgba(232,87,10,0.4)'); a.setLineWidth(1.0); a.setLineDash([6, 6]);
+      a.setStrokeStyle('rgba(232,87,10,0.24)'); a.setLineWidth(1.0); a.setLineDash([6, 6]);
       a.line(0, y * scale, gw, y * scale);
     }
   }
   a.setLineDash(null);
 
   // Frame
-  a.setStrokeStyle('#D4CFC4');
-  a.setLineWidth(2);
+  a.setStrokeStyle('#8E887F');
+  a.setLineWidth(3);
   a.strokeRect(0, 0, gw, gh);
 
   a.popState();
