@@ -31,6 +31,7 @@ export default function EditorFrame(props: Props) {
   const panelOpen = useWorkspaceStore(s => s.panelOpen);
   const setPanelOpen = useWorkspaceStore(s => s.setPanelOpen);
   const showPalettePanel = useWorkspaceStore(s => s.showPalettePanel);
+  const projectPanelOpen = useWorkspaceStore(s => s.projectPanelOpen);
   const leftOpen = panelOpen === 'left' || panelOpen === 'both';
   const rightOpen = panelOpen === 'right' || panelOpen === 'both';
   const initialized = useRef(false);
@@ -58,11 +59,12 @@ export default function EditorFrame(props: Props) {
       data-left-open={leftOpen}
       data-right-open={rightOpen}
       data-palette-open={showPalettePanel}
+      data-project-open={projectPanelOpen}
     >
       <main className="editor-canvas-stage">
         <CanvasViewport canvasRef={props.canvasRef} containerRef={props.containerRef} />
       </main>
-      {(leftOpen || rightOpen) && <button className="editor-panel-backdrop" onClick={() => setPanelOpen('none')} aria-label="关闭侧边面板" />}
+      {(leftOpen || rightOpen || projectPanelOpen) && <button className="editor-panel-backdrop" onClick={() => { setPanelOpen('none'); useWorkspaceStore.getState().setProjectPanelOpen(false); }} aria-label="关闭弹出面板" />}
       <PalettePanel currentPalette={props.currentPalette} />
       <TopToolbar
         currentPalette={props.currentPalette}

@@ -40,7 +40,7 @@ export default function App() {
 
   // Completed Crop phase
   const handleImageCropped = useCallback((imageDataUrl: string) => {
-    useWorkspaceStore.setState({ kMedoidsOptimize: true });
+    useWorkspaceStore.setState({ kMedoidsOptimize: true, pipelineMode: 'process' });
     setCroppedImage(imageDataUrl);
     setWorkspaceOpen(true);
   }, []);

@@ -188,8 +188,8 @@ export default function ProjectPanel({ onReset, croppedImageDataUrl, aspectRatio
     <div className="bg-transparent">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <span className="text-xs text-stone-500">项目存于本机 IndexedDB，建议定期导出 JSON 备份</span>
-        <span className="px-2 py-1 rounded-full bg-stone-100 text-[11px] font-mono text-stone-500">{projects.length} 个</span>
+        <span className="min-w-0 truncate pr-3 text-xs text-stone-500">项目存于本地</span>
+        <span className="shrink-0 whitespace-nowrap px-2 py-1 rounded-full bg-stone-100 text-[11px] font-mono text-stone-500">{projects.length} 个</span>
       </div>
 
       {hasCurrentPixels && (
@@ -268,72 +268,77 @@ export default function ProjectPanel({ onReset, croppedImageDataUrl, aspectRatio
           <span className="text-xs text-zinc-400 mt-1">点击"新建项目"或"导入 JSON"</span>
         </div>
       ) : (
-        <div className="border border-zinc-200 rounded-xl overflow-hidden">
-          <div className="max-h-[420px] overflow-y-auto">
-            {projects.map((p, idx) => (
+        <div className="max-h-[460px] overflow-y-auto pr-1 scrollbar-dark">
+          <div className="flex flex-col gap-2.5">
+            {projects.map((p) => (
               <div
                 key={p.id}
-                className={`flex items-center gap-4 p-3 hover:bg-zinc-50 transition-colors group ${p.id === currentProjectId ? 'bg-orange-50/60' : ''} ${idx !== 0 ? 'border-t border-zinc-100' : ''}`}
+                className={`rounded-2xl border p-3 transition-colors ${p.id === currentProjectId ? 'border-orange-200 bg-orange-50/70' : 'border-stone-200 bg-white/70 hover:border-stone-300 hover:bg-white'}`}
               >
-                <div
-                  className="w-12 h-12 rounded-lg border border-zinc-200 bg-zinc-100 flex-shrink-0 overflow-hidden"
-                  style={{
-                    backgroundImage: p.thumbnail ? `url(${p.thumbnail})` : undefined,
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                  }}
-                />
-                <div className="flex-1 min-w-0">
-                  {renamingId === p.id ? (
-                    <input
-                      type="text"
-                      value={renameName}
-                      onChange={e => setRenameName(e.target.value)}
-                      onKeyDown={e => {
-                        if (e.key === 'Enter') handleConfirmRename();
-                        if (e.key === 'Escape') handleCancelRename();
-                      }}
-                      onBlur={handleConfirmRename}
-                      className="w-full px-2 py-1 text-sm font-bold bg-white border border-[#E8570A] rounded-lg text-zinc-700 outline-none"
-                      onClick={e => e.stopPropagation()}
-                      autoFocus
-                    />
-                  ) : (
-                    <>
-                      <div className="text-sm font-bold text-zinc-700 truncate">{p.name}</div>
-                      <div className="flex items-center gap-3 mt-0.5">
-                        <span className="text-xs text-zinc-400">{p.updatedAt || p.createdAt}</span>
-                        <span className="text-xs font-mono text-zinc-400">{p.gridWidth}×{p.gridHeight} · {p.colorCount}色</span>
-                        {!p.hasOriginalImage && <span className="text-[10px] text-amber-600">仅图纸</span>}
+                <div className="flex min-w-0 items-start gap-3">
+                  <div
+                    className="h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-stone-200 bg-stone-100"
+                    style={{
+                      backgroundImage: p.thumbnail ? `url(${p.thumbnail})` : undefined,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                    }}
+                  />
+                  <div className="min-w-0 flex-1 pt-0.5">
+                    {renamingId === p.id ? (
+                      <input
+                        type="text"
+                        value={renameName}
+                        onChange={e => setRenameName(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') handleConfirmRename();
+                          if (e.key === 'Escape') handleCancelRename();
+                        }}
+                        onBlur={handleConfirmRename}
+                        className="w-full rounded-lg border border-[#E8570A] bg-white px-2 py-1 text-sm font-bold text-zinc-700 outline-none"
+                        autoFocus
+                      />
+                    ) : (
+                      <div className="flex min-w-0 items-center gap-2">
+                        <div className="truncate text-sm font-bold text-zinc-700">{p.name}</div>
+                        {p.id === currentProjectId ? <span className="shrink-0 rounded-full bg-[#E8570A] px-1.5 py-0.5 text-[9px] font-bold text-white">当前</span> : null}
                       </div>
-                    </>
-                  )}
-                </div>
-                {renamingId !== p.id && (
-                  <div className="flex items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleStartRename(p.id, p.name); }}
-                      className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-colors cursor-pointer"
-                      title="重命名"
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleLoad(p.id); }}
-                      disabled={busyAction === `load:${p.id}`}
-                      className="px-3 py-1.5 text-xs font-bold rounded-lg bg-[#E8570A]/10 text-[#E8570A] hover:bg-[#E8570A]/20 transition-colors cursor-pointer"
-                    >
-                      {busyAction === `load:${p.id}` ? '加载中' : p.id === currentProjectId ? '当前' : '加载'}
-                    </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleDelete(p.id, p.name); }}
-                      aria-label={`删除项目 ${p.name}`}
-                      className="p-1.5 rounded-lg text-zinc-400 hover:text-red-500 hover:bg-red-50 transition-colors cursor-pointer"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    )}
+                    <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-zinc-400">
+                      <span className="rounded-md bg-stone-100 px-1.5 py-0.5 font-mono text-stone-500">{p.gridWidth} × {p.gridHeight}</span>
+                      <span>{p.colorCount} 色</span>
+                      {!p.hasOriginalImage ? <span className="text-amber-600">仅图纸</span> : null}
+                    </div>
                   </div>
-                )}
+                </div>
+                <div className="mt-3 flex items-center border-t border-stone-100 pt-2.5">
+                  <span className="min-w-0 flex-1 truncate pr-2 text-[10px] text-stone-400">{p.updatedAt || p.createdAt}</span>
+                  {renamingId !== p.id ? (
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <button
+                        onClick={() => handleStartRename(p.id, p.name)}
+                        className="flex h-8 items-center gap-1 rounded-lg px-2 text-[11px] font-bold text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-700 cursor-pointer"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />重命名
+                      </button>
+                      <button
+                        onClick={() => handleLoad(p.id)}
+                        disabled={busyAction === `load:${p.id}`}
+                        className="h-8 rounded-lg bg-[#E8570A] px-3 text-[11px] font-bold text-white transition-colors hover:bg-[#CF4707] disabled:cursor-wait cursor-pointer"
+                      >
+                        {busyAction === `load:${p.id}` ? '打开中' : p.id === currentProjectId ? '已打开' : '打开'}
+                      </button>
+                      <button
+                        onClick={() => handleDelete(p.id, p.name)}
+                        aria-label={`删除项目 ${p.name}`}
+                        title="删除项目"
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-red-50 hover:text-red-500 cursor-pointer"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
               </div>
             ))}
           </div>

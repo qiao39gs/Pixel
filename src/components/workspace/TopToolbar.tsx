@@ -1,5 +1,5 @@
 import React from 'react';
-import { Menu, Pencil, Undo2, Redo2, Eraser, Sparkles, Wand2, Palette, Sliders, Layers, LayoutGrid, Award, Copy, RotateCcw, ChevronDown } from 'lucide-react';
+import { FolderKanban, Pencil, Undo2, Redo2, Eraser, Sparkles, Wand2, Palette, Sliders, Layers, LayoutGrid, Award, Copy, RotateCcw, ChevronDown } from 'lucide-react';
 import { useState } from 'react';
 import { BeadPaletteItem, TransformedPixel, IngredientStat } from '../../types';
 import { useWorkspaceStore } from '../../store/workspaceStore';
@@ -28,6 +28,21 @@ function TButton({ active, onClick, title, Icon, activeCls = 'bg-[#E8570A] text-
 
 const Sep = () => <span className="w-px h-5 bg-white/10 mx-1 shrink-0" />;
 
+function PanelButton({ active, onClick, title, label, Icon }: {
+  active: boolean;
+  onClick: () => void;
+  title: string;
+  label: string;
+  Icon: React.ComponentType<{ className?: string }>;
+}) {
+  return (
+    <button onClick={onClick} title={title} aria-label={title} aria-pressed={active} className="editor-panel-button cursor-pointer">
+      <Icon className={IconSize} />
+      <span>{label}</span>
+    </button>
+  );
+}
+
 export default function TopToolbar({ currentPalette, onGeneratePng, onGeneratePdf, onReset }: Props) {
   const editMode = useWorkspaceStore(s => s.editMode);
   const setEditMode = useWorkspaceStore(s => s.setEditMode);
@@ -44,7 +59,8 @@ export default function TopToolbar({ currentPalette, onGeneratePng, onGeneratePd
   const denoise = useWorkspaceStore(s => s.denoise);
   const showPalettePanel = useWorkspaceStore(s => s.showPalettePanel);
   const setShowPalettePanel = useWorkspaceStore(s => s.setShowPalettePanel);
-  const toggleProjectPanel = useWorkspaceStore(s => s.toggleProjectPanel);
+  const projectPanelOpen = useWorkspaceStore(s => s.projectPanelOpen);
+  const setProjectPanelOpen = useWorkspaceStore(s => s.setProjectPanelOpen);
   const toggleLeftDrawer = useWorkspaceStore(s => s.toggleLeftDrawer);
   const toggleRightPanel = useWorkspaceStore(s => s.toggleRightPanel);
   const setPanelOpen = useWorkspaceStore(s => s.setPanelOpen);
@@ -96,8 +112,28 @@ export default function TopToolbar({ currentPalette, onGeneratePng, onGeneratePd
       pushToast('复制失败，请检查剪贴板权限');
     }
   };
-  const toggleLeftPanel = () => window.matchMedia('(max-width: 1023px)').matches ? setPanelOpen(leftOpen ? 'none' : 'left') : toggleLeftDrawer();
-  const toggleStatsPanel = () => window.matchMedia('(max-width: 1023px)').matches ? setPanelOpen(rightOpen ? 'none' : 'right') : toggleRightPanel();
+  const toggleProjects = () => {
+    setPanelOpen('none');
+    setShowPalettePanel(false);
+    setProjectPanelOpen(!projectPanelOpen);
+  };
+  const toggleLeftPanel = () => {
+    setProjectPanelOpen(false);
+    setShowPalettePanel(false);
+    if (window.matchMedia('(max-width: 1023px)').matches) setPanelOpen(leftOpen ? 'none' : 'left');
+    else toggleLeftDrawer();
+  };
+  const toggleStatsPanel = () => {
+    setProjectPanelOpen(false);
+    setShowPalettePanel(false);
+    if (window.matchMedia('(max-width: 1023px)').matches) setPanelOpen(rightOpen ? 'none' : 'right');
+    else toggleRightPanel();
+  };
+  const toggleBrushPalette = () => {
+    setProjectPanelOpen(false);
+    setPanelOpen('none');
+    setShowPalettePanel(!showPalettePanel);
+  };
   const resetImage = () => {
     if (!confirmDiscardChanges('当前项目有未保存的修改。重选图片将放弃这些修改，是否继续？')) return;
     useWorkspaceStore.getState().clearCurrentProject();
@@ -109,8 +145,12 @@ export default function TopToolbar({ currentPalette, onGeneratePng, onGeneratePd
     <>
       {/* 顶部居中工具栏 */}
       <nav aria-label="编辑器工具栏" className="editor-top-toolbar glass-toolbar animate-toolbar-pop">
-        {/* 菜单分组 */}
-        <TButton active={false} onClick={toggleProjectPanel} title="项目" Icon={Menu} activeCls="" />
+        {/* 弹出面板入口 */}
+        <div className="flex items-center">
+          <PanelButton active={projectPanelOpen} onClick={toggleProjects} title="项目管理：保存、打开和备份图纸" label="项目" Icon={FolderKanban} />
+          <PanelButton active={leftOpen} onClick={toggleLeftPanel} title="图纸参数：规格、颜色、裁剪和视图" label="参数" Icon={Sliders} />
+          <PanelButton active={rightOpen} onClick={toggleStatsPanel} title="耗材统计：查看色号和拼豆用量" label="耗材" Icon={Layers} />
+        </div>
         <Sep />
 
         {/* 编辑分组 */}
@@ -127,17 +167,12 @@ export default function TopToolbar({ currentPalette, onGeneratePng, onGeneratePd
             <TButton active={isEraser} onClick={() => { setIsEraser(!isEraser); setBrushBead(null); }} title="橡皮擦 (E)" Icon={Eraser} activeCls="bg-red-500 text-white" />
             <TButton active={false} onClick={() => denoise(gridWidth, gridHeight, currentPalette)} title="去杂色" Icon={Sparkles} />
             <TButton active={wandMode} onClick={() => { setWandMode(!wandMode); setWandSelection(new Set()); }} title="魔棒 (W)" Icon={Wand2} activeCls="bg-cyan-500 text-white" />
-            <TButton active={showPalettePanel} onClick={() => setShowPalettePanel(!showPalettePanel)} title="色板 (B)" Icon={Palette} activeCls="bg-[#E8570A] text-white" />
+            <TButton active={showPalettePanel} onClick={toggleBrushPalette} title="画笔色板：选择绘制颜色 (B)" Icon={Palette} activeCls="bg-[#E8570A] text-white" />
           </>}
         </div>
 
-        {/* 面板切换 */}
         <span className="hidden sm:block"><Sep /></span>
-        <div className="flex items-center">
-          <TButton active={leftOpen} onClick={toggleLeftPanel} title="参数面板" Icon={Sliders} activeCls="bg-white/15 text-white" />
-          <TButton active={rightOpen} onClick={toggleStatsPanel} title="色卡面板" Icon={Layers} activeCls="bg-white/15 text-white" />
-          <TButton active={false} onClick={resetImage} title="重选图片" Icon={RotateCcw} />
-        </div>
+        <TButton active={false} onClick={resetImage} title="返回首页并选择其他图片" Icon={RotateCcw} />
 
         {/* 导出 */}
         <Sep />

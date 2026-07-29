@@ -1,7 +1,8 @@
 import React from 'react';
-import { X, Sliders } from 'lucide-react';
+import { Sliders } from 'lucide-react';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { SpecSection, AdjustSection, AiSection, TrimSection, ViewSection } from './ControlSections';
+import PanelHeader from './PanelHeader';
 
 const TABS = [
   { id: 'spec', label: '规格' },
@@ -27,15 +28,7 @@ export default function LeftDrawer({ onTriggerEnhance }: { onTriggerEnhance: () 
 
   return (
     <aside className="editor-side-panel editor-left-panel glass-panel animate-drawer-left">
-      <header className="flex items-center justify-between px-4 py-3 border-b border-slate-200/60 shrink-0">
-        <div className="flex items-center gap-2 text-stone-800">
-          <span className="flex w-8 h-8 items-center justify-center rounded-xl bg-orange-50 text-[#E8570A]"><Sliders className="w-4 h-4" /></span>
-           <div><span className="block font-sans font-bold text-sm leading-tight">图纸参数</span><span className="block text-[11px] text-stone-500 mt-0.5">{hasSourceImage ? '规格、颜色与视图' : '裁剪与视图'}</span></div>
-        </div>
-        <button onClick={toggleLeftDrawer} className="p-2 -m-2 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors cursor-pointer" title="关闭">
-            <X className="w-4 h-4" />
-        </button>
-      </header>
+      <PanelHeader icon={<Sliders className="h-4 w-4" />} title="图纸参数" description={hasSourceImage ? '规格、颜色与视图' : '裁剪与视图'} onClose={toggleLeftDrawer} closeLabel="关闭图纸参数" />
       <div className="flex gap-1 px-3 py-2.5 border-b border-slate-200/40 shrink-0 overflow-x-auto scrollbar-dark">
         {visibleTabs.map(t => (
           <button
