@@ -61,10 +61,27 @@ export function quantizeImage(
   };
 
   const sampleSrc = (gx: number, gy: number): [number, number, number, number] => {
-    const sx = gw > 1 ? Math.round(gx * (sw - 1) / (gw - 1)) : 0;
-    const sy = gh > 1 ? Math.round(gy * (sh - 1) / (gh - 1)) : 0;
-    const off = (sy * sw + sx) * 4;
-    return [srcData[off], srcData[off + 1], srcData[off + 2], srcData[off + 3]];
+    const startX = Math.floor(gx * sw / gw);
+    const endX = Math.max(startX + 1, Math.floor((gx + 1) * sw / gw));
+    const startY = Math.floor(gy * sh / gh);
+    const endY = Math.max(startY + 1, Math.floor((gy + 1) * sh / gh));
+    let red = 0, green = 0, blue = 0, alpha = 0, count = 0;
+
+    for (let sy = startY; sy < Math.min(endY, sh); sy++) {
+      for (let sx = startX; sx < Math.min(endX, sw); sx++) {
+        const off = (sy * sw + sx) * 4;
+        const weight = srcData[off + 3] / 255;
+        red += srcData[off] * weight;
+        green += srcData[off + 1] * weight;
+        blue += srcData[off + 2] * weight;
+        alpha += srcData[off + 3];
+        count++;
+      }
+    }
+
+    const colorWeight = alpha / 255;
+    if (count === 0 || colorWeight === 0) return [0, 0, 0, 0];
+    return [red / colorWeight, green / colorWeight, blue / colorWeight, alpha / count];
   };
 
   const matchBest = (pixelLab: LAB, rgb: RGB, searchPalette: PaletteItemWithCache[] = palette): BeadPaletteItem => {

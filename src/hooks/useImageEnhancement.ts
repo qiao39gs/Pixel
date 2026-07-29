@@ -10,11 +10,17 @@ interface CacheEntry {
 
 let cache: CacheEntry | null = null;
 
-function optionsKey(opts: ReturnType<typeof useWorkspaceStore.getState>['aiEnhanceOptions']): string {
-  return `${opts.enhanceStrength}|${opts.flatColors}|${opts.cartoonStyle}|${opts.customPrompt.trim()}`;
+function optionsKey(
+  opts: ReturnType<typeof useWorkspaceStore.getState>['aiEnhanceOptions'],
+  pattern: { gridWidth: number; gridHeight: number; colorLimit: number; removeBackground: boolean },
+): string {
+  return `${opts.enhanceStrength}|${opts.flatColors}|${opts.cartoonStyle}|${opts.customPrompt.trim()}|${pattern.gridWidth}x${pattern.gridHeight}|${pattern.colorLimit}|${pattern.removeBackground}`;
 }
 
-export function useImageEnhancement(croppedImageDataUrl: string | null) {
+export function useImageEnhancement(
+  croppedImageDataUrl: string | null,
+  patternOptions: { gridWidth: number; gridHeight: number; colorLimit: number; removeBackground: boolean },
+) {
   const aiEnhanceOptions = useWorkspaceStore(s => s.aiEnhanceOptions);
   const setIsAiEnhancing = useWorkspaceStore(s => s.setIsAiEnhancing);
   const setAiEnhanceError = useWorkspaceStore(s => s.setAiEnhanceError);
@@ -37,7 +43,7 @@ export function useImageEnhancement(croppedImageDataUrl: string | null) {
     if (!croppedImageDataUrl) return;
     if (useWorkspaceStore.getState().hasManualEdits && !window.confirm('AI 增强会重新生成图纸并覆盖当前手工编辑，是否继续？')) return;
 
-    const oKey = optionsKey(aiEnhanceOptions);
+    const oKey = optionsKey(aiEnhanceOptions, patternOptions);
     if (cache && cache.sourceImage === croppedImageDataUrl && cache.optionsKey === oKey) {
       setAiEnhancedImage(cache.result);
       setAiEnhanceError(null);
@@ -53,9 +59,9 @@ export function useImageEnhancement(croppedImageDataUrl: string | null) {
     setAiEnhanceError(null);
     setAiEnhancedImage(null);
 
-    const prompt = buildEnhancePrompt(aiEnhanceOptions);
+    const prompt = buildEnhancePrompt({ ...aiEnhanceOptions, ...patternOptions });
 
-    enhanceImage(croppedImageDataUrl, { prompt, signal: controller.signal })
+    enhanceImage(croppedImageDataUrl, { prompt, enhanceStrength: aiEnhanceOptions.enhanceStrength, signal: controller.signal })
       .then((result) => {
         if (controller.signal.aborted) return;
         cache = { sourceImage: croppedImageDataUrl, optionsKey: oKey, result };
@@ -70,7 +76,7 @@ export function useImageEnhancement(croppedImageDataUrl: string | null) {
         setAiEnhancedImage(null);
         setIsAiEnhancing(false);
       });
-  }, [croppedImageDataUrl, aiEnhanceOptions, setIsAiEnhancing, setAiEnhanceError, setAiEnhancedImage]);
+  }, [croppedImageDataUrl, aiEnhanceOptions, patternOptions, setIsAiEnhancing, setAiEnhanceError, setAiEnhancedImage]);
 
   const aiEnhancedImage = useWorkspaceStore(s => s.aiEnhancedImage);
   const isAiEnhancing = useWorkspaceStore(s => s.isAiEnhancing);

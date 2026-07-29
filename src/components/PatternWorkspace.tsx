@@ -71,7 +71,11 @@ export default function PatternWorkspace({ croppedImageDataUrl, onReset, aspectR
     BEAD_PALETTE.filter(i => i.brand === 'MGB').map(i => ({ ...i, rgb: hexToRgb(i.hex), lab: rgbToLab(hexToRgb(i.hex)) })),
   []);
 
-  const { effectiveImage, triggerEnhance } = useImageEnhancement(croppedImageDataUrl);
+  const aiPatternOptions = useMemo(
+    () => ({ gridWidth, gridHeight, colorLimit, removeBackground }),
+    [gridWidth, gridHeight, colorLimit, removeBackground],
+  );
+  const { effectiveImage, triggerEnhance } = useImageEnhancement(croppedImageDataUrl, aiPatternOptions);
 
   useImageProcessing({ croppedImageDataUrl: effectiveImage, removeBackground, colorLimit, distanceAlgorithm, kMedoidsOptimize, currentPalette, gridWidth, gridHeight, brightness, contrast, saturation });
 
