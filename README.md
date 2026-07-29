@@ -80,6 +80,8 @@ AI 图像增强通过 `api/enhance.ts` 调用 Pollinations API。API Key 只在�
 2. 在 Vercel 项目的 Environment Variables 中添加 `POLLINATIONS_API_KEY`。
 3. 重新部署项目。
 
+AI 功能默认开启。若不需要该功能，在 Vercel 项目的 Environment Variables 中将 `VITE_ENABLE_AI` 设置为精确字符串 `false`，图纸参数面板将不再显示 AI 标签页；修改后需要重新部署。
+
 本地调试 AI 增强时，需要先安装并登录 [Vercel CLI](https://vercel.com/docs/cli)，关联项目，并通过 Vercel CLI 拉取开发环境变量或参考 `.env.example` 配置本地服务端环境，然后运行：
 
 ```bash

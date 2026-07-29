@@ -138,6 +138,7 @@
 | 变量 | 使用位置 | 说明 |
 | --- | --- | --- |
 | `POLLINATIONS_API_KEY` | Vercel 服务端 | Pollinations API Key，仅 `api/enhance.ts` 读取 |
+| `VITE_ENABLE_AI` | Vite 客户端构建 | AI 功能开关，精确设为 `false` 时隐藏图纸参数面板中的 AI 功能，未设置时默认开启 |
 | `DISABLE_HMR` | Vite 开发环境 | 启动 Vite 前设为精确字符串 `true`，禁用 HMR 和文件监听 |
 
 `DISABLE_HMR` 直接从启动进程的环境变量读取，值必须精确为小写字符串 `true`，其他值均视为未禁用。

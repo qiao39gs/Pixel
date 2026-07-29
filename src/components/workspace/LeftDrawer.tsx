@@ -12,6 +12,8 @@ const TABS = [
   { id: 'view', label: '视图' },
 ] as const;
 
+const AI_ENABLED = import.meta.env.VITE_ENABLE_AI !== 'false';
+
 export default function LeftDrawer({ onTriggerEnhance }: { onTriggerEnhance: () => void }) {
   const panelOpen = useWorkspaceStore(s => s.panelOpen);
   const leftDrawerTab = useWorkspaceStore(s => s.leftDrawerTab);
@@ -23,7 +25,10 @@ export default function LeftDrawer({ onTriggerEnhance }: { onTriggerEnhance: () 
   if (!leftOpen) return null;
 
   const hasSourceImage = pipelineMode !== 'skipAndHold';
-  const visibleTabs = hasSourceImage ? TABS : TABS.filter(tab => tab.id === 'trim' || tab.id === 'view');
+  const visibleTabs = TABS.filter(tab => {
+    if (!AI_ENABLED && tab.id === 'ai') return false;
+    return hasSourceImage || tab.id === 'trim' || tab.id === 'view';
+  });
   const activeTab = visibleTabs.some(tab => tab.id === leftDrawerTab) ? leftDrawerTab : 'trim';
 
   return (
@@ -41,7 +46,7 @@ export default function LeftDrawer({ onTriggerEnhance }: { onTriggerEnhance: () 
       <div className="flex-1 overflow-y-auto p-4 scrollbar-dark">
         {activeTab === 'spec' && <SpecSection />}
         {activeTab === 'adjust' && <AdjustSection />}
-        {activeTab === 'ai' && <AiSection onTriggerEnhance={onTriggerEnhance} />}
+        {AI_ENABLED && activeTab === 'ai' && <AiSection onTriggerEnhance={onTriggerEnhance} />}
         {activeTab === 'trim' && <TrimSection />}
         {activeTab === 'view' && <ViewSection />}
       </div>
