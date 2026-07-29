@@ -141,8 +141,3 @@ vercel dev
 
 # 友情链接
 [linux.do](https://linux.do)
-
-## 链接
-
-- [GitHub 仓库](https://github.com/qiao39gs/Pixel)
-- [LINUX DO 社区](https://linux.do/)
