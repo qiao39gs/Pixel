@@ -55,6 +55,7 @@ interface WorkspaceStore {
   leftDrawerTab: 'spec' | 'adjust' | 'ai' | 'trim' | 'view';
   mobileToolbarOpen: boolean;
   projectPanelOpen: boolean;
+  projectSavePromptVersion: number;
   dragMode: boolean;
   pipelineMode: PipelineMode;
   currentProjectId: string | null;
@@ -108,6 +109,7 @@ interface WorkspaceStore {
   toggleGroupCollapse: (series: string) => void;
   setProjectPanelOpen: (v: boolean) => void;
   toggleProjectPanel: () => void;
+  requestProjectSaveName: () => void;
   setDragMode: (v: boolean) => void;
   toggleLeftDrawer: () => void;
   toasts: { id: number; msg: string }[];
@@ -195,6 +197,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   mobileToolbarOpen: false,
   collapsedGroups: new Set<string>(),
   projectPanelOpen: false,
+  projectSavePromptVersion: 0,
   dragMode: false,
   toasts: [],
   pipelineMode: 'process' as PipelineMode,
@@ -254,6 +257,12 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   }),
   setProjectPanelOpen: (v) => set({ projectPanelOpen: v }),
   toggleProjectPanel: () => set((s) => ({ projectPanelOpen: !s.projectPanelOpen })),
+  requestProjectSaveName: () => set((s) => ({
+    projectPanelOpen: true,
+    projectSavePromptVersion: s.projectSavePromptVersion + 1,
+    panelOpen: 'none',
+    showPalettePanel: false,
+  })),
   setDragMode: (v) => set({ dragMode: v }),
   pushToast: (msg) => {
     const id = Date.now() + Math.random();

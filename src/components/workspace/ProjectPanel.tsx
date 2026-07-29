@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { FolderKanban, Download, Trash2, Plus, FileDown, FileUp, Pencil, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { FolderKanban, Download, Trash2, FileDown, FileUp, Pencil, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import {
   ProjectMeta,
@@ -18,17 +18,17 @@ import { confirmDiscardChanges } from '../../hooks/useProjectSafety';
 import { AspectRatio } from '../../utils/constants';
 
 interface Props {
-  onReset: () => void;
   croppedImageDataUrl: string | null;
   aspectRatio: '1:1' | '4:3' | '3:4' | '16:9' | '9:16' | 'auto';
   onRestoreImage: (image: string | null, aspectRatio: AspectRatio) => void;
 }
 
-export default function ProjectPanel({ onReset, croppedImageDataUrl, aspectRatio, onRestoreImage }: Props) {
+export default function ProjectPanel({ croppedImageDataUrl, aspectRatio, onRestoreImage }: Props) {
   const [projects, setProjects] = useState<ProjectMeta[]>([]);
   const [saveName, setSaveName] = useState('');
   const [showSaveInput, setShowSaveInput] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const saveNameInputRef = useRef<HTMLInputElement>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameName, setRenameName] = useState('');
   const [busyAction, setBusyAction] = useState<string | null>('list');
@@ -55,12 +55,22 @@ export default function ProjectPanel({ onReset, croppedImageDataUrl, aspectRatio
   const lastSavedAt = useWorkspaceStore(s => s.lastSavedAt);
   const markSaved = useWorkspaceStore(s => s.markSaved);
   const setSaveStatus = useWorkspaceStore(s => s.setSaveStatus);
-  const clearCurrentProject = useWorkspaceStore(s => s.clearCurrentProject);
   const pushToast = useWorkspaceStore(s => s.pushToast);
+  const projectSavePromptVersion = useWorkspaceStore(s => s.projectSavePromptVersion);
 
   useEffect(() => {
     refreshProjects();
   }, []);
+
+  useEffect(() => {
+    if (projectSavePromptVersion === 0 || currentProjectId) return;
+    setShowSaveInput(true);
+  }, [projectSavePromptVersion, currentProjectId]);
+
+  useEffect(() => {
+    if (!showSaveInput) return;
+    saveNameInputRef.current?.focus();
+  }, [showSaveInput, projectSavePromptVersion]);
 
   const refreshProjects = async () => {
     try { setProjects(await getAllProjects()); }
@@ -99,13 +109,6 @@ export default function ProjectPanel({ onReset, croppedImageDataUrl, aspectRatio
     } finally {
       setBusyAction(null);
     }
-  };
-
-  const handleNewProject = () => {
-    if (!confirmDiscardChanges('当前项目有未保存的修改。新建项目将放弃这些修改，是否继续？')) return;
-    clearCurrentProject();
-    clearDraft().catch(() => {});
-    onReset();
   };
 
   const handleDelete = async (id: string, name: string) => {
@@ -204,22 +207,16 @@ export default function ProjectPanel({ onReset, croppedImageDataUrl, aspectRatio
 
       {/* Toolbar */}
       <div className="flex flex-col gap-2 mb-5">
-        <div className="grid grid-cols-2 gap-2">
-        <button
-          onClick={handleNewProject}
-          className="px-3 py-2.5 text-xs font-bold rounded-xl bg-[#E8570A] hover:bg-[#CF4707] text-white transition-colors cursor-pointer flex items-center justify-center gap-1.5 w-full"
-        >
-          <Plus className="w-3.5 h-3.5" />新建项目
-        </button>
         {hasCurrentPixels && (
           <button
             onClick={() => currentProjectId ? handleSave() : setShowSaveInput(!showSaveInput)}
             disabled={busyAction === 'save' || (!!currentProjectId && !isDirty)}
-            className="px-3 py-2.5 text-xs font-bold rounded-xl bg-stone-100 text-stone-600 hover:bg-stone-200 transition-colors cursor-pointer flex items-center justify-center gap-1.5 w-full"
+            className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-[#E8570A] px-3 py-2.5 text-xs font-bold text-white transition-colors hover:bg-[#CF4707] disabled:cursor-not-allowed disabled:bg-stone-200 disabled:text-stone-400 cursor-pointer"
           >
             {busyAction === 'save' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileDown className="w-3.5 h-3.5" />}{currentProjectId ? '更新当前' : '保存当前'}
           </button>
         )}
+        <div className="grid grid-cols-2 gap-2">
         <button
           onClick={() => fileInputRef.current?.click()}
           className="px-3 py-2.5 text-xs font-bold rounded-xl bg-stone-100 text-stone-600 hover:bg-stone-200 transition-colors cursor-pointer flex items-center justify-center gap-1.5 w-full"
@@ -242,13 +239,13 @@ export default function ProjectPanel({ onReset, croppedImageDataUrl, aspectRatio
       {showSaveInput && (
         <div className="mb-4 p-3 bg-zinc-50 border border-zinc-200 rounded-xl flex gap-2">
           <input
+            ref={saveNameInputRef}
             type="text"
             value={saveName}
             onChange={e => setSaveName(e.target.value)}
             placeholder="输入项目名称..."
             className="flex-1 px-3 py-2 bg-white border border-zinc-200 rounded-lg text-sm text-zinc-800 placeholder-zinc-400 outline-none focus:border-[#E8570A]/50 transition-colors"
             onKeyDown={e => { if (e.key === 'Enter') handleSave(); }}
-            autoFocus
           />
           <button onClick={handleSave} className="px-4 py-2 text-xs font-bold rounded-lg bg-[#E8570A] hover:bg-[#D0440A] text-white transition-colors cursor-pointer">保存</button>
           <button onClick={() => { setShowSaveInput(false); setSaveName(''); }} className="px-4 py-2 text-xs font-bold rounded-lg bg-zinc-200 text-zinc-600 hover:bg-zinc-300 transition-colors cursor-pointer">取消</button>
@@ -265,7 +262,7 @@ export default function ProjectPanel({ onReset, croppedImageDataUrl, aspectRatio
         <div className="flex flex-col items-center justify-center py-12 border border-dashed border-zinc-200 rounded-2xl">
           <FolderKanban className="w-10 h-10 mb-3 text-zinc-300" />
           <span className="text-sm font-medium text-zinc-400">暂无保存的项目</span>
-          <span className="text-xs text-zinc-400 mt-1">点击"新建项目"或"导入 JSON"</span>
+          <span className="text-xs text-zinc-400 mt-1">可导入 JSON，或从首页新建图纸</span>
         </div>
       ) : (
         <div className="max-h-[460px] overflow-y-auto pr-1 scrollbar-dark">

@@ -78,7 +78,6 @@ export default function EditorFrame(props: Props) {
       <Toasts />
       <MobileToolbar currentPalette={props.currentPalette} />
       <ProjectDrawer
-        onReset={props.onReset}
         croppedImageDataUrl={props.croppedImageDataUrl}
         aspectRatio={props.aspectRatio}
         onRestoreImage={props.onRestoreImage}

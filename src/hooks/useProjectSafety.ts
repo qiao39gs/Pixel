@@ -32,7 +32,7 @@ export function useProjectSafety(croppedImageDataUrl: string | null, aspectRatio
   const currentProjectName = useWorkspaceStore(s => s.currentProjectName);
   const pipelineMode = useWorkspaceStore(s => s.pipelineMode);
   const pushToast = useWorkspaceStore(s => s.pushToast);
-  const setProjectPanelOpen = useWorkspaceStore(s => s.setProjectPanelOpen);
+  const requestProjectSaveName = useWorkspaceStore(s => s.requestProjectSaveName);
 
   useEffect(() => {
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -59,8 +59,7 @@ export function useProjectSafety(croppedImageDataUrl: string | null, aspectRatio
       event.preventDefault();
       const s = useWorkspaceStore.getState();
       if (!s.currentProjectId) {
-        setProjectPanelOpen(true);
-        pushToast('请输入项目名称后保存');
+        requestProjectSaveName();
         return;
       }
       if (!s.isDirty) { pushToast('当前项目已是最新'); return; }
@@ -78,5 +77,5 @@ export function useProjectSafety(croppedImageDataUrl: string | null, aspectRatio
     };
     window.addEventListener('keydown', onSave);
     return () => window.removeEventListener('keydown', onSave);
-  }, [aspectRatio, croppedImageDataUrl, pushToast, setProjectPanelOpen]);
+  }, [aspectRatio, croppedImageDataUrl, pushToast, requestProjectSaveName]);
 }
