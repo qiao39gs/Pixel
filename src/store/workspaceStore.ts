@@ -129,6 +129,7 @@ interface WorkspaceStore {
   redo: () => void;
   denoise: (gridWidth: number, gridHeight: number, palette: BeadPaletteItem[]) => void;
   swapColor: (sourceCode: string, targetBead: BeadPaletteItem) => void;
+  createBlankProject: (gridWidth: number, gridHeight: number) => void;
   loadProject: (pixels: TransformedPixel[], gridWidth: number, gridHeight: number, stats: IngredientStat[], settings: { colorLimit: number; distanceAlgorithm: string; removeBackground: boolean; brightness: number; contrast: number; saturation: number; panelPreset?: string; customWidth?: number; kMedoidsOptimize?: boolean }, hasOriginalImage?: boolean, projectId?: string, projectName?: string) => void;
   autoDetectTrim: (gridWidth: number, gridHeight: number) => void;
   setTopTrim: (v: number) => void;
@@ -319,6 +320,39 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   swapColor: (sourceCode, targetBead) => {
     editor.swapColor(sourceCode, targetBead);
     set({ ...snapshotEditor(), isDirty: true, saveStatus: 'idle', hasManualEdits: true });
+  },
+
+  createBlankProject: (gridWidth, gridHeight) => {
+    const pixels = Array.from({ length: gridWidth * gridHeight }, (_, index) => ({
+      x: index % gridWidth,
+      y: Math.floor(index / gridWidth),
+      matchedBead: { ...EMPTY_BEAD },
+    }));
+    editor.load(pixels, [], gridWidth, gridHeight);
+    set({
+      ...snapshotEditor(),
+      panelPreset: 'custom',
+      customWidth: gridWidth,
+      localAspectRatio: gridWidth / gridHeight,
+      pipelineMode: 'skipAndHold',
+      currentProjectId: null,
+      currentProjectName: '未命名空白图纸',
+      isDirty: true,
+      saveStatus: 'idle',
+      lastSavedAt: null,
+      hasManualEdits: false,
+      wandSelection: new Set(),
+      selectedCell: null,
+      editMode: true,
+      brushBead: null,
+      isEraser: false,
+      wandMode: false,
+      panOffset: { x: 0, y: 0 },
+      topTrim: 0,
+      bottomTrim: 0,
+      leftTrim: 0,
+      rightTrim: 0,
+    });
   },
 
   autoDetectTrim: (gridWidth, gridHeight) => {

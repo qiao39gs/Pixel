@@ -6,6 +6,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { Analytics } from '@vercel/analytics/react';
 import ImageUploader from './components/ImageUploader';
+import HomeProjectActions from './components/HomeProjectActions';
 import PatternWorkspace from './components/PatternWorkspace';
 import { generateHighResPng, generateMultiPagePdf } from './utils/exportUtils';
 import { TransformedPixel, IngredientStat } from './types';
@@ -15,22 +16,24 @@ import { AspectRatio } from './utils/constants';
 
 export default function App() {
   const [croppedImage, setCroppedImage] = useState<string | null>(null);
+  const [workspaceOpen, setWorkspaceOpen] = useState(false);
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>('auto');
   const [uploaderHasImage, setUploaderHasImage] = useState(false);
 
   useEffect(() => {
     let active = true;
     loadDraft().then(draft => {
-      if (!active || !draft?.originalImage) return;
+      if (!active || !draft) return;
       if (!window.confirm(`发现 ${draft.savedAt} 自动保存的未完成项目，是否恢复？`)) {
         clearDraft().catch(() => {});
         return;
       }
       const ar = draft.aspectRatio ?? 'auto';
-      useWorkspaceStore.getState().loadProject(draft.pixels, draft.meta.gridWidth, draft.meta.gridHeight, draft.stats, draft.settings, true, draft.currentProjectId ?? undefined, draft.currentProjectName ?? undefined);
+      useWorkspaceStore.getState().loadProject(draft.pixels, draft.meta.gridWidth, draft.meta.gridHeight, draft.stats, draft.settings, !!draft.originalImage, draft.currentProjectId ?? undefined, draft.currentProjectName ?? undefined);
       useWorkspaceStore.setState({ isDirty: true, saveStatus: 'idle' });
       setAspectRatio(ar);
-      setCroppedImage(draft.originalImage!);
+      setCroppedImage(draft.originalImage ?? null);
+      setWorkspaceOpen(true);
     }).catch(() => {});
     return () => { active = false; };
   }, []);
@@ -39,15 +42,18 @@ export default function App() {
   const handleImageCropped = useCallback((imageDataUrl: string) => {
     useWorkspaceStore.setState({ kMedoidsOptimize: true });
     setCroppedImage(imageDataUrl);
+    setWorkspaceOpen(true);
   }, []);
 
   const handleReset = useCallback(() => {
     setCroppedImage(null);
+    setWorkspaceOpen(false);
   }, []);
 
-  const handleRestoreImage = useCallback((image: string, ar: AspectRatio) => {
+  const handleRestoreImage = useCallback((image: string | null, ar: AspectRatio) => {
     setAspectRatio(ar);
     setCroppedImage(image);
+    setWorkspaceOpen(true);
   }, []);
 
   // PNG trigger download
@@ -84,7 +90,7 @@ export default function App() {
     <div className="min-h-screen bg-[#FAFAF7] text-[#18181B] flex flex-col font-sans selection:bg-orange-100 selection:text-orange-900">
 
       {/* Header — 仅在上传入口阶段显示，进入编辑器后让 EditorFrame 满屏 */}
-      {!croppedImage && (
+      {!workspaceOpen && (
         <header className="sticky top-0 z-50 bg-[#FAFAF7]/90 backdrop-blur-md border-b border-black/[0.07] px-4 py-3.5">
           <div className="max-w-[1600px] mx-auto flex items-center justify-between">
             <div className="flex items-center gap-2.5">
@@ -99,7 +105,7 @@ export default function App() {
       {/* Main */}
       <main className="flex-1 w-full mx-auto px-4 py-6 md:py-8 flex flex-col gap-8">
 
-        {!croppedImage && !uploaderHasImage && (
+        {!workspaceOpen && !uploaderHasImage && (
           <div className="relative text-center max-w-lg mx-auto pt-6 pb-2 flex flex-col items-center gap-3 animate-fade-in">
             <div
               className="absolute inset-x-0 top-0 h-full -z-10 pointer-events-none"
@@ -118,7 +124,7 @@ export default function App() {
         )}
 
         {/* Upload / Workspace */}
-        {!croppedImage ? (
+        {!workspaceOpen ? (
           <div className="max-w-4xl w-full mx-auto animate-fade-in">
             <ImageUploader
               onImageCropped={handleImageCropped}
@@ -126,6 +132,7 @@ export default function App() {
               aspectRatio={aspectRatio}
               setAspectRatio={setAspectRatio}
             />
+            {!uploaderHasImage ? <HomeProjectActions onOpenWorkspace={handleRestoreImage} /> : null}
           </div>
         ) : (
           <PatternWorkspace
@@ -141,7 +148,7 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      {!croppedImage && (
+      {!workspaceOpen && (
         <footer className="border-t border-black/[0.06] px-4 py-5">
           <div className="max-w-[1600px] mx-auto flex items-center justify-between text-xs text-zinc-400 font-mono">
             <span>© 2026 像素拼豆图纸生成器</span>

@@ -22,7 +22,7 @@ export function confirmDiscardChanges(message = '当前项目有未保存的修�
   return !useWorkspaceStore.getState().isDirty || window.confirm(message);
 }
 
-export function useProjectSafety(croppedImageDataUrl: string, aspectRatio: AspectRatio) {
+export function useProjectSafety(croppedImageDataUrl: string | null, aspectRatio: AspectRatio) {
   const isDirty = useWorkspaceStore(s => s.isDirty);
   const transformedPixels = useWorkspaceStore(s => s.transformedPixels);
   const stats = useWorkspaceStore(s => s.stats);
@@ -47,7 +47,7 @@ export function useProjectSafety(croppedImageDataUrl: string, aspectRatio: Aspec
   useEffect(() => {
     if (!isDirty || transformedPixels.length === 0) return;
     const timer = window.setTimeout(() => {
-      saveDraft(transformedPixels, gridWidth, gridHeight, stats, getSettings(), pipelineMode === 'skipAndHold' ? undefined : croppedImageDataUrl, aspectRatio, currentProjectId, currentProjectName)
+      saveDraft(transformedPixels, gridWidth, gridHeight, stats, getSettings(), pipelineMode === 'skipAndHold' ? undefined : croppedImageDataUrl ?? undefined, aspectRatio, currentProjectId, currentProjectName)
         .catch(() => pushToast('自动恢复草稿保存失败'));
     }, 1800);
     return () => window.clearTimeout(timer);
@@ -66,7 +66,7 @@ export function useProjectSafety(croppedImageDataUrl: string, aspectRatio: Aspec
       if (!s.isDirty) { pushToast('当前项目已是最新'); return; }
       s.setSaveStatus('saving');
       try {
-        const meta = await updateProject(s.currentProjectId, s.transformedPixels, s.gridWidthActual, s.gridHeightActual, s.stats, getSettings(), s.pipelineMode === 'skipAndHold' ? undefined : croppedImageDataUrl, aspectRatio);
+        const meta = await updateProject(s.currentProjectId, s.transformedPixels, s.gridWidthActual, s.gridHeightActual, s.stats, getSettings(), s.pipelineMode === 'skipAndHold' ? undefined : croppedImageDataUrl ?? undefined, aspectRatio);
         if (!meta) throw new Error('项目不存在');
         s.markSaved(meta.id, meta.name);
         await clearDraft();

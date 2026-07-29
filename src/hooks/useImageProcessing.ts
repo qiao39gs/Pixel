@@ -3,7 +3,7 @@ import { quantizeImage, PaletteItemWithCache, DistanceAlgorithm } from '../utils
 import { useWorkspaceStore } from '../store/workspaceStore';
 
 interface Params {
-  croppedImageDataUrl: string;
+  croppedImageDataUrl: string | null;
   removeBackground: boolean;
   colorLimit: number;
   distanceAlgorithm: DistanceAlgorithm;
@@ -29,6 +29,17 @@ export function useImageProcessing({
   const lastImageRef = useRef<string | null>(null);
 
   useEffect(() => {
+    const mode = useWorkspaceStore.getState().pipelineMode;
+    if (mode === 'skipOnce') {
+      setPipelineMode('process');
+      setIsProcessing(false);
+      return;
+    }
+    if (mode === 'skipAndHold' || mode === 'paused') {
+      setIsProcessing(false);
+      return;
+    }
+
     if (!croppedImageDataUrl) {
       useWorkspaceStore.getState().setPipelineResult([], []);
       setIsProcessing(false);
@@ -40,17 +51,6 @@ export function useImageProcessing({
       if (useWorkspaceStore.getState().pipelineMode !== 'skipOnce' && useWorkspaceStore.getState().pipelineMode !== 'skipAndHold') {
         useWorkspaceStore.setState({ currentProjectId: null, currentProjectName: null, saveStatus: 'idle' });
       }
-    }
-
-    const mode = useWorkspaceStore.getState().pipelineMode;
-    if (mode === 'skipOnce') {
-      setPipelineMode('process');
-      setIsProcessing(false);
-      return;
-    }
-    if (mode === 'skipAndHold' || mode === 'paused') {
-      setIsProcessing(false);
-      return;
     }
 
     setIsProcessing(true);

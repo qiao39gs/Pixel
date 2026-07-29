@@ -22,9 +22,9 @@ interface Props {
   onGeneratePdf: (pixels: TransformedPixel[], w: number, h: number, stats: IngredientStat[], opts?: { showRulers: boolean; showNumbers: boolean }) => void;
   onReset: () => void;
   onTriggerEnhance: () => void;
-  croppedImageDataUrl: string;
+  croppedImageDataUrl: string | null;
   aspectRatio: '1:1' | '4:3' | '3:4' | '16:9' | '9:16' | 'auto';
-  onRestoreImage: (image: string, ar: AspectRatio) => void;
+  onRestoreImage: (image: string | null, ar: AspectRatio) => void;
 }
 
 export default function EditorFrame(props: Props) {

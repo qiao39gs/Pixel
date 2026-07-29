@@ -12,12 +12,12 @@ import EditorFrame from './workspace/EditorFrame';
 import { AspectRatio } from '../utils/constants';
 
 interface PatternWorkspaceProps {
-  croppedImageDataUrl: string;
+  croppedImageDataUrl: string | null;
   onReset: () => void;
   aspectRatio: '1:1' | '4:3' | '3:4' | '16:9' | '9:16' | 'auto';
   onGeneratePng: (pixels: TransformedPixel[], width: number, height: number, stats: IngredientStat[], options?: { showRulers: boolean; showNumbers: boolean }) => void;
   onGeneratePdf: (pixels: TransformedPixel[], width: number, height: number, stats: IngredientStat[], options?: { showRulers: boolean; showNumbers: boolean }) => void;
-  onRestoreImage: (image: string, aspectRatio: AspectRatio) => void;
+  onRestoreImage: (image: string | null, aspectRatio: AspectRatio) => void;
 }
 
 export default function PatternWorkspace({ croppedImageDataUrl, onReset, aspectRatio, onGeneratePng, onGeneratePdf, onRestoreImage }: PatternWorkspaceProps) {

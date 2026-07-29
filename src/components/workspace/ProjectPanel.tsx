@@ -19,9 +19,9 @@ import { AspectRatio } from '../../utils/constants';
 
 interface Props {
   onReset: () => void;
-  croppedImageDataUrl: string;
+  croppedImageDataUrl: string | null;
   aspectRatio: '1:1' | '4:3' | '3:4' | '16:9' | '9:16' | 'auto';
-  onRestoreImage: (image: string, aspectRatio: AspectRatio) => void;
+  onRestoreImage: (image: string | null, aspectRatio: AspectRatio) => void;
 }
 
 export default function ProjectPanel({ onReset, croppedImageDataUrl, aspectRatio, onRestoreImage }: Props) {
@@ -71,7 +71,7 @@ export default function ProjectPanel({ onReset, croppedImageDataUrl, aspectRatio
   const getSettings = (): ProjectData['settings'] => ({
     colorLimit, distanceAlgorithm, removeBackground, brightness, contrast, saturation, panelPreset, customWidth, kMedoidsOptimize,
   });
-  const sourceImage = pipelineMode === 'skipAndHold' ? undefined : croppedImageDataUrl;
+  const sourceImage = pipelineMode === 'skipAndHold' ? undefined : croppedImageDataUrl ?? undefined;
 
   const handleSave = async () => {
     setBusyAction('save');
@@ -129,7 +129,7 @@ export default function ProjectPanel({ onReset, croppedImageDataUrl, aspectRatio
       if (!data) throw new Error('项目不存在');
       const hasImg = !!data.originalImage;
       loadProject(data.pixels, data.meta.gridWidth, data.meta.gridHeight, data.stats, data.settings, hasImg, id, data.meta.name);
-      if (hasImg) onRestoreImage(data.originalImage!, data.aspectRatio ?? 'auto');
+      onRestoreImage(data.originalImage ?? null, data.aspectRatio ?? 'auto');
       await clearDraft();
       pushToast(hasImg ? '项目已加载' : '已加载仅图纸项目，生成参数不可重新计算');
     } catch { pushToast('项目加载失败'); }
@@ -151,7 +151,7 @@ export default function ProjectPanel({ onReset, croppedImageDataUrl, aspectRatio
         const hasImg = !!data.originalImage;
         loadProject(data.pixels, data.gridWidth, data.gridHeight, data.stats, data.settings, hasImg, undefined, data.name);
         useWorkspaceStore.setState({ isDirty: true, saveStatus: 'idle' });
-        if (hasImg) onRestoreImage(data.originalImage!, data.aspectRatio ?? 'auto');
+        onRestoreImage(data.originalImage ?? null, data.aspectRatio ?? 'auto');
         pushToast('项目已导入，请保存到项目库');
       } else {
         pushToast('文件格式无效或项目数据不完整');
