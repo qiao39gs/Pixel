@@ -139,6 +139,9 @@ vercel dev
 
 推荐使用最新版 Chrome、Edge、Firefox 或 Safari。复制耗材用量需要浏览器允许页面写入剪贴板。
 
+# 友情链接
+[linux.do](https://linux.do)
+
 ## 链接
 
 - [GitHub 仓库](https://github.com/qiao39gs/Pixel)
