@@ -2,6 +2,7 @@ import type { MouseEvent as ReactMouseEvent, TouchEvent as ReactTouchEvent } fro
 import { TransformedPixel } from '../types';
 import { BeadPaletteItem } from '../types';
 import { EMPTY_BEAD, floodFill as doFloodFill } from './editOperations';
+import { MIN_SCALE, MAX_SCALE } from './constants';
 
 export interface GridCell { x: number; y: number; }
 
@@ -182,7 +183,7 @@ export class PointerInteraction {
     const c = this.ctx;
     if (e.touches.length >= 2 && this.pinch) {
       const d = Math.hypot(e.touches[1].clientX - e.touches[0].clientX, e.touches[1].clientY - e.touches[0].clientY);
-      const ns = Math.max(4, Math.min(32, Math.round(this.pinch.scale * d / this.pinch.dist)));
+      const ns = Math.max(MIN_SCALE, Math.min(MAX_SCALE, Math.round(this.pinch.scale * d / this.pinch.dist)));
       c.setScale(ns);
       return;
     }
@@ -250,7 +251,7 @@ export class PointerInteraction {
     const oldScale = c.scale;
     const po = c.panOffset;
     const delta = -e.deltaY * 0.0015;
-    const newScale = Math.max(4, Math.min(32, Math.round(oldScale * (1 + delta))));
+    const newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, Math.round(oldScale * (1 + delta))));
     if (newScale === oldScale) return;
     const ratio = newScale / oldScale;
     c.setScale(newScale);

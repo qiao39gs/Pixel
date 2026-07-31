@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useCallback } from 'react';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { PointerInteraction } from '../../utils/pointerInteraction';
+import { MIN_SCALE, MAX_SCALE } from '../../utils/constants';
 import ZoomControls from './ZoomControls';
 import ToolHint from './ToolHint';
 
@@ -95,7 +96,7 @@ export default function CanvasViewport({ canvasRef, containerRef }: Props) {
     const rulerSize = showRulers ? 32 : 0;
     const fitW = Math.floor((availW - rulerSize) / gridWidth);
     const fitH = Math.floor((availH - rulerSize) / gridHeight);
-    const fit = Math.max(4, Math.min(32, Math.min(fitW, fitH)));
+    const fit = Math.max(MIN_SCALE, Math.min(MAX_SCALE, Math.min(fitW, fitH)));
     setScale(fit);
     setPanOffset({ x: 0, y: 0 });
   }, [containerRef, showRulers, gridWidth, gridHeight, setScale, setPanOffset]);

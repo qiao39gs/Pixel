@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Sliders, Hash, Grid3X3, Layers, Wand2, Loader2, AlertCircle, CheckCircle2, X, Crop, ZoomIn, ZoomOut } from 'lucide-react';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { checkEnhanceConfigured } from '../../services/pollinationsApi';
+import { MIN_SCALE, MAX_SCALE } from '../../utils/constants';
 
 function AdjustSlider({ label, value, onRelease }: { label: string; value: number; onRelease: (v: number) => boolean | void }) {
   const pending = useRef(value);
@@ -331,9 +332,9 @@ export function ViewSection() {
           <span className="font-mono font-bold text-[#E8570A] text-[13px]">{scale}px</span>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => setScale(Math.max(8, scale - 2))} className="p-2 rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200 transition-colors cursor-pointer"><ZoomOut className="w-4 h-4" /></button>
-          <input type="range" min="8" max="32" step="1" value={scale} onChange={e => setScale(parseInt(e.target.value))} className="flex-1 accent-[#E8570A] h-2.5 bg-stone-200 rounded-lg cursor-pointer" />
-          <button onClick={() => setScale(Math.min(32, scale + 2))} className="p-2 rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200 transition-colors cursor-pointer"><ZoomIn className="w-4 h-4" /></button>
+          <button onClick={() => setScale(Math.max(MIN_SCALE, scale - 2))} className="p-2 rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200 transition-colors cursor-pointer"><ZoomOut className="w-4 h-4" /></button>
+          <input type="range" min={MIN_SCALE} max={MAX_SCALE} step="1" value={scale} onChange={e => setScale(parseInt(e.target.value))} className="flex-1 accent-[#E8570A] h-2.5 bg-stone-200 rounded-lg cursor-pointer" />
+          <button onClick={() => setScale(Math.min(MAX_SCALE, scale + 2))} className="p-2 rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200 transition-colors cursor-pointer"><ZoomIn className="w-4 h-4" /></button>
         </div>
       </div>
       <div className="flex flex-col gap-3 pt-2">
