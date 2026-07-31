@@ -8,27 +8,23 @@
     "dev": "vite --port=3000 --host=0.0.0.0",
     "build": "vite build",
     "preview": "vite preview --port=3000 --host=0.0.0.0",
-    "clean": "rm -rf dist server.js",
+    "clean": "rm -rf dist",
     "lint": "tsc --noEmit"
   },
   "dependencies": {
-    "@tailwindcss/vite": "^4.1.14",
     "@vercel/analytics": "^2.0.1",
-    "@vitejs/plugin-react": "^5.0.4",
     "jspdf": "^4.2.1",
     "lucide-react": "^0.546.0",
     "react": "^19.0.1",
     "react-dom": "^19.0.1",
-    "vite": "^6.2.3",
     "zustand": "^5.0.14"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "^4.1.14",
     "@types/node": "^22.14.0",
     "@vercel/node": "^5.8.22",
-    "autoprefixer": "^10.4.21",
-    "esbuild": "^0.25.0",
+    "@vitejs/plugin-react": "^5.0.4",
     "tailwindcss": "^4.1.14",
-    "tsx": "^4.21.0",
     "typescript": "~5.8.2",
     "vite": "^6.2.3"
   }

@@ -108,7 +108,7 @@ function packPixels(pixels: TransformedPixel[]): string[] {
 }
 
 function codeToPixels(codes: string[], gridWidth: number, gridHeight: number): TransformedPixel[] {
-  const map = new Map(BEAD_PALETTE.filter(b => b.brand === 'MGB').map(b => [b.code, b]));
+  const map = new Map(BEAD_PALETTE.map(b => [b.code, b]));
   const length = gridWidth * gridHeight;
   return Array.from({ length }, (_, i) => ({
     x: i % gridWidth,
@@ -133,7 +133,7 @@ function generateThumbnail(codes: string[], gridWidth: number, gridHeight: numbe
   canvas.height = gridHeight * cellSize;
   const ctx = canvas.getContext('2d');
   if (!ctx) return '';
-  const hexMap = new Map(BEAD_PALETTE.filter(b => b.brand === 'MGB').map(b => [b.code, b.hex]));
+  const hexMap = new Map(BEAD_PALETTE.map(b => [b.code, b.hex]));
   for (let y = 0; y < gridHeight; y++) {
     for (let x = 0; x < gridWidth; x++) {
       const code = codes[y * gridWidth + x];

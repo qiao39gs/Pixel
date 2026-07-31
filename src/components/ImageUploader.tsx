@@ -805,11 +805,11 @@ export default function ImageUploader({ onImageCropped, onImageStateChange, aspe
                 {/* Keyboard Shortcuts cheat sheet for pro look */}
                 <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 text-xs text-slate-500 leading-normal flex flex-col gap-1">
                   <div className="font-bold text-slate-700 uppercase tracking-wider mb-1">键盘快捷面板</div>
-                  <div className="flex justify-between"><span>平移微调:</span> <span className="font-mono font-bold bg-white border border-slate-250 px-1 rounded">↑ ↓ ← →</span></div>
-                  <div className="flex justify-between"><span>快速缩放:</span> <span className="font-mono font-bold bg-white border border-slate-250 px-1 rounded">- / +</span></div>
-                  <div className="flex justify-between"><span>旋转:</span> <span className="font-mono font-bold bg-white border border-slate-250 px-1 rounded">R键</span></div>
-                  <div className="flex justify-between"><span>水平翻转:</span> <span className="font-mono font-bold bg-white border border-slate-250 px-1 rounded">H键</span></div>
-                  <div className="flex justify-between"><span>垂直翻转:</span> <span className="font-mono font-bold bg-white border border-slate-250 px-1 rounded">V键</span></div>
+                  <div className="flex justify-between"><span>平移微调:</span> <span className="font-mono font-bold bg-white border border-slate-200 px-1 rounded">↑ ↓ ← →</span></div>
+                  <div className="flex justify-between"><span>快速缩放:</span> <span className="font-mono font-bold bg-white border border-slate-200 px-1 rounded">- / +</span></div>
+                  <div className="flex justify-between"><span>旋转:</span> <span className="font-mono font-bold bg-white border border-slate-200 px-1 rounded">R键</span></div>
+                  <div className="flex justify-between"><span>水平翻转:</span> <span className="font-mono font-bold bg-white border border-slate-200 px-1 rounded">H键</span></div>
+                  <div className="flex justify-between"><span>垂直翻转:</span> <span className="font-mono font-bold bg-white border border-slate-200 px-1 rounded">V键</span></div>
                   <div className="flex justify-between mt-1 text-slate-400"><span>加速平移:</span> <span>按住 Shift + 方向键</span></div>
                 </div>
               </div>

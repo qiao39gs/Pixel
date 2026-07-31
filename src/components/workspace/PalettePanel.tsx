@@ -1,13 +1,13 @@
 import React from 'react';
 import { hexToRgb, luminance } from '../../colorUtils';
 import { COLOR_GROUPS } from '../../data/palette';
-import { BeadPaletteItem } from '../../types';
+import { PaletteItemWithCache } from '../../utils/quantizeImage';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { Palette } from 'lucide-react';
 import PanelHeader from './PanelHeader';
 
 interface Props {
-  currentPalette: Array<BeadPaletteItem & { rgb: { r: number; g: number; b: number }; lab: any }>;
+  currentPalette: PaletteItemWithCache[];
 }
 
 export default function PalettePanel({ currentPalette }: Props) {

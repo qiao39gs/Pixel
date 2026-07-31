@@ -22,7 +22,7 @@ export default function StatsPanel() {
 
   const allPalette = useMemo(() => {
     const seen = new Set<string>();
-    return BEAD_PALETTE.filter(b => b.brand === 'MGB' && !seen.has(b.code) && seen.add(b.code));
+    return BEAD_PALETTE.filter(b => !seen.has(b.code) && seen.add(b.code));
   }, []);
 
   const usedCounts = useMemo(() => {

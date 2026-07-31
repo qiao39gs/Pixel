@@ -1,13 +1,14 @@
 import React from 'react';
 import { FolderKanban, Pencil, Undo2, Redo2, Eraser, Sparkles, Wand2, Palette, Sliders, Layers, LayoutGrid, Award, Copy, RotateCcw, ChevronDown } from 'lucide-react';
 import { useState } from 'react';
-import { BeadPaletteItem, TransformedPixel, IngredientStat } from '../../types';
+import { TransformedPixel, IngredientStat } from '../../types';
+import { PaletteItemWithCache } from '../../utils/quantizeImage';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { confirmDiscardChanges } from '../../hooks/useProjectSafety';
 import { COLOR_GROUPS } from '../../data/palette';
 
 interface Props {
-  currentPalette: Array<BeadPaletteItem & { rgb: { r: number; g: number; b: number }; lab: any }>;
+  currentPalette: PaletteItemWithCache[];
   onGeneratePng: (pixels: TransformedPixel[], w: number, h: number, stats: IngredientStat[], opts?: { showRulers: boolean; showNumbers: boolean }) => void;
   onGeneratePdf: (pixels: TransformedPixel[], w: number, h: number, stats: IngredientStat[], opts?: { showRulers: boolean; showNumbers: boolean }) => void;
   onReset: () => void;

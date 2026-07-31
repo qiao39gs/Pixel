@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
-import { BeadPaletteItem, TransformedPixel, IngredientStat } from '../../types';
+import { TransformedPixel, IngredientStat } from '../../types';
+import { PaletteItemWithCache } from '../../utils/quantizeImage';
 import CanvasViewport from './CanvasViewport';
 import TopToolbar from './TopToolbar';
 import LeftDrawer from './LeftDrawer';
@@ -12,12 +13,10 @@ import { useWorkspaceStore } from '../../store/workspaceStore';
 import { AspectRatio } from '../../utils/constants';
 import ProjectStatus from './ProjectStatus';
 
-type Palette = Array<BeadPaletteItem & { rgb: { r: number; g: number; b: number }; lab: any }>;
-
 interface Props {
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
   containerRef: React.RefObject<HTMLDivElement | null>;
-  currentPalette: Palette;
+  currentPalette: PaletteItemWithCache[];
   onGeneratePng: (pixels: TransformedPixel[], w: number, h: number, stats: IngredientStat[], opts?: { showRulers: boolean; showNumbers: boolean }) => void;
   onGeneratePdf: (pixels: TransformedPixel[], w: number, h: number, stats: IngredientStat[], opts?: { showRulers: boolean; showNumbers: boolean }) => void;
   onReset: () => void;

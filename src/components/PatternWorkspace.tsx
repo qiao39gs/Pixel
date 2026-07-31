@@ -68,7 +68,7 @@ export default function PatternWorkspace({ croppedImageDataUrl, onReset, aspectR
   }, [panelPreset, customWidth, aspectRatio, localAspectRatio]);
 
   const currentPalette = useMemo(() =>
-    BEAD_PALETTE.filter(i => i.brand === 'MGB').map(i => ({ ...i, rgb: hexToRgb(i.hex), lab: rgbToLab(hexToRgb(i.hex)) })),
+    BEAD_PALETTE.map(i => ({ ...i, rgb: hexToRgb(i.hex), lab: rgbToLab(hexToRgb(i.hex)) })),
   []);
 
   const aiPatternOptions = useMemo(

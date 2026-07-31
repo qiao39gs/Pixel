@@ -53,7 +53,6 @@ interface WorkspaceStore {
   rightTrim: number;
   panelOpen: 'left' | 'right' | 'both' | 'none';
   leftDrawerTab: 'spec' | 'adjust' | 'ai' | 'trim' | 'view';
-  mobileToolbarOpen: boolean;
   projectPanelOpen: boolean;
   projectSavePromptVersion: number;
   dragMode: boolean;
@@ -104,7 +103,6 @@ interface WorkspaceStore {
   setGridHeightActual: (v: number) => void;
   setPanelOpen: (v: WorkspaceStore['panelOpen']) => void;
   setLeftDrawerTab: (v: WorkspaceStore['leftDrawerTab']) => void;
-  setMobileToolbarOpen: (v: boolean) => void;
   collapsedGroups: Set<string>;
   toggleGroupCollapse: (series: string) => void;
   setProjectPanelOpen: (v: boolean) => void;
@@ -194,7 +192,6 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   rightTrim: 0,
   panelOpen: 'right' as const,
   leftDrawerTab: 'spec' as const,
-  mobileToolbarOpen: false,
   collapsedGroups: new Set<string>(),
   projectPanelOpen: false,
   projectSavePromptVersion: 0,
@@ -249,7 +246,6 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   setRightTrim: (v) => set({ rightTrim: v }),
   setPanelOpen: (v) => set({ panelOpen: v }),
   setLeftDrawerTab: (v) => set({ leftDrawerTab: v }),
-  setMobileToolbarOpen: (v) => set({ mobileToolbarOpen: v }),
   toggleGroupCollapse: (series) => set((s) => {
     const next = new Set(s.collapsedGroups);
     if (next.has(series)) next.delete(series); else next.add(series);

@@ -16,8 +16,6 @@ export default function CanvasViewport({ canvasRef, containerRef }: Props) {
   const brushBead = useWorkspaceStore(s => s.brushBead);
   const isEraser = useWorkspaceStore(s => s.isEraser);
   const wandMode = useWorkspaceStore(s => s.wandMode);
-  const wandSelection = useWorkspaceStore(s => s.wandSelection);
-  const selectedCell = useWorkspaceStore(s => s.selectedCell);
   const isProcessing = useWorkspaceStore(s => s.isProcessing);
   const isPanning = useWorkspaceStore(s => s.isPanning);
   const panOffset = useWorkspaceStore(s => s.panOffset);
@@ -65,7 +63,6 @@ export default function CanvasViewport({ canvasRef, containerRef }: Props) {
     setBrushBead, setIsEraser, setSelectedCell, setWandSelection,
     setIsPanning, setPanStart, setPanOffset, setScale,
     applyBrush, applyWandFill, pushUndo, beginBrushStroke, endBrushStroke,
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }), []);
 
   useEffect(() => {
@@ -88,9 +85,6 @@ export default function CanvasViewport({ canvasRef, containerRef }: Props) {
     el.addEventListener('wheel', onWheel, { passive: false });
     return () => el.removeEventListener('wheel', onWheel);
   }, [containerRef, interaction]);
-
-  // 静默引用 wandSelection/selectedCell，保持未来扩展顺手——避免变量未用告警
-  void wandSelection; void selectedCell;
 
   const resetView = useCallback(() => {
     const el = containerRef.current;

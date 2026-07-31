@@ -275,7 +275,7 @@ export function generateMultiPagePdf(
   pdf.text(`• Dimensions: ${gridWidth} x ${gridHeight} grids`, 25, 80);
   pdf.text(`• Target Beads: ${stats.reduce((acc, s) => acc + s.count, 0)} beads`, 25, 87);
   pdf.text(`• Colors Matched: ${stats.length} unique shades`, 110, 80);
-  pdf.text(`• Standard Reference: MGB/Universal`, 110, 87);
+  pdf.text(`• Standard Reference: MGB 221 Colors`, 110, 87);
 
   pdf.setTextColor('#0F172A'); pdf.setFontSize(13); pdf.setFont('helvetica', 'bold');
   pdf.text('Required Shopping & Work Checklist (Inventory):', 15, 110);

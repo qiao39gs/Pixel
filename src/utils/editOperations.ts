@@ -1,6 +1,6 @@
 import { BeadPaletteItem, TransformedPixel } from '../types';
 
-export const EMPTY_BEAD: BeadPaletteItem = { code: 'EMPTY', name: '透明背景', hex: 'rgba(0,0,0,0)', brand: 'MGB', series: '' };
+export const EMPTY_BEAD: BeadPaletteItem = { code: 'EMPTY', name: '透明背景', hex: 'rgba(0,0,0,0)', series: '' };
 
 export function floodFill(
   pixels: TransformedPixel[],

@@ -84,5 +84,5 @@ export function useImageEnhancement(
 
   const effectiveImage = aiEnhancedImage ?? croppedImageDataUrl;
 
-  return { enhancedImage: aiEnhancedImage, effectiveImage, isAiEnhancing, aiEnhanceError, triggerEnhance };
+  return { effectiveImage, isAiEnhancing, aiEnhanceError, triggerEnhance };
 }
