@@ -7,6 +7,8 @@ import LeftDrawer from './LeftDrawer';
 import RightStatsPanel from './RightStatsPanel';
 import ProjectDrawer from './ProjectDrawer';
 import PalettePanel from './PalettePanel';
+import StrokePanel from './StrokePanel';
+import BrushPanel from './BrushPanel';
 import MobileToolbar from './MobileToolbar';
 import Toasts from './Toasts';
 import { useWorkspaceStore } from '../../store/workspaceStore';
@@ -30,6 +32,8 @@ export default function EditorFrame(props: Props) {
   const panelOpen = useWorkspaceStore(s => s.panelOpen);
   const setPanelOpen = useWorkspaceStore(s => s.setPanelOpen);
   const showPalettePanel = useWorkspaceStore(s => s.showPalettePanel);
+  const strokePanelOpen = useWorkspaceStore(s => s.strokePanelOpen);
+  const brushPanelOpen = useWorkspaceStore(s => s.brushPanelOpen);
   const projectPanelOpen = useWorkspaceStore(s => s.projectPanelOpen);
   const leftOpen = panelOpen === 'left' || panelOpen === 'both';
   const rightOpen = panelOpen === 'right' || panelOpen === 'both';
@@ -58,6 +62,8 @@ export default function EditorFrame(props: Props) {
       data-left-open={leftOpen}
       data-right-open={rightOpen}
       data-palette-open={showPalettePanel}
+      data-stroke-open={strokePanelOpen}
+      data-brush-open={brushPanelOpen}
       data-project-open={projectPanelOpen}
     >
       <main className="editor-canvas-stage">
@@ -65,6 +71,8 @@ export default function EditorFrame(props: Props) {
       </main>
       {(leftOpen || rightOpen || projectPanelOpen) && <button className="editor-panel-backdrop" onClick={() => { setPanelOpen('none'); useWorkspaceStore.getState().setProjectPanelOpen(false); }} aria-label="关闭弹出面板" />}
       <PalettePanel currentPalette={props.currentPalette} />
+      <StrokePanel currentPalette={props.currentPalette} />
+      <BrushPanel />
       <TopToolbar
         currentPalette={props.currentPalette}
         onGeneratePng={props.onGeneratePng}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { FolderKanban, Pencil, Undo2, Redo2, Eraser, Sparkles, Wand2, Palette, Sliders, Layers, LayoutGrid, Award, Copy, RotateCcw, ChevronDown } from 'lucide-react';
+import { FolderKanban, Pencil, Undo2, Redo2, Eraser, Sparkles, Wand2, Palette, PenTool, Brush, Sliders, Layers, LayoutGrid, Award, Copy, RotateCcw, ChevronDown } from 'lucide-react';
 import { useState } from 'react';
 import { TransformedPixel, IngredientStat } from '../../types';
 import { PaletteItemWithCache } from '../../utils/quantizeImage';
@@ -60,6 +60,10 @@ export default function TopToolbar({ currentPalette, onGeneratePng, onGeneratePd
   const denoise = useWorkspaceStore(s => s.denoise);
   const showPalettePanel = useWorkspaceStore(s => s.showPalettePanel);
   const setShowPalettePanel = useWorkspaceStore(s => s.setShowPalettePanel);
+  const strokePanelOpen = useWorkspaceStore(s => s.strokePanelOpen);
+  const setStrokePanelOpen = useWorkspaceStore(s => s.setStrokePanelOpen);
+  const brushPanelOpen = useWorkspaceStore(s => s.brushPanelOpen);
+  const setBrushPanelOpen = useWorkspaceStore(s => s.setBrushPanelOpen);
   const projectPanelOpen = useWorkspaceStore(s => s.projectPanelOpen);
   const setProjectPanelOpen = useWorkspaceStore(s => s.setProjectPanelOpen);
   const toggleLeftDrawer = useWorkspaceStore(s => s.toggleLeftDrawer);
@@ -80,7 +84,7 @@ export default function TopToolbar({ currentPalette, onGeneratePng, onGeneratePd
   const leftOpen = panelOpen === 'left' || panelOpen === 'both';
   const rightOpen = panelOpen === 'right' || panelOpen === 'both';
 
-  const toggleEdit = () => { setEditMode(!editMode); setBrushBead(null); setSelectedCell(null); setIsEraser(false); setWandMode(false); setWandSelection(new Set()); };
+  const toggleEdit = () => { setEditMode(!editMode); setBrushBead(null); setSelectedCell(null); setIsEraser(false); setWandMode(false); setWandSelection(new Set()); setStrokePanelOpen(false); setBrushPanelOpen(false); };
   const fire = (fn: () => void) => () => { fn(); setExportOpen(false); };
   const copyMaterialUsage = async () => {
     if (stats.length === 0) {
@@ -132,8 +136,17 @@ export default function TopToolbar({ currentPalette, onGeneratePng, onGeneratePd
   };
   const toggleBrushPalette = () => {
     setProjectPanelOpen(false);
+    setStrokePanelOpen(false);
+    setBrushPanelOpen(false);
     setPanelOpen('none');
     setShowPalettePanel(!showPalettePanel);
+  };
+  const toggleStroke = () => {
+    setProjectPanelOpen(false);
+    setShowPalettePanel(false);
+    setBrushPanelOpen(false);
+    setPanelOpen('none');
+    setStrokePanelOpen(!strokePanelOpen);
   };
   const resetImage = () => {
     if (!confirmDiscardChanges('当前项目有未保存的修改。重选图片将放弃这些修改，是否继续？')) return;
@@ -169,6 +182,8 @@ export default function TopToolbar({ currentPalette, onGeneratePng, onGeneratePd
             <TButton active={false} onClick={() => denoise(gridWidth, gridHeight, currentPalette)} title="去杂色" Icon={Sparkles} />
             <TButton active={wandMode} onClick={() => { setWandMode(!wandMode); setWandSelection(new Set()); }} title="魔棒 (W)" Icon={Wand2} activeCls="bg-cyan-500 text-white" />
             <TButton active={showPalettePanel} onClick={toggleBrushPalette} title="画笔色板：选择绘制颜色 (B)" Icon={Palette} activeCls="bg-[#E8570A] text-white" />
+            <TButton active={strokePanelOpen} onClick={toggleStroke} title="描边：沿内容边缘向外描边" Icon={PenTool} activeCls="bg-violet-500 text-white" />
+            <TButton active={brushPanelOpen} onClick={() => { setProjectPanelOpen(false); setShowPalettePanel(false); setStrokePanelOpen(false); setPanelOpen('none'); setBrushPanelOpen(!brushPanelOpen); }} title="画笔粗细：设置画笔和橡皮粗细" Icon={Brush} activeCls="bg-emerald-500 text-white" />
           </>}
         </div>
 

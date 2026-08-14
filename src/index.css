@@ -258,6 +258,40 @@ body::after {
   border-radius: 20px;
 }
 
+/* 描边控制面板：居中浮层，便于桌面和移动端使用 */
+.editor-stroke-panel {
+  position: absolute;
+  right: var(--editor-stage-right);
+  bottom: 16px;
+  left: var(--editor-stage-left);
+  z-index: 35;
+  display: flex;
+  width: min(420px, calc(100vw - var(--editor-stage-left) - var(--editor-stage-right) - 24px));
+  max-height: min(58vh, 480px);
+  margin-inline: auto;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 20px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.38);
+}
+
+/* 画笔粗细面板：与描边面板同布局 */
+.editor-brush-panel {
+  position: absolute;
+  right: var(--editor-stage-right);
+  bottom: 16px;
+  left: var(--editor-stage-left);
+  z-index: 35;
+  display: flex;
+  width: min(360px, calc(100vw - var(--editor-stage-left) - var(--editor-stage-right) - 24px));
+  max-height: min(58vh, 440px);
+  margin-inline: auto;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 20px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.38);
+}
+
 .editor-left-panel,
 .editor-project-panel { left: 12px; }
 .editor-right-panel { right: 12px; }
@@ -318,7 +352,25 @@ body::after {
     max-height: 52dvh;
     border-radius: 18px;
   }
-  .editor-shell[data-palette-open="true"] .zoom-controls { display: none; }
+  .editor-stroke-panel {
+    right: 6px;
+    bottom: 64px;
+    left: 6px;
+    width: auto;
+    max-height: 52dvh;
+    border-radius: 18px;
+  }
+  .editor-brush-panel {
+    right: 6px;
+    bottom: 64px;
+    left: 6px;
+    width: auto;
+    max-height: 52dvh;
+    border-radius: 18px;
+  }
+  .editor-shell[data-palette-open="true"] .zoom-controls,
+  .editor-shell[data-stroke-open="true"] .zoom-controls,
+  .editor-shell[data-brush-open="true"] .zoom-controls { display: none; }
   .editor-panel-button { gap: 4px; padding: 0 6px; font-size: 10px; }
   .tool-hint {
     top: 8px;

@@ -65,6 +65,12 @@ interface WorkspaceStore {
   hasManualEdits: boolean;
   undoStack: Snapshot[];
   redoStack: Snapshot[];
+  strokeColor: BeadPaletteItem | null;
+  strokeThickness: number;
+  strokePanelOpen: boolean;
+  brushSize: number;
+  brushShape: 'square' | 'circle';
+  brushPanelOpen: boolean;
 
   // Simple setters
   setIsAiEnhancing: (v: boolean) => void;
@@ -96,6 +102,12 @@ interface WorkspaceStore {
   setWandMode: (v: boolean) => void;
   setWandSelection: (v: Set<string>) => void;
   setShowPalettePanel: (v: boolean) => void;
+  setStrokeColor: (v: BeadPaletteItem | null) => void;
+  setStrokeThickness: (v: number) => void;
+  setStrokePanelOpen: (v: boolean) => void;
+  setBrushSize: (v: number) => void;
+  setBrushShape: (v: WorkspaceStore['brushShape']) => void;
+  setBrushPanelOpen: (v: boolean) => void;
   /** 加载管线输出。清空 undo/redo 栈 — 管线结果是新基线，不可撤销。 */
   setPipelineResult: (pixels: TransformedPixel[], stats: IngredientStat[], width?: number, height?: number) => void;
   setIsProcessing: (v: boolean) => void;
@@ -125,6 +137,7 @@ interface WorkspaceStore {
   endBrushStroke: () => void;
   applyBrush: (x: number, y: number, gridWidth: number) => void;
   applyWandFill: (cell: { x: number; y: number }, selection: Set<string>, targetBead: BeadPaletteItem, gridWidth: number) => void;
+  applyStroke: (gridWidth: number, gridHeight: number) => void;
   undo: () => void;
   redo: () => void;
   denoise: (gridWidth: number, gridHeight: number, palette: BeadPaletteItem[]) => void;
@@ -206,6 +219,12 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   hasManualEdits: false,
   undoStack: editor.undoStack,
   redoStack: editor.redoStack,
+  strokeColor: null,
+  strokeThickness: 1,
+  strokePanelOpen: false,
+  brushSize: 1,
+  brushShape: 'square' as const,
+  brushPanelOpen: false,
 
   setIsAiEnhancing: (v) => set({ isAiEnhancing: v }),
   setAiEnhanceError: (v) => set({ aiEnhanceError: v }),
@@ -236,6 +255,12 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   setWandMode: (v) => set({ wandMode: v }),
   setWandSelection: (v) => set({ wandSelection: v }),
   setShowPalettePanel: (v) => set({ showPalettePanel: v }),
+  setStrokeColor: (v) => set({ strokeColor: v }),
+  setStrokeThickness: (v) => set({ strokeThickness: v }),
+  setStrokePanelOpen: (v) => set({ strokePanelOpen: v }),
+  setBrushSize: (v) => set({ brushSize: v }),
+  setBrushShape: (v) => set({ brushShape: v }),
+  setBrushPanelOpen: (v) => set({ brushPanelOpen: v }),
   setPipelineResult: (pixels, stats, width = 0, height = 0) => { editor.load(pixels, stats, width, height); set({ ...snapshotEditor(), isDirty: pixels.length > 0, saveStatus: 'idle', hasManualEdits: false }); },
   setIsProcessing: (v) => set({ isProcessing: v }),
   setGridWidthActual: (v) => set({ gridWidthActual: v }),
@@ -293,13 +318,21 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     const s = get();
     const targetBead = s.isEraser ? EMPTY_BEAD : s.brushBead;
     if (!targetBead) return;
-    editor.brush(x, y, gridWidth, targetBead);
+    editor.brush(x, y, gridWidth, targetBead, s.brushSize, s.brushShape);
     set({ ...snapshotEditor(), selectedCell: { x, y }, isDirty: true, saveStatus: 'idle', hasManualEdits: true });
   },
 
   applyWandFill: (cell, selection, targetBead, gridWidth) => {
     editor.wandFill(selection, targetBead, gridWidth);
     set({ ...snapshotEditor(), wandSelection: new Set(), selectedCell: cell, isDirty: true, saveStatus: 'idle', hasManualEdits: true });
+  },
+
+  applyStroke: (gridWidth, gridHeight) => {
+    const s = get();
+    if (!s.strokeColor) { get().pushToast('请先选择描边颜色'); return; }
+    editor.strokeOutline(gridWidth, gridHeight, s.strokeColor, s.strokeThickness);
+    set({ ...snapshotEditor(), isDirty: true, saveStatus: 'idle', hasManualEdits: true });
+    get().pushToast('已应用描边（粗细 ' + s.strokeThickness + '）');
   },
 
   undo: () => {
@@ -352,6 +385,9 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
       brushBead: null,
       isEraser: false,
       wandMode: false,
+      strokePanelOpen: false,
+      brushPanelOpen: false,
+      showPalettePanel: false,
       panOffset: { x: 0, y: 0 },
       topTrim: 0,
       bottomTrim: 0,
@@ -404,6 +440,9 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
       brushBead: null,
       isEraser: false,
       wandMode: false,
+      strokePanelOpen: false,
+      brushPanelOpen: false,
+      showPalettePanel: false,
       topTrim: 0,
       bottomTrim: 0,
       leftTrim: 0,

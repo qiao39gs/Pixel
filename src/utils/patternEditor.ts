@@ -78,10 +78,20 @@ export class PatternEditor {
     this.strokeActive = false;
   }
 
-  brush(x: number, y: number, gridWidth: number, targetBead: BeadPaletteItem): void {
+  brush(x: number, y: number, gridWidth: number, targetBead: BeadPaletteItem, size = 1, shape: 'square' | 'circle' = 'square'): void {
     if (!this.strokeActive) this.pushSnapshot();
+    const half = Math.max(0, Math.floor((size - 1) / 2));
     const next = [...this._pixels];
-    next[y * gridWidth + x] = { x, y, matchedBead: targetBead };
+    for (let dy = -half; dy <= half; dy++) {
+      const ny = y + dy;
+      if (ny < 0 || ny >= this._height) continue;
+      for (let dx = -half; dx <= half; dx++) {
+        if (shape === 'circle' && dx * dx + dy * dy > (half + 0.5) * (half + 0.5)) continue;
+        const nx = x + dx;
+        if (nx < 0 || nx >= gridWidth) continue;
+        next[ny * gridWidth + nx] = { x: nx, y: ny, matchedBead: targetBead };
+      }
+    }
     this._pixels = next;
     this._stats = recalculateStats(next);
   }
@@ -142,6 +152,41 @@ export class PatternEditor {
       p.matchedBead.code === sourceCode ? { ...p, matchedBead: targetBead } : p
     );
     this._stats = recalculateStats(this._pixels);
+  }
+
+  /**
+   * 描边：沿所有非空内容的外侧空位向外填充 targetBead，层级数由 thickness 决定。
+   * 使用八邻接判断，保证描边形成连续封闭的轮廓；只填充空格（跳过已有内容）。
+   */
+  strokeOutline(gridWidth: number, gridHeight: number, targetBead: BeadPaletteItem, thickness: number): void {
+    const layers = Math.max(1, Math.floor(thickness));
+    this.pushSnapshot();
+    const next = [...this._pixels];
+    for (let layer = 0; layer < layers; layer++) {
+      const frontier: number[] = [];
+      for (let y = 0; y < gridHeight; y++) {
+        for (let x = 0; x < gridWidth; x++) {
+          const idx = y * gridWidth + x;
+          if (next[idx].matchedBead.code !== 'EMPTY') continue;
+          let hasNeighbor = false;
+          for (let dy = -1; dy <= 1 && !hasNeighbor; dy++) {
+            for (let dx = -1; dx <= 1; dx++) {
+              if (dx === 0 && dy === 0) continue;
+              const nx = x + dx, ny = y + dy;
+              if (nx < 0 || nx >= gridWidth || ny < 0 || ny >= gridHeight) continue;
+              if (next[ny * gridWidth + nx].matchedBead.code !== 'EMPTY') { hasNeighbor = true; break; }
+            }
+          }
+          if (hasNeighbor) frontier.push(idx);
+        }
+      }
+      if (frontier.length === 0) break;
+      for (const i of frontier) {
+        next[i] = { x: i % gridWidth, y: Math.floor(i / gridWidth), matchedBead: targetBead };
+      }
+    }
+    this._pixels = next;
+    this._stats = recalculateStats(next);
   }
 
   trim(topTrim: number, bottomTrim: number, leftTrim: number, rightTrim: number, gridWidth: number, gridHeight: number): CropResult | null {

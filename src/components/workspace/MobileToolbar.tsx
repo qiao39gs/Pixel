@@ -1,5 +1,5 @@
 import React from 'react';
-import { Undo2, Redo2, Move, Eraser, Sparkles, Wand2, Palette } from 'lucide-react';
+import { Undo2, Redo2, Move, Eraser, Sparkles, Wand2, Palette, PenTool, Brush } from 'lucide-react';
 import { PaletteItemWithCache } from '../../utils/quantizeImage';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
@@ -21,6 +21,10 @@ export default function MobileToolbar({ currentPalette }: Props) {
   const wandMode = useWorkspaceStore(s => s.wandMode);
   const showPalettePanel = useWorkspaceStore(s => s.showPalettePanel);
   const setShowPalettePanel = useWorkspaceStore(s => s.setShowPalettePanel);
+  const strokePanelOpen = useWorkspaceStore(s => s.strokePanelOpen);
+  const setStrokePanelOpen = useWorkspaceStore(s => s.setStrokePanelOpen);
+  const brushPanelOpen = useWorkspaceStore(s => s.brushPanelOpen);
+  const setBrushPanelOpen = useWorkspaceStore(s => s.setBrushPanelOpen);
   const denoise = useWorkspaceStore(s => s.denoise);
   const gridWidth = useWorkspaceStore(s => s.gridWidthActual);
   const gridHeight = useWorkspaceStore(s => s.gridHeightActual);
@@ -31,7 +35,7 @@ export default function MobileToolbar({ currentPalette }: Props) {
   if (!editMode || panelOpen !== 'none') return null;
 
   const toggleDragMode = () => {
-    if (!dragMode) { setBrushBead(null); setIsEraser(false); setWandMode(false); setWandSelection(new Set()); setDragMode(true); }
+    if (!dragMode) { setBrushBead(null); setIsEraser(false); setWandMode(false); setWandSelection(new Set()); setStrokePanelOpen(false); setBrushPanelOpen(false); setShowPalettePanel(false); setDragMode(true); }
     else { setDragMode(false); }
   };
 
@@ -51,7 +55,9 @@ export default function MobileToolbar({ currentPalette }: Props) {
       {toolBtn(isEraser, () => { setIsEraser(!isEraser); setBrushBead(null); setDragMode(false); }, '橡皮擦', Eraser, '橡皮', 'bg-red-500 text-white')}
       {toolBtn(false, () => denoise(gridWidth, gridHeight, currentPalette), '去杂色', Sparkles, '去杂', '')}
       {toolBtn(wandMode, () => { setWandMode(!wandMode); setWandSelection(new Set()); setDragMode(false); }, '魔棒', Wand2, '魔棒', 'bg-cyan-500 text-white')}
-      {toolBtn(showPalettePanel, () => { setShowPalettePanel(!showPalettePanel); setDragMode(false); }, '色板', Palette, '色板', 'bg-violet-500 text-white')}
+      {toolBtn(showPalettePanel, () => { setShowPalettePanel(!showPalettePanel); setStrokePanelOpen(false); setBrushPanelOpen(false); setDragMode(false); }, '色板', Palette, '色板', 'bg-violet-500 text-white')}
+      {toolBtn(strokePanelOpen, () => { setStrokePanelOpen(!strokePanelOpen); setShowPalettePanel(false); setBrushPanelOpen(false); setDragMode(false); }, '描边', PenTool, '描边', 'bg-violet-500 text-white')}
+      {toolBtn(brushPanelOpen, () => { setBrushPanelOpen(!brushPanelOpen); setShowPalettePanel(false); setStrokePanelOpen(false); setDragMode(false); }, '画笔粗细', Brush, '粗细', 'bg-emerald-500 text-white')}
     </div>
   );
 }
