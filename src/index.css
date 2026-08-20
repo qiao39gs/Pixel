@@ -416,3 +416,56 @@ body::after {
   .animate-fade-in { animation: none !important; }
 }
 
+/* ── 全局 range 滑块：统一品牌橙色 thumb、加大触摸热区 ── */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 20px;
+  background: transparent;
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 999px;
+  background: #E7E5E4;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 15px;
+  height: 15px;
+  margin-top: -4.5px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  border: 3px solid var(--editor-accent);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.22);
+  transition: transform 120ms ease, border-color 120ms ease;
+}
+input[type="range"]:hover::-webkit-slider-thumb { transform: scale(1.15); }
+input[type="range"]:active::-webkit-slider-thumb {
+  transform: scale(1.05);
+  border-color: var(--editor-accent-strong);
+}
+input[type="range"]::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: #E7E5E4;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  border: 3px solid var(--editor-accent);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.22);
+  transition: transform 120ms ease, border-color 120ms ease;
+}
+input[type="range"]:hover::-moz-range-thumb { transform: scale(1.15); }
+input[type="range"]:active::-moz-range-thumb { border-color: var(--editor-accent-strong); }
+input[type="range"]:focus-visible {
+  outline: 2px solid rgba(232, 87, 10, 0.45);
+  outline-offset: 2px;
+  border-radius: 999px;
+}
+input[type="range"]:disabled { opacity: 0.45; cursor: not-allowed; }
+

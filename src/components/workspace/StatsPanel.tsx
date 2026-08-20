@@ -259,6 +259,20 @@ export default function StatsPanel() {
         </div>
       )}
 
+      {stats.length === 0 && (
+        <div className="flex flex-col items-center justify-center text-center py-16 px-4">
+          <div className="grid grid-cols-4 gap-1.5 mb-5 opacity-70" aria-hidden="true">
+            {Array.from({ length: 16 }, (_, i) => (
+              <span key={i} className={`h-3 w-3 rounded-[3px] ${[5, 6, 9, 10].includes(i) ? 'bg-orange-300' : 'bg-stone-200'}`} />
+            ))}
+          </div>
+          <p className="text-[13px] font-bold text-slate-600">暂无耗材数据</p>
+          <p className="mt-1.5 text-[12px] leading-relaxed text-slate-400 max-w-[220px]">
+            {editMode ? '用画笔在图纸上绘制后，这里会列出每个色号的用量。' : '图纸上还没有拼豆，绘制或导入图纸后这里会列出每个色号的用量。'}
+          </p>
+        </div>
+      )}
+      {stats.length > 0 && (
       <div className="flex items-center justify-between pb-3 mb-3 border-b border-stone-200/70">
         <span className="text-[12px] text-stone-500">{editMode ? '点击色块设为画笔' : '点击聚焦 · 拖拽换色'}</span>
         <div className="group relative shrink-0">
@@ -270,6 +284,7 @@ export default function StatsPanel() {
           </div>
         </div>
       </div>
+      )}
       {COLOR_GROUPS.map(group => {
         const seriesStats = stats.filter(s => s.bead.series === group.series);
         if (seriesStats.length === 0) return null;

@@ -10,7 +10,6 @@ import PalettePanel from './PalettePanel';
 import StrokePanel from './StrokePanel';
 import BrushPanel from './BrushPanel';
 import MobileToolbar from './MobileToolbar';
-import Toasts from './Toasts';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { AspectRatio } from '../../utils/constants';
 import ProjectStatus from './ProjectStatus';
@@ -42,7 +41,7 @@ export default function EditorFrame(props: Props) {
   useEffect(() => {
     if (initialized.current) return;
     initialized.current = true;
-    if (window.matchMedia('(max-width: 1023px)').matches && panelOpen === 'right') {
+    if (window.matchMedia('(max-width: 1023px)').matches && panelOpen !== 'none') {
       setPanelOpen('none');
     }
   }, [panelOpen, setPanelOpen]);
@@ -50,7 +49,8 @@ export default function EditorFrame(props: Props) {
   useEffect(() => {
     const media = window.matchMedia('(max-width: 1023px)');
     const collapsePanels = (event: MediaQueryListEvent) => {
-      if (event.matches && useWorkspaceStore.getState().panelOpen === 'both') setPanelOpen('right');
+      // 进入移动端后，桌面端的并排面板会全屏盖住画布，统一收起
+      if (event.matches && useWorkspaceStore.getState().panelOpen !== 'none') setPanelOpen('none');
     };
     media.addEventListener('change', collapsePanels);
     return () => media.removeEventListener('change', collapsePanels);
@@ -82,7 +82,6 @@ export default function EditorFrame(props: Props) {
       <ProjectStatus />
       <LeftDrawer onTriggerEnhance={props.onTriggerEnhance} />
       <RightStatsPanel />
-      <Toasts />
       <MobileToolbar currentPalette={props.currentPalette} />
       <ProjectDrawer
         croppedImageDataUrl={props.croppedImageDataUrl}

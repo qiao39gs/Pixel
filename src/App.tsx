@@ -8,6 +8,7 @@ import { Analytics } from '@vercel/analytics/react';
 import ImageUploader from './components/ImageUploader';
 import HomeProjectActions from './components/HomeProjectActions';
 import PatternWorkspace from './components/PatternWorkspace';
+import Toasts from './components/workspace/Toasts';
 import { generateHighResPng, generateMultiPagePdf } from './utils/exportUtils';
 import { TransformedPixel, IngredientStat } from './types';
 import { clearDraft, loadDraft } from './utils/projectStorage';
@@ -159,6 +160,7 @@ export default function App() {
         </footer>
       )}
 
+      <Toasts />
       <Analytics />
     </div>
   );

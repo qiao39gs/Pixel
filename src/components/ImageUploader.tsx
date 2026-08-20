@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Upload, Image as ImageIcon, RotateCw, ZoomIn, ZoomOut, Move, FlipHorizontal, FlipVertical, Crop } from 'lucide-react';
 import { ASPECT_RATIOS, AspectRatio } from '../utils/constants';
+import { useWorkspaceStore } from '../store/workspaceStore';
 
 interface ImageUploaderProps {
   onImageCropped: (imageDataUrl: string) => void;
@@ -33,7 +34,7 @@ export default function ImageUploader({ onImageCropped, onImageStateChange, aspe
   // Handle uploaded file
   const handleFile = (file: File) => {
     if (!file.type.startsWith('image/')) {
-      alert('仅支持上传图片类型文件（PNG/JPEG/WebP）');
+      useWorkspaceStore.getState().pushToast('仅支持上传图片类型文件（PNG/JPEG/WebP）');
       return;
     }
 

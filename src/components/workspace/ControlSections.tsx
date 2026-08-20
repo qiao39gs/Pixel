@@ -26,7 +26,7 @@ function AdjustSlider({ label, value, onRelease }: { label: string; value: numbe
 // ── 统一分组标题 ──
 function SectionTitle({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="flex items-center gap-2 pb-2.5 mb-4">
+    <div className="flex items-center gap-2 pb-2.5 mb-4 border-b border-slate-200/70">
       <span className="text-slate-400">{icon}</span>
       <span className="text-[13px] font-bold text-slate-700">{children}</span>
     </div>
@@ -34,10 +34,17 @@ function SectionTitle({ icon, children }: { icon: React.ReactNode; children: Rea
 }
 
 // ── 状态化 toggle——我统一样式 ──
-function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
+function Toggle({ on, onClick, disabled = false, title }: { on: boolean; onClick: () => void; disabled?: boolean; title?: string }) {
   return (
-    <button onClick={onClick} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer shrink-0 ${on ? 'bg-[#E8570A]' : 'bg-stone-300'}`}>
-      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${on ? 'translate-x-6' : 'translate-x-1'}`} />
+    <button
+      onClick={onClick}
+      role="switch"
+      aria-checked={on}
+      disabled={disabled}
+      title={title}
+      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#E8570A] ${on ? 'bg-[#E8570A]' : 'bg-stone-300'} ${disabled ? 'opacity-40 cursor-not-allowed' : ''}`}
+    >
+      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${on ? 'translate-x-6' : 'translate-x-1'}`} />
     </button>
   );
 }
@@ -183,14 +190,13 @@ export function TrimSection() {
     <div className={`flex flex-col ${SECTION_GAP}`}>
       <div>
         <SectionTitle icon={<Crop className="w-4 h-4" />}>裁边修整</SectionTitle>
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-[13px] font-bold text-slate-700">裁边修整</span>
-          <div className="flex gap-2">
+        <div className="flex items-center justify-between gap-3 mb-2">
+          <p className="text-[13px] text-slate-500 leading-normal">拖动滑块预览裁切效果，点击「应用」确认。</p>
+          <div className="flex gap-2 shrink-0">
             <button onClick={() => autoDetectTrim(gridWidth, gridHeight)} className="h-8 px-2.5 text-[13px] font-bold rounded-lg bg-amber-50 text-amber-600 border border-amber-200 hover:bg-amber-100 transition-colors cursor-pointer">自动裁剪</button>
             <button onClick={() => applyTrim(gridWidth, gridHeight)} className={`h-8 px-2.5 text-[13px] font-bold rounded-lg transition-colors cursor-pointer ${topTrim+bottomTrim+leftTrim+rightTrim === 0 ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-indigo-50 text-indigo-600 border border-indigo-200 hover:bg-indigo-100'}`} disabled={topTrim+bottomTrim+leftTrim+rightTrim === 0}>应用</button>
           </div>
         </div>
-        <p className="text-[13px] text-slate-500 leading-normal mb-3">拖动滑块预览裁切效果，点击「应用」确认。</p>
         {([
           ['上', topTrim, setTopTrim, Math.floor(gridHeight/2)] as const,
           ['下', bottomTrim, setBottomTrim, Math.floor(gridHeight/2)] as const,
@@ -344,7 +350,7 @@ export function ViewSection() {
         </div>
         <div className="flex items-center justify-between">
           <span className="text-[13px] text-slate-700 font-bold flex items-center gap-1.5"><Hash className="w-4 h-4 text-slate-400" /> 格子色号标识</span>
-          <button onClick={() => setShowNumbers(!showNumbers)} disabled={scale < 12 && !showNumbers} title={scale < 12 ? '请拉大网格尺寸以开启色号' : ''} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${showNumbers ? 'bg-[#E8570A]' : 'bg-stone-300'} ${scale < 12 && !showNumbers ? 'opacity-40 cursor-not-allowed' : ''}`}><span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${showNumbers ? 'translate-x-6' : 'translate-x-1'}`} /></button>
+          <Toggle on={showNumbers} onClick={() => setShowNumbers(!showNumbers)} disabled={scale < 12 && !showNumbers} title={scale < 12 ? '请拉大网格尺寸以开启色号' : ''} />
         </div>
       </div>
       {scale < 17 && <p className="text-[13px] text-slate-500 leading-tight">当前缩放较小 ({scale}px)，色号仅在选中/悬停时显示；放大到 120% 以上可全部显示。</p>}

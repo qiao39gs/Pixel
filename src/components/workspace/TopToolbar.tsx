@@ -1,6 +1,5 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { FolderKanban, Pencil, Undo2, Redo2, Eraser, Sparkles, Wand2, Palette, PenTool, Brush, Sliders, Layers, LayoutGrid, Award, Copy, RotateCcw, ChevronDown } from 'lucide-react';
-import { useState } from 'react';
 import { TransformedPixel, IngredientStat } from '../../types';
 import { PaletteItemWithCache } from '../../utils/quantizeImage';
 import { useWorkspaceStore } from '../../store/workspaceStore';
@@ -81,6 +80,13 @@ export default function TopToolbar({ currentPalette, onGeneratePng, onGeneratePd
   const pushToast = useWorkspaceStore(s => s.pushToast);
 
   const [exportOpen, setExportOpen] = useState(false);
+
+  useEffect(() => {
+    if (!exportOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setExportOpen(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [exportOpen]);
   const leftOpen = panelOpen === 'left' || panelOpen === 'both';
   const rightOpen = panelOpen === 'right' || panelOpen === 'both';
 
