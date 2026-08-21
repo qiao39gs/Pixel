@@ -124,8 +124,11 @@ export default function TopToolbar({ currentPalette, onGeneratePng, onGeneratePd
     }
   };
   const toggleProjects = () => {
-    setPanelOpen('none');
-    setShowPalettePanel(false);
+    if (!projectPanelOpen) {
+      // 项目面板与参数面板互斥，但可与右侧耗材统计并列显示。
+      setPanelOpen(rightOpen ? 'right' : 'none');
+      setShowPalettePanel(false);
+    }
     setProjectPanelOpen(!projectPanelOpen);
   };
   const toggleLeftPanel = () => {
@@ -135,7 +138,6 @@ export default function TopToolbar({ currentPalette, onGeneratePng, onGeneratePd
     else toggleLeftDrawer();
   };
   const toggleStatsPanel = () => {
-    setProjectPanelOpen(false);
     setShowPalettePanel(false);
     if (window.matchMedia('(max-width: 1023px)').matches) setPanelOpen(rightOpen ? 'none' : 'right');
     else toggleRightPanel();

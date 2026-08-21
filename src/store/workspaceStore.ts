@@ -281,7 +281,8 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   requestProjectSaveName: () => set((s) => ({
     projectPanelOpen: true,
     projectSavePromptVersion: s.projectSavePromptVersion + 1,
-    panelOpen: 'none',
+    // 保存项目时仅关闭互斥的参数面板，保留耗材统计面板。
+    panelOpen: s.panelOpen === 'both' || s.panelOpen === 'right' ? 'right' : 'none',
     showPalettePanel: false,
   })),
   setDragMode: (v) => set({ dragMode: v }),
